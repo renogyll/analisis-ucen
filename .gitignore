@@ -1,0 +1,29 @@
+# ── Datos (pesados, entregados por contraparte o generados por ETL) ───────────
+data/raw/
+data/cascade/
+
+# ── Outputs generados (reproducibles con los scripts) ─────────────────────────
+outputs/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+*.ipynb
+.ipynb_checkpoints/
+
+# ── Office (archivos temporales de bloqueo) ───────────────────────────────────
+~$*.xlsx
+~$*.pptx
+~$*.docx
+
+# ── Sistema ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

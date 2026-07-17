@@ -1,0 +1,38 @@
+Slide,Nombre gráfica,Descripción,CSV,CSV madre
+1,Portada,Título principal de la presentación: Resultados del Perfeccionamiento Docente P3,,
+2,Índice,Mapa de contenidos con los 4 bloques de análisis,,
+3,Marco Metodológico,4 cajas que explican universo y metodología de análisis,docente_918.csv; p3_918.csv,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv
+4,Separador Bloque I,Divisor visual — BLOQUE I: Clasificación del Cuerpo Académico,,
+5,Distribución por Tramo de Edad y Sexo,Pirámide/barras dobles por tramo de edad y sexo,docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+6,Distribución por Facultad,Barras horizontales por unidad/facultad,docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+7,Distribución por Antigüedad,Barras horizontales por tramo de antigüedad,docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+8,Distribución por Jerarquía,Barras horizontales por jerarquía académica,docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+9,Distribución por Nivel de Formación,Barras horizontales por nivel de postgrado (magíster/doctorado/etc.),docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+10,Institución de Titulación,Barras horizontales por institución donde obtuvo el grado,CONSOLIDADO DOCENTES.xlsx - DOTACION_CON_GRADOREC.csv,CONSOLIDADO DOCENTES.xlsx (hoja: DOTACION_CON_GRADOREC)
+11,Separador Bloque II,Divisor visual — BLOQUE II: Evaluación SAT,,
+12,Tipos de Formación (Venn),Diagrama Venn 3 conjuntos: Taller / Diplomado / Proyecto y sus intersecciones,p3_918.csv,participacion_formacion.csv
+13,Universo SAT P3,Composición del universo: 197 aptos P3 vs 486 control con SAT disponible,p3_sat_zscore_918.csv; control_918.csv,evaluacion_periodo.csv; participacion_formacion.csv; nomina_docente.csv
+14,Embudo 917 → 357 → 197,Árbol de filtros: desde 917 jerarquizados hasta 197 aptos P3 con SAT pre+post,docente_918.csv; p3_918.csv; p3_sat_zscore_918.csv,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; evaluacion_periodo.csv
+15,Separador 2.1 Caracterización,Divisor visual — Sección 2.1: Caracterización de Formados,,
+16,Participación por Jerarquía y Tipo,Barras 100% apiladas horizontales: composición Taller/Diplomado/Proyecto por jerarquía,p3_sat_zscore_918.csv,participacion_formacion.csv; evaluacion_periodo.csv
+17,Participación por Antigüedad y Tipo,Barras 100% apiladas verticales: composición por tramo de antigüedad,p3_sat_zscore_918.csv,participacion_formacion.csv; nomina_docente.csv
+18,Intensidad de Participación,Distribución por número de instancias por docente,p3_918.csv,participacion_formacion.csv
+19,Combinaciones de Modalidad,Frecuencia de combinaciones Taller/Diplomado/Proyecto entre los 197 formados,p3_918.csv,participacion_formacion.csv
+20,Perfil del Grupo Control,Comparación de perfil SAT baseline: formados vs control sin formación,control_vs_trat_918.csv; control_918.csv,evaluacion_periodo.csv; nomina_docente.csv
+21,SAT z-score: Formados vs Control (6 períodos),Líneas temporales z-score formados (azul) vs control (amarillo) 2023–2025,p3_sat_zscore_918.csv; control_918.csv,evaluacion_periodo.csv; participacion_formacion.csv
+22,SAT z-score por Facultad (dumbbell),Dumbbell plot: punto baseline → punto resultado + línea Δ por facultad,p3_sat_zscore_918.csv,evaluacion_periodo.csv; participacion_formacion.csv
+23,Separador Bloque III,Divisor visual — BLOQUE III: Aprobación de Alumnos,,
+24,Derivación Grupos de Control,Embudo árbol que explica cómo se define el control en cada bloque,docente_918.csv; p3_918.csv; scatter_sat_notas.csv; P1_consolidado_con_evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; calificacion_alumno.csv; evaluacion_periodo.csv
+25,Perfil B3: Formados vs Control (Aprobación),Gráficos butterfly pareados: jerarquía + tramo edad — formados vs control B3,p3_sat_zscore_918.csv; scatter_sat_notas.csv; docente_918.csv,evaluacion_periodo.csv; participacion_formacion.csv; calificacion_alumno.csv
+26,Scatter SAT vs Nota (3 paneles),Dispersión SAT vs nota promedio alumno por período (2023-01 / 2024-01 / 2025-01),scatter_sat_notas.csv,calificacion_alumno.csv; evaluacion_periodo.csv; participacion_formacion.csv
+27,Aprobación Global Formados vs Control,Barras comparativas: % aprobación y nota promedio global por grupo,scatter_sat_notas.csv,calificacion_alumno.csv; evaluacion_periodo.csv
+28,Evolución Aprobación por Período,Líneas temporales: % aprobación semestral 2023-01 → 2025-02,scatter_sat_notas.csv,calificacion_alumno.csv; evaluacion_periodo.csv
+29,Aprobación por Antigüedad,Barras por tramo de antigüedad: % aprobación formados vs control,scatter_sat_notas.csv; docente_918.csv,calificacion_alumno.csv; evaluacion_periodo.csv; CONSOLIDADO DOCENTES.xlsx
+30,Aprobación por Jerarquía,Barras por jerarquía académica: % aprobación formados vs control,scatter_sat_notas.csv; docente_918.csv,calificacion_alumno.csv; evaluacion_periodo.csv; CONSOLIDADO DOCENTES.xlsx
+31,Efecto Acumulativo por Instancias,Barras por número de instancias P3: mayor participación → mayor aprobación,scatter_sat_notas.csv; p3_918.csv,calificacion_alumno.csv; evaluacion_periodo.csv; participacion_formacion.csv
+32,Separador Bloque IV,Divisor visual — BLOQUE IV: Evaluación de Desempeño (EDD),,
+33,Perfil B4: Formados vs Control (EDD),Gráficos butterfly pareados: jerarquía + tramo edad — formados vs control EDD,P1_consolidado_con_evaluacion_jefes.csv; docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
+34,Evolución EDD Formados vs Control,Líneas EDD promedio anual 2022–2025: formados (azul) vs control (amarillo),P1_consolidado_con_evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
+35,EDD por Tipo de Formación,Barras: EDD promedio por tipo (Taller/Diplomado/Proyecto/Mixto) vs línea control,P1_consolidado_con_evaluacion_jefes.csv; p3_sat_zscore_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES); participacion_formacion.csv
+36,Resumen Fuentes y Grupos,Tabla visual: grupos formados/control por bloque + fuente original + archivo derivado,Todos los CSV del proyecto,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; evaluacion_periodo.csv; calificacion_alumno.csv
+37,Conclusiones y Recomendaciones,4 cajas de texto: impacto SAT / Aprobación / EDD / Recomendaciones,,
