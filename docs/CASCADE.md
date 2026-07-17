@@ -9,14 +9,17 @@ Git guarda el historial completo de decisiones.
 | Nivel | Carpeta | N | Filtro aplicado | Fecha decisión |
 |-------|---------|---|-----------------|----------------|
 | 00 | `00_base` | pendiente | NOMINA × DOTACION, RUT único, sin filtros adicionales | 2026-07-15 |
-| 01 | `01_jornada` | pendiente | `tipo_contrato` IN (Planta Activa, Media Jornada, Contrata, Contrata Indefinida...) | 2026-07-15 |
-| 02 | `02_honorario` | pendiente | `tipo_contrato` IN (Honorario, Por Hora) | 2026-07-15 |
-| 03 | `03_jerarquizados` | ≈918 | jerarquía académica válida (excluye "SIN JERARQUÍA", "NO INFORMA", vacíos) | pre-2026 |
-| 04 | `04_formados_p3` | ≈357 | participó en ≥1 actividad P3 (Taller / Diplomado / Proyecto) | pre-2026 |
-| 05 | `05_aptos_p3` | 197 | SAT docente disponible en período PRE y en período POST a la formación | pre-2026 |
+| 01 | `01_jornada` | pendiente | `tipo_contrato_tag` = JORNADA | 2026-07-15 |
+| 02 | `02_honorario` | pendiente | `tipo_contrato_tag` = HONORARIO | 2026-07-15 |
+| 03 | `03_jerarquizados` | 917 | jerarquía académica válida (excluye "SIN JERARQUÍA", "NO INFORMA", vacíos) | pre-2026 |
+| 04 | `04_formados_p3` | pendiente | participó en ≥1 actividad P3 — desde universo_base sin filtro jerarquía | 2026-07-15 |
+| 05 | `05_aptos_p3` | pendiente | SAT docente disponible en período PRE y POST — desde formados_p3 sin filtro jerarquía | 2026-07-15 |
 
-> **Nota:** Los N de niveles 00–02 se completarán al correr `etl/00_base/etl_nomina_dotacion.py`
-> con el tag de tipo_contrato incorporado (pendiente en rama `feat/universo-base`).
+> **Nota:** Los N pendientes se confirman al correr `etl/00_base/etl_universo_base.py`
+> (pendiente en rama `feat/universo-base`).
+>
+> El N=917 (nivel 03) corresponde al universo con jerarquía válida después de excluir ESPINOZA (RUT 16322128),
+> persona eliminada por ambigüedad de identidad. La cifra histórica 918 era previa a esa exclusión.
 
 ## Decisiones metodológicas relevantes
 
