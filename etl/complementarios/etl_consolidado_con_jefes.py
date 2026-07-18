@@ -1,46 +1,53 @@
 """
-ETL: P1_docente_consolidado + EVALUACION DE JEFES (formato largo)
-Output: P1_consolidado_con_evaluacion_jefes.csv
-  - Una fila por docente x año_evaluacion
-  - Perfil completo (nomina + dotacion) repetido en cada fila
-  - Columnas de evaluacion de jefe al lado derecho: anio_evaluacion, concepto, ratios
-  - Docentes sin ninguna evaluacion aparecen con 1 fila y campos jefe vacios
+ETL: consolidados.evaluacion_jefes
+Carga el CSV de Evaluación de Jefes a Docentes a la DB.
+Una fila por docente × año de evaluación.
+
+FUENTE: EVALUACION DE JEFES A DOCENTES .csv
+SALIDA: consolidados.evaluacion_jefes (DB)
+        data/cascade/complementarios/evaluacion_jefes.csv
+
+CAMBIO 2026-07-18: reescrito para poblar DB desde CSV fuente.
+Anterior versión: solo generaba CSV en PROCESADO/ desde tabla_docente.csv (legacy).
 """
-
-import pandas as pd
+import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os
+from pathlib import Path
+import pandas as pd
+from sqlalchemy import create_engine, text
 
-BASE  = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2"
-DOCS  = os.path.join(BASE, "CONSOLIDADO DOCENTES 3-05-2026")
-OUT   = os.path.join(BASE, "PROCESADO")
+sys.path.insert(0, str(Path(__file__).parents[2]))
+from config import CASCADE
+
+RAW    = Path(r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\CONSOLIDADO DOCENTES 3-05-2026")
+OUT    = os.path.join(CASCADE, "complementarios")
+DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
+engine = create_engine(DB_URL)
 
 def strip_dv(serie):
     return (serie.astype(str).str.strip()
             .str.replace(".", "", regex=False)
-            .str.split("-").str[0].str.strip())
+            .str.upper()
+            .str.split("-").str[0]
+            .str.rstrip("Kk")
+            .str.strip())
 
-# ── Cargar base maestra (tabla_docente — fuentes NOMINA y NOMINA_DOTACION) ────
-td = pd.read_csv(os.path.join(OUT, "tabla_docente.csv"), dtype=str)
-td.columns = td.columns.str.strip()
-base = td[td["fuente"].isin(["NOMINA_DOTACION", "NOMINA"])].copy()
-print(f"Base tabla_docente (NOMINA+NOMINA_DOTACION): {len(base)} filas | {base['rut_key'].nunique()} RUTs unicos")
+# ── Cargar CSV fuente ─────────────────────────────────────────────────────────
+csv_path = RAW / "CONSOLIDADO DOCENTES 3-05-2026.xlsx - EVALUACION DE JEFES A DOCENTES .csv"
+df = pd.read_csv(csv_path, dtype=str, encoding="latin-1")
+df.columns = df.columns.str.strip()
 
-# ── Cargar EVALUACION JEFES ───────────────────────────────────────────────────
-jefes = pd.read_csv(
-    os.path.join(DOCS, "CONSOLIDADO DOCENTES 3-05-2026.xlsx - EVALUACION DE JEFES A DOCENTES .csv"),
-    dtype=str
-)
-jefes.columns = jefes.columns.str.strip()
-jefes["rut_key"] = strip_dv(jefes["RUT ACADEMICO"])
-jefes["PERIODO"] = jefes["PERIODO"].str.strip()
+print(f"CSV cargado: {len(df)} filas | columnas: {list(df.columns)}")
 
-print(f"Evaluacion jefes:   {len(jefes)} filas | {jefes['rut_key'].nunique()} RUTs unicos")
-print(f"Periodos: {sorted(jefes['PERIODO'].unique())}")
-print(f"Conceptos: {jefes['CONCEPTO'].value_counts().to_dict()}")
+# ── Normalizar ────────────────────────────────────────────────────────────────
+df["rut_key"]        = strip_dv(df["RUT ACADEMICO"])
+df["anio_evaluacion"] = df["PERIODO"].str.strip()
+df["nombre_docente"] = df["DOCENTE"].str.strip() if "DOCENTE" in df.columns else None
+df["concepto"]       = df["CONCEPTO"].str.strip() if "CONCEPTO" in df.columns else None
+df["tiene_eval_jefe"] = "SI"
 
-# ── Columnas clave a pivotar ──────────────────────────────────────────────────
-COLS_JEFE = {
-    "CONCEPTO":            "concepto",
+# Mapeo de columnas numéricas
+col_map = {
     "PORCENTAJE CONCEPTO": "porcentaje_concepto",
     "CUMPLIMIENTO CD":     "cumplimiento_cd",
     "EDD":                 "edd_total",
@@ -50,42 +57,33 @@ COLS_JEFE = {
     "FACULTAD":            "facultad_jefe",
     "CARRERA":             "carrera_jefe",
     "SEDE":                "sede_jefe",
-    "OBSERVACIÓN":    "observacion_jefe",
     "COD_OBSERVACION":     "cod_observacion",
 }
+for src, dst in col_map.items():
+    if src in df.columns:
+        df[dst] = df[src].str.strip() if df[src].dtype == object else df[src]
 
-jefes_slim = jefes[["rut_key", "PERIODO"] + list(COLS_JEFE.keys())].copy()
-jefes_slim = jefes_slim.rename(columns={**COLS_JEFE, "PERIODO": "anio_evaluacion"})
-# si hay duplicados rut+año (raro), quedarse con el primero
-jefes_slim = jefes_slim.drop_duplicates(subset=["rut_key", "anio_evaluacion"], keep="first")
+# Columnas finales
+cols = ["rut_key", "anio_evaluacion", "nombre_docente", "tiene_eval_jefe",
+        "concepto", "porcentaje_concepto", "cumplimiento_cd",
+        "edd_total", "edd_director", "edd_docente",
+        "activo_ucen", "facultad_jefe", "carrera_jefe", "sede_jefe", "cod_observacion"]
+cols_disp = [c for c in cols if c in df.columns]
+out = df[cols_disp].copy()
 
-print(f"\nJefes formato largo: {len(jefes_slim)} filas | {jefes_slim['rut_key'].nunique()} RUTs unicos")
+# Excluir ESPINOZA
+out = out[out["rut_key"] != "16322128"]
 
-# ── JOIN largo: base LEFT con jefes ──────────────────────────────────────────
-# Docentes sin evaluacion quedan con 1 fila y campos jefe vacios
-resultado = base.merge(jefes_slim, on="rut_key", how="left")
+# Dedup rut × año (en caso de duplicados, keep first)
+out = out.drop_duplicates(subset=["rut_key", "anio_evaluacion"], keep="first")
 
-# Flag legible
-resultado["tiene_eval_jefe"] = resultado["anio_evaluacion"].notna().map({True: "SI", False: "NO"})
-
-# Ordenar: perfil primero, luego año, luego ratios
-cols_perfil = [c for c in base.columns]
-cols_jefe   = ["anio_evaluacion", "tiene_eval_jefe", "concepto", "porcentaje_concepto",
-               "cumplimiento_cd", "edd_total", "edd_director", "edd_docente",
-               "activo_ucen", "facultad_jefe", "carrera_jefe", "sede_jefe",
-               "observacion_jefe", "cod_observacion"]
-resultado = resultado[cols_perfil + cols_jefe]
-
-ruts_con = resultado[resultado["tiene_eval_jefe"] == "SI"]["rut_key"].nunique()
-ruts_sin = resultado[resultado["tiene_eval_jefe"] == "NO"]["rut_key"].nunique()
-print(f"\nResultado final: {len(resultado)} filas | {len(resultado.columns)} columnas")
-print(f"  Docentes con al menos 1 evaluacion jefe: {ruts_con}")
-print(f"  Docentes sin ninguna evaluacion jefe:    {ruts_sin}")
-print("\nDistribucion por concepto:")
-print(resultado["concepto"].value_counts(dropna=False).to_string())
+print(f"\nevaluacion_jefes: {len(out)} filas | {out['rut_key'].nunique()} docentes únicos")
+print(f"Años: {sorted(out['anio_evaluacion'].dropna().unique())}")
+print(f"Conceptos:\n{out['concepto'].value_counts(dropna=False).to_string()}")
 
 # ── Guardar ───────────────────────────────────────────────────────────────────
-out_path = os.path.join(OUT, "P1_consolidado_con_evaluacion_jefes.csv")
-resultado.to_csv(out_path, index=False, encoding="utf-8-sig")
-print(f"\nGuardado: P1_consolidado_con_evaluacion_jefes.csv")
-print("Listo. Archivos madre no modificados.")
+os.makedirs(OUT, exist_ok=True)
+out.to_sql("evaluacion_jefes", engine, schema="consolidados", if_exists="replace", index=False)
+out.to_csv(os.path.join(OUT, "evaluacion_jefes.csv"), index=False, encoding="utf-8-sig")
+print(f"\nDB : consolidados.evaluacion_jefes  ({len(out)} filas)")
+print(f"CSV: {OUT}/evaluacion_jefes.csv")

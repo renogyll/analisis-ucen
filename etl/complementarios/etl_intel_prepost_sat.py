@@ -8,12 +8,21 @@ Calcula nota SAT_NOTA promedio en 3 momentos:
 
 Para DIPLOMADO/PROYECTO los periodos son anuales (agrupa 2 semestres).
 Para TALLER son semestrales exactos.
-"""
 
+CAMBIO 2026-07-18: periodos TALLER 2025-01 y 2025-02 agregados.
+Universo fuente: analisis.p3_grupo_tratamiento (1.144 universo_base).
+Salida principal: intel.prepost_sat (DB). CSVs como respaldo.
+"""
+import sys; sys.stdout.reconfigure(encoding="utf-8")
+import os
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine
 
-OUT    = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).parents[2]))
+from config import CASCADE
+
+OUT    = os.path.join(CASCADE, "complementarios")
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 
 engine = create_engine(DB_URL)
@@ -49,6 +58,8 @@ TALLER_DURANTE = {
     "2023-02": ["2023-02"],
     "2024-01": ["2024-01"],
     "2024-02": ["2024-02"],
+    "2025-01": ["2025-01"],
+    "2025-02": ["2025-02"],
 }
 
 def periodos_durante_diplomado(anio):
@@ -78,8 +89,20 @@ for _, row in trat.iterrows():
         label_durante = str(a)
         label_post    = str(a + 1)
     elif tipo == "TALLER" and per:
-        TALLER_BASELINE  = {"2023-02": "2023-01", "2024-01": "2023-02", "2024-02": "2024-01"}
-        TALLER_RESULTADO = {"2023-02": "2024-01", "2024-01": "2024-02", "2024-02": "2025-01"}
+        TALLER_BASELINE  = {
+            "2023-02": "2023-01",
+            "2024-01": "2023-02",
+            "2024-02": "2024-01",
+            "2025-01": "2024-02",
+            "2025-02": "2025-01",
+        }
+        TALLER_RESULTADO = {
+            "2023-02": "2024-01",
+            "2024-01": "2024-02",
+            "2024-02": "2025-01",
+            "2025-01": "2025-02",
+            "2025-02": "2026-01",
+        }
         p_pre     = [TALLER_BASELINE.get(per)]
         p_durante = TALLER_DURANTE.get(per, [per])
         p_post    = [TALLER_RESULTADO.get(per)]
@@ -127,13 +150,19 @@ print(f"  Con nota_durante:{df['nota_durante'].notna().sum()}")
 print(f"\nPromedio SAT por momento y tipo:")
 print(df.groupby("tipo_formacion")[["nota_pre","nota_durante","nota_post","delta_pre_post"]].mean().round(3).to_string())
 
-# ── Tabla 1: pre_during_post_sat — los 3 momentos no nulos ───────────────────
-df_3pt = df[df["nota_pre"].notna() & df["nota_durante"].notna() & df["nota_post"].notna()].copy()
-df_3pt.to_csv(f"{OUT}/intel_pre_during_post_sat.csv", index=False, encoding="utf-8-sig")
-df_3pt.to_sql("pre_during_post_sat", engine, schema="intel", if_exists="replace", index=False)
-print(f"\nCargado: intel.pre_during_post_sat ({len(df_3pt)} filas — 3 puntos completos)")
+# ── Guardar tabla completa en DB ──────────────────────────────────────────────
+os.makedirs(OUT, exist_ok=True)
+df.to_sql("prepost_sat", engine, schema="intel", if_exists="replace", index=False)
+df.to_csv(os.path.join(OUT, "intel_prepost_sat.csv"), index=False, encoding="utf-8-sig")
+print(f"\nDB : intel.prepost_sat  ({len(df)} filas | {df['rut_key'].nunique()} docentes)")
 
-# ── Tabla 2: pre_post_sat — pre y post, durante opcional ──────────────────────
+# Subconjunto con los 3 momentos completos (para análisis longitudinal)
+df_3pt = df[df["nota_pre"].notna() & df["nota_durante"].notna() & df["nota_post"].notna()].copy()
+df_3pt.to_sql("pre_during_post_sat", engine, schema="intel", if_exists="replace", index=False)
+df_3pt.to_csv(os.path.join(OUT, "intel_pre_during_post_sat.csv"), index=False, encoding="utf-8-sig")
+print(f"DB : intel.pre_during_post_sat  ({len(df_3pt)} filas — 3 puntos completos)")
+
+# Subconjunto pre + post (durante opcional)
 df_2pt = df[df["nota_pre"].notna() & df["nota_post"].notna()].copy()
 df_2pt = df_2pt.rename(columns={
     "periodo_pre":  "periodo_baseline",
@@ -150,9 +179,8 @@ cols_order = ["rut_key", "nombre", "tipo_formacion", "nombre_actividad",
               "antiguedad_anios", "sexo"]
 df_2pt = df_2pt[[c for c in cols_order if c in df_2pt.columns]]
 df_2pt["tiene_nota_durante"] = df_2pt["nota_durante"].notna()
-
 sin_durante = (~df_2pt["tiene_nota_durante"]).sum()
-df_2pt.to_csv(f"{OUT}/intel_pre_post_sat.csv", index=False, encoding="utf-8-sig")
 df_2pt.to_sql("pre_post_sat", engine, schema="intel", if_exists="replace", index=False)
-print(f"Cargado: intel.pre_post_sat       ({len(df_2pt)} filas — {sin_durante} sin nota_durante)")
-print("\nListo. Archivos madre no modificados.")
+df_2pt.to_csv(os.path.join(OUT, "intel_pre_post_sat.csv"), index=False, encoding="utf-8-sig")
+print(f"DB : intel.pre_post_sat  ({len(df_2pt)} filas — {sin_durante} sin nota_durante)")
+print("\nListo.")
