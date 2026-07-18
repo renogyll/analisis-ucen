@@ -1,11 +1,23 @@
 """
-ETL: Universo Base — NOMINA × DOTACION
+ETL: Universo Base — NOMINA × DOTACION ∪ SOLO_FORMACION
 FUENTE : data/raw/consolidado_docentes/
 SALIDAS: analisis.universo_base (DB)
          data/cascade/00_base/nomina_x_dotacion.csv
 
-Universo base del proyecto: todos los RUTs únicos presentes en NOMINA o DOTACION.
-Reemplaza etl_nomina_dotacion.py + etl_ped001_perfil.py
+Universo base del proyecto: todos los RUTs únicos presentes en NOMINA, DOTACION,
+o en actividades de formación (Taller 2025 + Proyectos de Investigación).
+
+Origen:
+  AMBOS          → en NOMINA y DOTACION          (~520)
+  SOLO_NOMINA    → solo en NOMINA                (~437)
+  SOLO_DOTACION  → solo en DOTACION              ( ~27)
+  SOLO_FORMACION → solo en Taller2025/Proyectos  (~160)  ← nuevo 2026-07-18
+
+Actualización 2026-07-18:
+  Se incorporan 160 RUTs nuevos detectados en Certificación Oferta Formativa 2025
+  y Proyectos de Investigación que no estaban en NOMINA ni DOTACION.
+  Estos tienen perfil parcial: nombre, sexo, jerarquía, facultad y contrato.
+  Campos de RRHH (antigüedad, grado académico, fecha ingreso) quedan NULL.
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os
@@ -49,6 +61,7 @@ def strip_dv(serie):
         serie.astype(str).str.strip()
         .str.replace(".", "", regex=False)
         .str.split("-").str[0].str.strip()
+        .str.rstrip("Kk")   # RUTs con dígito verificador 'k' sin guión (ej: 15913282k)
     )
 
 def find_col(df, *keywords):
@@ -216,6 +229,69 @@ COLS_FINAL = [
 ]
 out = merged[[c for c in COLS_FINAL if c in merged.columns]].copy()
 
+# ── SOLO_FORMACION: Taller 2025 + Proyectos de Investigación ─────────────────
+# Docentes que participaron en formación pero NO están en NOMINA ni DOTACION.
+# Tienen perfil parcial: nombre, sexo, jerarquía, facultad y contrato.
+
+CONT_MAP = {
+    "JORNADA": "JORNADA", "HONORARIO": "HONORARIO", "HONORARIOS": "HONORARIO"
+}
+
+ruts_ya_en_base = set(out["rut_key"].dropna())
+filas_form = []
+
+# Taller 2025
+tall = pd.read_excel(RAW / "CERTIFICACION OFERTA FORMATIVA 2025.xlsx", dtype=str)
+tall["rut_key"] = strip_dv(tall["RUT"])
+tall_nuevos = tall[~tall["rut_key"].isin(ruts_ya_en_base)].copy()
+tall_nuevos = tall_nuevos.drop_duplicates(subset="rut_key", keep="first")
+print(f"TALLER 2025    : {len(tall)} filas → {tall['rut_key'].nunique()} RUTs únicos → {len(tall_nuevos)} nuevos")
+
+for _, r in tall_nuevos.iterrows():
+    nombre = " ".join(filter(None, [
+        str(r.get("Nombre","")).strip(),
+        str(r.get("1er Apellido","")).strip(),
+        str(r.get("2do Apellido","")).strip()
+    ]))
+    filas_form.append({
+        "rut_key":          r["rut_key"],
+        "origen":           "SOLO_FORMACION",
+        "tipo_contrato_tag": CONT_MAP.get(str(r.get("Contrato","")).strip().upper(), "DESCONOCIDO"),
+        "nombre":           nombre,
+        "sexo":             str(r.get("Sexo","")).strip().upper() or None,
+        "jerarquia":        str(r.get("Jerarquía","")).strip() or None,
+        "unidad_facultad":  str(r.get("Facultad","")).strip() or None,
+        "area_carrera":     str(r.get("Carrera","")).strip() or None,
+    })
+
+# Proyectos de Investigación
+proy = pd.read_csv(RAW / "CONSOLIDADO DOCENTES 3-05-2026.xlsx - PROYECTOS DE INVESTIGACION.csv", dtype=str)
+proy["rut_key"] = strip_dv(proy["RUT"])
+proy_nuevos = proy[~proy["rut_key"].isin(ruts_ya_en_base | {r["rut_key"] for r in filas_form})].copy()
+proy_nuevos = proy_nuevos.drop_duplicates(subset="rut_key", keep="first")
+print(f"PROYECTOS I+D  : {len(proy)} filas → {proy['rut_key'].nunique()} RUTs únicos → {len(proy_nuevos)} nuevos")
+
+for _, r in proy_nuevos.iterrows():
+    filas_form.append({
+        "rut_key":          r["rut_key"],
+        "origen":           "SOLO_FORMACION",
+        "tipo_contrato_tag": CONT_MAP.get(str(r.get("Tipo de contrato","")).strip().upper(), "DESCONOCIDO"),
+        "nombre":           str(r.get("NOMBRE DOCENTE","")).strip() or None,
+        "jerarquia":        str(r.get("Jerarquía","")).strip() or None,
+        "unidad_facultad":  str(r.get("Facultad","")).strip() or None,
+        "area_carrera":     str(r.get("Carrera","")).strip() or None,
+    })
+
+if filas_form:
+    df_form = pd.DataFrame(filas_form)
+    df_form["sexo"] = df_form.get("sexo", pd.NA)
+    descon_form = (df_form["tipo_contrato_tag"] == "DESCONOCIDO").sum()
+    if descon_form:
+        print(f"\nAVISO SOLO_FORMACION: {descon_form} con tipo_contrato_tag=DESCONOCIDO")
+        print(df_form[df_form["tipo_contrato_tag"] == "DESCONOCIDO"][["rut_key","nombre"]])
+    out = pd.concat([out, df_form], ignore_index=True, sort=False)
+    print(f"\nSOLO_FORMACION incorporados: {len(df_form)} docentes")
+
 # ── Guardar CSV ───────────────────────────────────────────────────────────────
 os.makedirs(C00_BASE, exist_ok=True)
 csv_path = os.path.join(C00_BASE, "nomina_x_dotacion.csv")
@@ -242,3 +318,7 @@ for col in ["sexo","unidad_facultad","nivel_formacion","antiguedad_anios","edad_
         pct = n / len(out) * 100
         bar = "█" * int(pct / 5)
         print(f"  {col:<25}: {n:4d}/{len(out)}  {pct:5.1f}%  {bar}")
+
+print(f"\nNOTA: SOLO_FORMACION tiene perfil parcial (NULL en antigüedad, grado académico,")
+print(f"      fecha ingreso). Son docentes confirmados en actividades P3 no registrados")
+print(f"      en NOMINA ni DOTACION a la fecha del corte (mayo 2026).")
