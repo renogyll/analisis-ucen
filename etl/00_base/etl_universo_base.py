@@ -117,7 +117,8 @@ DOT_RENAME = {
     find_col(dot, "clasificaci"):              "clasificacion",
     find_col(dot, "jornada"):                  "jornada_dot",
     find_col(dot, "nacimiento"):               "fecha_nacimiento",
-    find_col(dot, "edad"):                     "edad_anios",
+    # "edad" es substring de "antigüedad", buscar columna que EMPIECE con "edad"
+    next((c for c in dot.columns if c.strip().lower().startswith("edad")), None): "edad_anios",
     find_col(dot, "jerarqu"):                  "jerarquia_dot",
     find_col(dot, "nivel", "formaci"):         "nivel_formacion",
     find_col(dot, "nombre", "grado"):          "nombre_grado",
