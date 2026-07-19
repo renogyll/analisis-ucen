@@ -203,6 +203,12 @@ doc918 = pd.read_csv(DOC918_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
 doc918["rut_key"] = doc918["rut_key"].str.strip()
 ruts_917 = set(doc918["rut_key"])
 
+base_df = pd.read_csv(os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv"), encoding="utf-8-sig")
+base_df["rut_key"] = base_df["rut_key"].astype(str).str.strip()
+form_df = pd.read_csv(os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv"),
+                      encoding="utf-8-sig").drop_duplicates("rut_key")
+form_df["rut_key"] = form_df["rut_key"].astype(str).str.strip()
+
 ruts_todos_formados = set(p3ev["rut_key"].astype(str).str.strip())   # 419 formados en 941
 N_NO_FORM = len(ruts_917 - ruts_todos_formados)
 
@@ -230,7 +236,7 @@ scat = pd.read_csv(SCAT_CSV, encoding="utf-8-sig")
 scat["formado"] = scat["formado"].astype(str).str.strip().str.upper().isin(
     ["TRUE", "1", "SI", "SÍ", "YES"])
 scat_ctrl_ruts = set(scat[~scat["formado"]]["rut_docente"].astype(str).str.strip().unique())
-ctrl_b3_doc = doc918[doc918["rut_key"].isin(scat_ctrl_ruts)].drop_duplicates("rut_key").copy()
+ctrl_b3_doc = base_df[base_df["rut_key"].isin(scat_ctrl_ruts)].drop_duplicates("rut_key").copy()
 ctrl_b3_doc["jerarquia_u"] = ctrl_b3_doc["jerarquia"].str.strip().str.upper()
 ctrl_b3_doc["tramo_g"]     = ctrl_b3_doc["tramo_edad"].map(TRAMOS_EDAD_RAW)
 N_B3_FORM = N197
@@ -241,8 +247,8 @@ sat["tramo_g"]     = sat["tramo_edad"].map(TRAMOS_EDAD_RAW)
 if has_edd and len(edd_form) > 0:
     edd_form_ruts = set(edd_form["rut_key"].unique())
     edd_ctrl_ruts = set(edd_ctrl["rut_key"].unique())
-    b4_form_doc = doc918[doc918["rut_key"].isin(edd_form_ruts)].drop_duplicates("rut_key").copy()
-    b4_ctrl_doc = doc918[doc918["rut_key"].isin(edd_ctrl_ruts)].drop_duplicates("rut_key").copy()
+    b4_form_doc = base_df[base_df["rut_key"].isin(edd_form_ruts)].drop_duplicates("rut_key").copy()
+    b4_ctrl_doc = base_df[base_df["rut_key"].isin(edd_ctrl_ruts)].drop_duplicates("rut_key").copy()
     b4_form_doc["jerarquia_u"] = b4_form_doc["jerarquia"].str.strip().str.upper()
     b4_form_doc["tramo_g"]     = b4_form_doc["tramo_edad"].map(TRAMOS_EDAD_RAW)
     b4_ctrl_doc["jerarquia_u"] = b4_ctrl_doc["jerarquia"].str.strip().str.upper()
@@ -1027,72 +1033,100 @@ def slide_15(prs):
     print("  ✓ slide 15 — Sep 2.1")
 
 def slide_16(prs):
-    """Jerarquía × Tipo — barras 100% apiladas. Solo jerarquías con n≥5."""
+    """Jerarquía × Tipo (composición 100%) + Tasa de participación sobre universo base."""
     JER_ORD_U = ["INSTRUCTOR REGULAR","INSTRUCTOR DOCENTE","ASISTENTE REGULAR","ASISTENTE DOCENTE",
                  "ASOCIADO REGULAR","ASOCIADO DOCENTE","TITULAR REGULAR","TITULAR DOCENTE"]
     TIPO_COLS2 = {"Taller":"#5C9BD6","Diplomado":"#FFB74D","Proyecto":"#80DEEA","Participación Mixta":"#CE93D8"}
+
+    # ── Panel izquierdo: composición 100% por tipo ────────────────────────────
     df = sat[sat["jerarquia"].notna() & sat["tipos_formacion"].notna()].copy()
     df["jer_u"] = df["jerarquia"].str.strip().str.upper()
     df["tipo_g"] = df["tipos_formacion"].str.strip().apply(_tipo_simple)
-    pivot = (df.groupby(["jer_u","tipo_g"])["rut_key"].count().unstack(fill_value=0))
+    pivot = df.groupby(["jer_u","tipo_g"])["rut_key"].count().unstack(fill_value=0)
     order = [j for j in JER_ORD_U if j in pivot.index]
     pivot = pivot.reindex([j for j in order if j in pivot.index])
     totales = pivot.sum(axis=1)
-    # separar jerarquías con n significativo (>=5) de las marginales
-    pivot_sig  = pivot[totales >= 5]
-    excl_n     = int(totales[totales < 5].sum())
-    jer_lbl    = [j.title() for j in pivot_sig.index.tolist()]
-    tipos      = [t for t in TIPO_COLS2 if t in pivot_sig.columns]  # orden fijo
+    pivot_sig = pivot[totales >= 5]
+    excl_n = int(totales[totales < 5].sum())
+    jer_key = pivot_sig.index.tolist()
+    jer_lbl = [j.title() for j in jer_key]
+    tipos = [t for t in TIPO_COLS2 if t in pivot_sig.columns]
     totales_sig = totales[pivot_sig.index]
-    # normalizar a 100%
     pivot_pct = pivot_sig[tipos].div(totales_sig, axis=0) * 100
 
+    # ── Panel derecho: tasa de participación (formados 419 / universo 1144) ───
+    uni_jer = base_df["jerarquia"].str.strip().str.upper().value_counts().rename("total")
+    frm_jer = form_df["jerarquia"].str.strip().str.upper().value_counts().rename("formados")
+    tasa_df = pd.concat([uni_jer, frm_jer], axis=1).fillna(0)
+    tasa_df["tasa"] = (tasa_df["formados"] / tasa_df["total"] * 100).clip(upper=100)
+    tasas = [float(tasa_df.loc[j, "tasa"]) if j in tasa_df.index else 0.0 for j in jer_key]
+    tasa_media = sum(tasas) / len(tasas) if tasas else 0
+
     fig = _tr_fig()
-    ax  = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
-    n   = len(jer_lbl); ya = np.arange(n)
+    lw = CHART_W * 0.62
+    rw = CHART_W * 0.29
+    gap = CHART_W * 0.06
+    n = len(jer_lbl); ya = np.arange(n)
+
+    # Eje izquierdo — composición
+    ax_l = fig.add_axes([CHART_X, CHART_Y, lw, CHART_H], facecolor="none", zorder=5)
     left = np.zeros(n)
     for tipo in tipos:
-        vals_pct = pivot_pct[tipo].values if tipo in pivot_pct else np.zeros(n)
-        vals_abs = pivot_sig[tipo].values if tipo in pivot_sig else np.zeros(n)
-        col = TIPO_COLS2.get(tipo, "#888888")
-        ax.barh(ya, vals_pct, left=left, height=0.62, color=col,
-                alpha=0.90, edgecolor="none", label=tipo)
-        for j, (vp, va) in enumerate(zip(vals_pct, vals_abs)):
-            if vp > 9 and va > 0:
-                ax.text(left[j] + vp / 2, j, str(int(va)),
-                        ha="center", va="center", fontsize=8.5, fontweight="bold", color="#0A0F18",
-                        path_effects=[pe.withStroke(linewidth=0.8, foreground="white")])
-        left = left + vals_pct
-    # total n al final de cada barra
-    for j, tot in enumerate(totales_sig.values):
-        ax.text(101.5, j, f"nº {int(tot)}", va="center", ha="left", fontsize=8.5, color="#AAAAAA")
-    ax.set_yticks(ya)
-    ax.set_yticklabels(jer_lbl, fontsize=9.5, color="white")
-    ax.set_xlim(0, 114); ax.set_xticks([0, 25, 50, 75, 100])
-    ax.set_xticklabels(["0%","25%","50%","75%","100%"], fontsize=9, color="#AAAAAA")
-    ax.tick_params(axis="y", length=0, pad=6)
-    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.25); sp.set_linewidth(0.8)
-    ax.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax.set_axisbelow(True)
-    ax.legend(fontsize=8.5, framealpha=0.22, labelcolor="white",
-              facecolor="#101820", edgecolor="#444",
-              loc="upper left", bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
+        vp = pivot_pct[tipo].values if tipo in pivot_pct.columns else np.zeros(n)
+        va = pivot_sig[tipo].values if tipo in pivot_sig.columns else np.zeros(n)
+        ax_l.barh(ya, vp, left=left, height=0.62, color=TIPO_COLS2[tipo], alpha=0.90, edgecolor="none", label=tipo)
+        for j, (p, a) in enumerate(zip(vp, va)):
+            if p > 9 and a > 0:
+                ax_l.text(left[j] + p/2, j, str(int(a)),
+                          ha="center", va="center", fontsize=8.5, fontweight="bold", color="#0A0F18",
+                          path_effects=[pe.withStroke(linewidth=0.8, foreground="white")])
+        left += vp
+    ax_l.set_yticks(ya); ax_l.set_yticklabels(jer_lbl, fontsize=9.5, color="white")
+    ax_l.set_xlim(0, 100); ax_l.set_xticks([0, 25, 50, 75, 100])
+    ax_l.set_xticklabels(["0%","25%","50%","75%","100%"], fontsize=9, color="#AAAAAA")
+    ax_l.tick_params(axis="y", length=0, pad=6)
+    for sp in ax_l.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.22); sp.set_linewidth(0.7)
+    ax_l.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax_l.set_axisbelow(True)
+    ax_l.set_title("Composición por tipo de formación  (100%)", color="#CCCCCC", fontsize=9.5, pad=5)
+    ax_l.legend(fontsize=8, framealpha=0.22, labelcolor="white", facecolor="#101820", edgecolor="#444",
+                loc="lower center", bbox_to_anchor=(0.42, -0.14), ncol=4, borderaxespad=0)
     if excl_n:
-        ax.text(0.01, -0.07, f"* {excl_n} participaciones en jerarquías con n<5 no se muestran.",
-                transform=ax.transAxes, fontsize=7.5, color="#777777", style="italic")
+        ax_l.text(0.01, -0.10, f"* {excl_n} en jerarquías con n<5 no se muestran.",
+                  transform=ax_l.transAxes, fontsize=7.5, color="#777777", style="italic")
+
+    # Eje derecho — tasa de participación
+    ax_r = fig.add_axes([CHART_X + lw + gap, CHART_Y, rw, CHART_H], facecolor="none", zorder=5)
+    cols_r = ["#52C97A" if t >= 60 else "#FFB74D" if t >= 35 else "#E57373" for t in tasas]
+    ax_r.barh(ya, tasas, height=0.62, color=cols_r, alpha=0.88, edgecolor="none")
+    for j, t in enumerate(tasas):
+        x_lbl = t + 1.5 if t < 85 else t - 1.5
+        ha = "left" if t < 85 else "right"
+        ax_r.text(x_lbl, j, f"{t:.0f}%", va="center", ha=ha, fontsize=10, fontweight="bold",
+                  color="white", path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
+    ax_r.axvline(x=tasa_media, color="#AAAAAA", linestyle="--", linewidth=0.9, alpha=0.55)
+    ax_r.text(tasa_media + 1, n - 0.2, f"media\n{tasa_media:.0f}%",
+              fontsize=7.5, color="#AAAAAA", va="top")
+    ax_r.set_xlim(0, 108); ax_r.set_xticks([0, 50, 100])
+    ax_r.set_xticklabels(["0%","50%","100%"], fontsize=9, color="#AAAAAA")
+    ax_r.set_yticks(ya); ax_r.set_yticklabels([])
+    ax_r.tick_params(axis="y", length=0)
+    for sp in ax_r.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.22); sp.set_linewidth(0.7)
+    ax_r.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax_r.set_axisbelow(True)
+    ax_r.set_title("Tasa de participación\n(formados 419 / universo 1.144)", color="#CCCCCC", fontsize=9.5, pad=5)
 
     _pic(sl := _new_sl(prs), SHARED_BG, prs); _pic(sl, _save_ch(fig, "17_chart.png"), prs)
-    _T(sl, "Participación por Jerarquía y Tipo de Formación")
+    _T(sl, "Participación por Jerarquía — Composición y Tasa Real")
     _POP(sl)
-    _CT(sl, f"Formados Aptos P3: composición 100% por jerarquía · n absoluto dentro de segmento · total n al margen")
+    _CT(sl, "Izq.: del total formado, ¿qué tipo eligió? (100% por jerarquía)  ·  Der.: de todos los docentes de esa jerarquía en la institución, ¿qué % participó en formación?")
     _BUL(sl, [
-        "Cada barra suman 100% de las participaciones de esa jerarquía — permite comparar composición "
-        "sin que el volumen de Talleres oculte el resto.",
-        "Los Talleres dominan en todas las jerarquías; los Diplomados y Proyectos tienen mayor peso relativo "
-        "en Asistente y Asociado.",
-        "El n total al margen derecho revela el volumen real: las jerarquías de rango medio concentran "
-        "la mayor participación absoluta entre los 210 Aptos P3.",
+        "La composición (izq.) muestra que los Talleres dominan en todas las jerarquías; "
+        "Diplomados y Proyectos tienen mayor peso relativo en Asistente y Asociado Docente.",
+        "La tasa (der.) corrige el sesgo de volumen: Instructor Docente tiene la mayor tasa de participación (45%), "
+        "seguido de Asociado Docente (41%) y Asistente Docente (37%) — no solo participan más por ser más.",
+        "Los rangos Titular muestran la tasa más baja (21%), indicando menor acceso o interés en formación "
+        "— área de oportunidad para la política institucional.",
     ])
-    print("  ✓ slide 16 — Jerarquía × Tipo (100% apilado)")
+    print("  ✓ slide 16 — Jerarquía × Tipo + Tasa (dual panel)")
 
 def slide_17(prs):
     """Antigüedad × Tipo — barras 100% apiladas verticales. Paleta más distinguible."""
@@ -2179,6 +2213,169 @@ def slide_tabla(prs):
     print("  ✓ slide — Tabla resumen grupos")
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Cruces por Facultad — Bloque II, III, IV
+# ─────────────────────────────────────────────────────────────────────────────
+def slide_fac_b2(prs):
+    """SAT z-score resultado × Facultad — Formados (aptos P3) vs Control."""
+    sf = sat[sat["z_resultado"].notna()].copy()
+    sf["fac"] = sf["unidad_facultad"].apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+    form_fac = (sf.groupby("fac")
+                .agg(z_form=("z_resultado","mean"), n_form=("rut_key","nunique"))
+                .reset_index())
+
+    ctrl_avg = (ctrl.groupby("rut_key")
+                .agg(z_avg=("z","mean"), fac_raw=("unidad_facultad","first"))
+                .reset_index())
+    ctrl_avg["fac"] = ctrl_avg["fac_raw"].apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+    ctrl_fac = (ctrl_avg.groupby("fac")
+                .agg(z_ctrl=("z_avg","mean"), n_ctrl=("rut_key","nunique"))
+                .reset_index())
+
+    comp = form_fac.merge(ctrl_fac, on="fac", how="inner")
+    comp = comp[comp["n_form"] >= 5].sort_values("z_form", ascending=True).reset_index(drop=True)
+
+    n = len(comp); ya = np.arange(n)
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    for i, row in comp.iterrows():
+        ax.plot([row["z_ctrl"], row["z_form"]], [i, i],
+                color="white", linewidth=1.8, alpha=0.25, zorder=2)
+    ax.scatter(comp["z_ctrl"], ya, color="#FFB74D", s=90, zorder=4, label="Control", alpha=0.90)
+    ax.scatter(comp["z_form"], ya, color="#5C9BD6", s=90, zorder=4, label="Formados Aptos P3", alpha=0.90)
+    for i, row in comp.iterrows():
+        ax.text(row["z_form"] + 0.012, i + 0.18, f"{row['z_form']:+.2f} (nº {row['n_form']})",
+                ha="left", va="bottom", fontsize=8, color="#5C9BD6",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+        ax.text(row["z_ctrl"] - 0.012, i - 0.18, f"{row['z_ctrl']:+.2f} (nº {int(row['n_ctrl'])})",
+                ha="right", va="top", fontsize=8, color="#FFB74D",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+    ax.axvline(x=0, color="white", linewidth=0.8, alpha=0.25, linestyle="--")
+    ax.set_yticks(ya); ax.set_yticklabels(comp["fac"], fontsize=9.5, color="white")
+    ax.tick_params(axis="y", length=0, pad=6)
+    ax.set_xlabel("SAT z-score promedio", color="#AAAAAA", fontsize=9)
+    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+    ax.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax.set_axisbelow(True)
+    ax.legend(fontsize=9, framealpha=0.22, labelcolor="white", facecolor="#101820",
+              edgecolor="#444", loc="lower right", borderaxespad=0.5)
+
+    _pic(sl := _new_sl(prs), SHARED_BG, prs); _pic(sl, _save_ch(fig, "fac_b2_chart.png"), prs)
+    _T(sl, "SAT z-score por Facultad — Formados vs Control")
+    _POP(sl, POP_CTR)
+    _CT(sl, "z-score resultado (Formados Aptos P3)  vs  z promedio histórico (Control sin formación)  ·  por Unidad/Facultad")
+    _BUL(sl, [
+        "Dumbbell por facultad: punto azul = SAT z-score post-formación (aptos P3) · "
+        "punto naranja = SAT z-score promedio del grupo control.",
+        "La línea punteada (z = 0) representa la media poblacional — valores positivos indican "
+        "desempeño sobre la media institucional.",
+        "Las facultades con mayor brecha azul-naranja muestran mayor diferencial de evaluación docente "
+        "asociado a la participación en formación.",
+    ])
+    print("  ✓ slide fac_b2 — SAT z × Facultad (formados vs control)")
+
+
+def slide_fac_b3(prs):
+    """Rendimiento Académico × Facultad — Formados vs Control."""
+    base_fac = base_df[["rut_key","unidad_facultad"]].copy()
+    sc = scat.copy()
+    sc["rut_docente"] = sc["rut_docente"].astype(str).str.strip()
+    sc = sc.merge(base_fac.rename(columns={"rut_key":"rut_docente"}), on="rut_docente", how="left")
+    sc["fac"] = sc["unidad_facultad"].apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+
+    form_fac = (sc[sc["formado"]].groupby("fac")
+                .agg(rend=("pct_aprobacion","mean"), n=("rut_docente","nunique")).reset_index())
+    ctrl_fac = (sc[~sc["formado"]].groupby("fac")
+                .agg(rend=("pct_aprobacion","mean"), n=("rut_docente","nunique")).reset_index())
+
+    comp = form_fac.merge(ctrl_fac, on="fac", suffixes=("_f","_c"), how="inner")
+    comp = comp[(comp["n_f"] >= 5) & (comp["n_c"] >= 5)].sort_values("rend_f", ascending=True).reset_index(drop=True)
+
+    n = len(comp); ya = np.arange(n)
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    h = 0.30
+    ax.barh(ya + h/2, comp["rend_f"], height=h, color="#5C9BD6", alpha=0.90, label="Formados", edgecolor="none")
+    ax.barh(ya - h/2, comp["rend_c"], height=h, color="#FFB74D", alpha=0.90, label="Control", edgecolor="none")
+    for i, row in comp.iterrows():
+        ax.text(row["rend_f"] + 0.4, i + h/2, f"{row['rend_f']:.1f}%  (nº {int(row['n_f'])})",
+                va="center", ha="left", fontsize=8, color="#5C9BD6",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+        ax.text(row["rend_c"] + 0.4, i - h/2, f"{row['rend_c']:.1f}%  (nº {int(row['n_c'])})",
+                va="center", ha="left", fontsize=8, color="#FFB74D",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+    ax.set_yticks(ya); ax.set_yticklabels(comp["fac"], fontsize=9.5, color="white")
+    ax.tick_params(axis="y", length=0, pad=6)
+    ax.set_xlabel("% Rendimiento Académico promedio de alumnos", color="#AAAAAA", fontsize=9)
+    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+    ax.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax.set_axisbelow(True)
+    ax.legend(fontsize=9, framealpha=0.22, labelcolor="white", facecolor="#101820",
+              edgecolor="#444", loc="lower right", borderaxespad=0.5)
+
+    _pic(sl := _new_sl(prs), SHARED_BG, prs); _pic(sl, _save_ch(fig, "fac_b3_chart.png"), prs)
+    _T(sl, "Rendimiento Académico por Facultad — Formados vs Control")
+    _POP(sl, POP_CTR)
+    _CT(sl, "% Rendimiento Académico promedio de alumnos · por Unidad/Facultad del docente · formados vs control")
+    _BUL(sl, [
+        "En la mayoría de facultades los cursos de docentes formados muestran mayor rendimiento académico "
+        "que los cursos del grupo control.",
+        "Las diferencias más pronunciadas en facultades con mayor masa crítica de formados "
+        "sugieren un efecto acumulativo de la política formativa.",
+    ])
+    print("  ✓ slide fac_b3 — Rendimiento Académico × Facultad (formados vs control)")
+
+
+def slide_fac_b4(prs):
+    """EDD × Facultad — Formados vs Control."""
+    if not has_edd or len(edd_form) == 0:
+        print("  ✗ slide fac_b4 — sin datos EDD, omitida")
+        return
+    fac_map = doc918.drop_duplicates("rut_key").set_index("rut_key")["unidad_facultad"].to_dict()
+    ef = edd_form.copy()
+    ef["fac"] = ef["rut_key"].map(fac_map).apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+    ec = edd_ctrl.copy()
+    ec["fac"] = ec["rut_key"].map(fac_map).apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+
+    form_fac = (ef.groupby("fac").agg(edd=("edd_total","mean"), n=("rut_key","nunique")).reset_index())
+    ctrl_fac = (ec.groupby("fac").agg(edd=("edd_total","mean"), n=("rut_key","nunique")).reset_index())
+
+    comp = form_fac.merge(ctrl_fac, on="fac", suffixes=("_f","_c"), how="inner")
+    comp = comp[(comp["n_f"] >= 3) & (comp["n_c"] >= 3)].sort_values("edd_f", ascending=True).reset_index(drop=True)
+    if len(comp) == 0:
+        print("  ✗ slide fac_b4 — sin facultades con n≥3, omitida")
+        return
+
+    n = len(comp); ya = np.arange(n)
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    h = 0.30
+    ax.barh(ya + h/2, comp["edd_f"], height=h, color="#5C9BD6", alpha=0.90, label="Formados", edgecolor="none")
+    ax.barh(ya - h/2, comp["edd_c"], height=h, color="#FFB74D", alpha=0.90, label="Control", edgecolor="none")
+    for i, row in comp.iterrows():
+        for val, dy, col, nv in [(row["edd_f"], h/2, "#5C9BD6", int(row["n_f"])),
+                                  (row["edd_c"], -h/2, "#FFB74D", int(row["n_c"]))]:
+            ax.text(val + 0.002, i + dy, f"{val:.3f}  (nº {nv})",
+                    va="center", ha="left", fontsize=8, color=col,
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+    ax.set_yticks(ya); ax.set_yticklabels(comp["fac"], fontsize=9.5, color="white")
+    ax.tick_params(axis="y", length=0, pad=6)
+    ax.set_xlabel("EDD Total Promedio", color="#AAAAAA", fontsize=9)
+    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+    ax.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax.set_axisbelow(True)
+    ax.legend(fontsize=9, framealpha=0.22, labelcolor="white", facecolor="#101820",
+              edgecolor="#444", loc="lower right", borderaxespad=0.5)
+
+    _pic(sl := _new_sl(prs), SHARED_BG, prs); _pic(sl, _save_ch(fig, "fac_b4_chart.png"), prs)
+    _T(sl, "EDD por Facultad — Formados vs Control")
+    _POP(sl, POP_CTR)
+    _CT(sl, "EDD Total Promedio · por Unidad/Facultad del docente · formados vs control")
+    _BUL(sl, [
+        "Comparación de evaluación de desempeño docente (EDD) por facultad entre formados y grupo control.",
+        "Las diferencias entre unidades reflejan el efecto de la formación dentro del contexto "
+        "institucional propio de cada facultad.",
+    ])
+    print("  ✓ slide fac_b4 — EDD × Facultad (formados vs control)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Slide 3 — Embudo 1144→419→210 (izq) + Distribución JORNADA/HONORARIO (der)
 # ─────────────────────────────────────────────────────────────────────────────
 def slide_nuevo_02(prs):
@@ -2207,24 +2404,21 @@ def slide_nuevo_02(prs):
     fig = _tr_fig()
 
     # ── PANEL IZQUIERDO: Embudo 1144 → 419 → 210 ────────────────────────────
-    ew = PIC_RECT[2] * 0.42
+    ew = PIC_RECT[2] * 0.46
     ex = PIC_RECT[0] + 0.01
-    ey = PIC_RECT[1] + PIC_RECT[3] * 0.02
-    eh = PIC_RECT[3] * 0.93
+    ey = PIC_RECT[1] + PIC_RECT[3] * 0.08
+    eh = PIC_RECT[3] * 0.85
     ax_e = fig.add_axes([ex, ey, ew, eh], facecolor="none", zorder=5)
     ax_e.set_xlim(0, 10); ax_e.set_ylim(0, 10); ax_e.axis("off")
 
     steps = [
-        (8.5, 6.8, "1.144", "Universo base",
-         "Honorarios y Jornada UCEN", "#3D6FA4"),
-        (6.5, 4.8, "419",   "37%  de 1.144",
-         "Participaron en ≥1 iniciativa de formación", "#4B9CD3"),
-        (4.8, 2.8, "210",   "50%  de 419",
-         "Aptos P3: SAT disponible en baseline y resultado", "#52C97A"),
+        (9.0, 7.2, "1.144", "Universo base  ·  Jornada + Honorario", "#3D6FA4"),
+        (7.0, 5.2, "419",   "37% de 1.144  ·  ≥1 iniciativa de formación", "#4B9CD3"),
+        (5.2, 3.2, "210",   "50% de 419  ·  Aptos P3 con SAT válido", "#52C97A"),
     ]
     tops = [9.65, 6.80, 3.95]
     hh   = 2.50
-    for (tw, bw, n, pct_lbl, desc, col), top in zip(steps, tops):
+    for (tw, bw, n, desc, col), top in zip(steps, tops):
         bot = top - hh
         pts = np.array([[5-tw/2, top], [5+tw/2, top],
                         [5+bw/2, bot], [5-bw/2, bot]])
@@ -2232,31 +2426,24 @@ def slide_nuevo_02(prs):
         ax_e.plot(np.append(pts[:,0], pts[0,0]),
                   np.append(pts[:,1], pts[0,1]),
                   color="white", linewidth=0.7, alpha=0.40, zorder=3)
-        ax_e.text(5, top - hh*0.38, n,
-                  ha="center", va="center", fontsize=26, fontweight="bold",
+        ax_e.text(5, top - hh*0.33, n,
+                  ha="center", va="center", fontsize=28, fontweight="bold",
                   color="white", zorder=4,
                   path_effects=[pe.withStroke(linewidth=3, foreground="#0A0F18")])
-        ax_e.text(5, top - hh*0.62, pct_lbl,
-                  ha="center", va="center", fontsize=8,
-                  color="#D8F0D8", fontweight="bold", zorder=4)
-        rx = 5 + tw/2 + 0.25
-        ax_e.text(rx, top - hh*0.44, desc,
-                  ha="left", va="center", fontsize=8.5, color="white", zorder=4)
-        ax_e.plot([5+tw/2+0.04, rx-0.06], [top-hh*0.44, top-hh*0.44],
-                  "-", color="white", linewidth=0.5, alpha=0.35, zorder=3)
-    for ax_x, ay, label in [(4.65, 7.05, "1.144  →  419  = 37%"),
-                             (3.80, 4.20, "419  →  210  = 50%")]:
-        ax_e.annotate("", xy=(ax_x-0.1, ay-0.35), xytext=(ax_x-0.1, ay+0.35),
-                      arrowprops=dict(arrowstyle="->", color="#FFD580", lw=1.2), zorder=5)
-        ax_e.text(ax_x-0.55, ay, label,
-                  ha="right", va="center", fontsize=7.5,
-                  color="#FFD580", fontstyle="italic", zorder=5)
+        ax_e.text(5, top - hh*0.65, desc,
+                  ha="center", va="center", fontsize=8, color="#E0F0E0",
+                  fontweight="bold", zorder=4)
+    for ay, label in [(7.05, "37%"), (4.20, "50%")]:
+        ax_e.annotate("", xy=(5, ay-0.30), xytext=(5, ay+0.30),
+                      arrowprops=dict(arrowstyle="->", color="#FFD580", lw=1.5), zorder=5)
+        ax_e.text(5.5, ay, label, ha="left", va="center", fontsize=9,
+                  color="#FFD580", fontstyle="italic", fontweight="bold", zorder=5)
 
     # ── PANEL DERECHO: Distribución JORNADA / HONORARIO ──────────────────────
-    dx = PIC_RECT[0] + ew + 0.05
-    dw = PIC_RECT[2] - ew - 0.07
-    dy = PIC_RECT[1] + 0.04
-    dh = PIC_RECT[3] - 0.08
+    dx = PIC_RECT[0] + ew + 0.08
+    dw = PIC_RECT[2] - ew - 0.11
+    dy = PIC_RECT[1] + 0.10
+    dh = PIC_RECT[3] - 0.14
     ax_d = fig.add_axes([dx, dy, dw, dh], facecolor="none", zorder=5)
     ax_d.axis("off")
 
@@ -2323,7 +2510,7 @@ def slide_nuevo_02(prs):
 # Ensamblar PPTX
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("Generando PRESENTACION_210_P3_v4.pptx (35 slides) …")
+    print("Generando PRESENTACION_210_P3_v4.pptx (37 slides) …")
     _ensure_bg()
     prs = Presentation()
     prs.slide_width  = Emu(SW_EMU)
@@ -2346,34 +2533,36 @@ if __name__ == "__main__":
     slide_11(prs)                  # 11 Sep BLOQUE II
     slide_12(prs)                  # 12 Venn tipos formación
     slide_13(prs)                  # 13 Universo SAT P3
-    slide_14(prs)           # 14 Embudo 917→357→197 (compacto)
+    # slide_14(prs)          # eliminado — Embudo compacto (cubierto por slide_nuevo_02)
     slide_15(prs)                  # 15 Sep 2.1 Caracterización
     slide_16(prs)                  # 16 Participación × Jerarquía
     slide_17(prs)                  # 17 Participación × Antigüedad
     slide_18(prs)                  # 18 Intensidad participación
     slide_19(prs)                  # 19 Combinaciones modalidad
     slide_20(prs)                  # 20 Perfil grupo control
-    slide_21(prs)                  # 21 SAT z formados vs control (6 períodos)
-    # slide_22(prs)               # eliminado — SAT z por facultad
+    slide_21(prs)                  # SAT z formados vs control (6 períodos)
+    slide_fac_b2(prs)              # SAT z × Facultad (formados vs control)
 
     # BLOQUE III — Rendimiento Académico de Alumnos
-    slide_23(prs)                  # 23 Sep BLOQUE III
+    slide_23(prs)                  # Sep BLOQUE III
     # slide_embudo(prs)            # eliminado — Derivación grupos control
-    slide_perfil_b3(prs)           # 24 Perfil B3: formados vs control
-    slide_24(prs)                  # 26 Scatter SAT vs Nota (3 paneles)
-    slide_25(prs)                  # 27 Aprobación global formados vs control
-    slide_26(prs)                  # 28 Evolución aprobación × período
-    slide_27(prs)                  # 29 Aprobación × Antigüedad
-    slide_28(prs)                  # 30 Aprobación × Jerarquía
-    slide_29(prs)                  # 31 Efecto acumulativo × instancias
+    slide_perfil_b3(prs)           # Perfil B3: formados vs control
+    slide_24(prs)                  # Scatter SAT vs Nota (3 paneles)
+    slide_25(prs)                  # Rendimiento global formados vs control
+    slide_26(prs)                  # Evolución Rendimiento × período
+    slide_27(prs)                  # Rendimiento × Antigüedad
+    slide_28(prs)                  # Rendimiento × Jerarquía
+    slide_29(prs)                  # Efecto acumulativo × instancias
+    slide_fac_b3(prs)              # Rendimiento Académico × Facultad (formados vs control)
 
     # BLOQUE IV — EDD
-    slide_30(prs)                  # 32 Sep BLOQUE IV
-    slide_perfil_b4(prs)           # 33 Perfil B4: formados vs control EDD
-    slide_31(prs)                  # 34 Evolución EDD formados vs control
-    slide_32(prs)                  # 35 EDD por tipo de formación
+    slide_30(prs)                  # Sep BLOQUE IV
+    slide_perfil_b4(prs)           # Perfil B4: formados vs control EDD
+    slide_31(prs)                  # Evolución EDD formados vs control
+    slide_32(prs)                  # EDD por tipo de formación
+    slide_fac_b4(prs)              # EDD × Facultad (formados vs control)
     # slide_tabla(prs)             # eliminado — Tabla resumen fuentes y grupos
-    slide_33(prs)                  # 35 Conclusiones y Recomendaciones
+    slide_33(prs)                  # Conclusiones y Recomendaciones
 
     prs.save(OUT_PPTX)
     print(f"\n✓ Guardado: {OUT_PPTX}")
