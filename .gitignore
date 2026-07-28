@@ -1,9 +1,19 @@
 # ── Datos (pesados, entregados por contraparte o generados por ETL) ───────────
 data/raw/
 data/cascade/
+data/*.csv
+
+# ── Archivos grandes en archive (CSVs procesados pesados) ─────────────────────
+archive/legacy_918/PROCESADO/*.csv
+archive/legacy_918/NOTEBOOKS/*.pptx
 
 # ── Outputs generados (reproducibles con los scripts) ─────────────────────────
 outputs/
+slides/**/dark_slides_v3/
+archive/**/dark_slides_v3/
+
+# ── PPTXs pesadas en la raíz ──────────────────────────────────────────────────
+PRESENTACION_800.pptx
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
