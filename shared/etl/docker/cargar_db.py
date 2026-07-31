@@ -41,12 +41,6 @@ TABLAS = [
     ("consolidados", "participacion_formacion",
      "P3_participacion_formacion_todos.csv", [], []),
 
-    ("consolidados", "consolidado_jefes",
-     "P1_consolidado_con_evaluacion_jefes.csv",
-     ["fecha_ingreso", "fecha_retiro", "fecha_nacimiento"],
-     ["antiguedad_anios", "edad_anios", "cumplimiento_cd",
-      "edd_total", "edd_director", "edd_docente", "porcentaje_concepto"]),
-
     # ── analisis ──────────────────────────────────────────────────────────────
     ("analisis", "docente_ambos", "docente_ambos.csv",
      ["fecha_ingreso", "fecha_retiro", "fecha_nacimiento"],

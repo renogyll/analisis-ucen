@@ -76,7 +76,6 @@ tablas_fk = [
     ("consolidados.evaluacion_periodo",      "rut_docente"),
     ("consolidados.calificacion_alumno",     "rut_docente"),
     ("consolidados.participacion_formacion", "rut_key"),
-    ("consolidados.consolidado_jefes",       "rut_key"),
     ("analisis.docente_ambos",               "rut_key"),
     ("analisis.p3_grupo_tratamiento",        "rut_key"),
     ("intel.pre_during_post_sat",            "rut_key"),

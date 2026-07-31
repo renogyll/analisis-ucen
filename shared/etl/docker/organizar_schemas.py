@@ -18,7 +18,6 @@ SCHEMAS = {
         "evaluacion_respuesta",
         "calificacion_alumno",
         "participacion_formacion",
-        "consolidado_jefes",
     ],
     "analisis": [
         "docente_ambos",

@@ -21,6 +21,7 @@ Actualización 2026-07-18:
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os
+import unicodedata
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -33,6 +34,33 @@ from config import DATA_RAW, C00_BASE
 RAW    = Path(DATA_RAW) / "consolidado_docentes"
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine = create_engine(DB_URL)
+
+# ── Normalización de jerarquía (2026-07-31) ────────────────────────────────────
+# Los docentes SOLO_FORMACION (Taller 2025 + Proyectos I+D) traen "Jerarquía" en
+# formato corto/inconsistente ("Asistente", "Instructor/a", "Sin Jerarquía") a
+# diferencia del formato canónico de NOMINA/DOTACION ("ASISTENTE DOCENTE", etc.).
+# Las formas cortas que no distinguen DOCENTE/REGULAR se asumen DOCENTE (decisión
+# 2026-07-31: es la categoría ampliamente mayoritaria en todo el dataset).
+_JERARQUIA_CORTAS = {
+    "ASISTENTE":   "ASISTENTE DOCENTE",
+    "INSTRUCTOR/A": "INSTRUCTOR DOCENTE",
+    "ASOCIADO/A":  "ASOCIADO DOCENTE",
+    "TITULAR":     "TITULAR DOCENTE",
+}
+
+def _sin_acentos(s):
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+def normalizar_jerarquia(val):
+    if val is None:
+        return None
+    v = str(val).strip()
+    if not v:
+        return None
+    vu = v.upper()
+    if _sin_acentos(vu) == "SIN JERARQUIA":
+        return "SIN JERARQUÍA"
+    return _JERARQUIA_CORTAS.get(vu, vu)
 
 # ── Mapeo CARGO → tipo_contrato_tag para los 27 SOLO_DOTACION ─────────────────
 # Fuente: etl/00_base/solo_dotacion_28tageables.csv (revisión manual)
@@ -260,7 +288,7 @@ for _, r in tall_nuevos.iterrows():
         "tipo_contrato_tag": CONT_MAP.get(str(r.get("Contrato","")).strip().upper(), "DESCONOCIDO"),
         "nombre":           nombre,
         "sexo":             str(r.get("Sexo","")).strip().upper() or None,
-        "jerarquia":        str(r.get("Jerarquía","")).strip() or None,
+        "jerarquia":        normalizar_jerarquia(r.get("Jerarquía")),
         "unidad_facultad":  str(r.get("Facultad","")).strip() or None,
         "area_carrera":     str(r.get("Carrera","")).strip() or None,
     })
@@ -278,7 +306,7 @@ for _, r in proy_nuevos.iterrows():
         "origen":           "SOLO_FORMACION",
         "tipo_contrato_tag": CONT_MAP.get(str(r.get("Tipo de contrato","")).strip().upper(), "DESCONOCIDO"),
         "nombre":           str(r.get("NOMBRE DOCENTE","")).strip() or None,
-        "jerarquia":        str(r.get("Jerarquía","")).strip() or None,
+        "jerarquia":        normalizar_jerarquia(r.get("Jerarquía")),
         "unidad_facultad":  str(r.get("Facultad","")).strip() or None,
         "area_carrera":     str(r.get("Carrera","")).strip() or None,
     })

@@ -2048,7 +2048,7 @@ def slide_30(prs):
     """Separador BLOQUE IV — EDD."""
     _ensure_bg(); sl = _new_sl(prs); _pic(sl, SHARED_BG, prs)
     _T(sl, "BLOQUE IV — Evaluación de Desempeño Docente (EDD)", fs=18)
-    _POP(sl, "Fuente: P1_consolidado_con_evaluacion_jefes.csv  ·  formados vs control  ·  2022–2025")
+    _POP(sl, "Fuente: evaluacion_jefes.csv  ·  formados vs control  ·  2022–2025")
     items = [
         "•   Diapo 37:  Evolución EDD — Formados vs Control  (2022–2025)",
         "•   Diapo 38:  EDD por Tipo de Formación  (Oferta formativa / Diplomado / Proyecto vs Control)",

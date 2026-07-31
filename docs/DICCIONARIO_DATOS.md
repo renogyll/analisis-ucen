@@ -167,27 +167,12 @@ Registro de participación docente en actividades de formación 2022-2025.
 
 ---
 
-### `consolidados.consolidado_jefes`
-Perfil completo del docente cruzado con evaluación de jefes directos por año.  
-**Fuentes:** `consolidados.docente` (fuente=NOMINA o NOMINA_DOTACION) + `EVALUACION DE JEFES A DOCENTES .csv`
-
-| Columna | Tipo | Tabla origen | Columna origen | Descripción |
-|---|---|---|---|---|
-| *(cols 1-28)* | — | consolidados.docente | — | Todas las columnas de docente (perfil completo). Ver tabla docente. |
-| `anio_evaluacion` | TEXT | EVALUACION JEFES | `PERIODO` | Año de la evaluación de jefe (2022-2025). NULL = docente sin evaluación. |
-| `tiene_eval_jefe` | TEXT | ETL | — | "SI" / "NO" — indica si esa fila tiene evaluación de jefe. |
-| `concepto` | TEXT | EVALUACION JEFES | `CONCEPTO` | Concepto cualitativo: Muy Bueno, Bueno, Insuficiente, Deficiente. |
-| `porcentaje_concepto` | FLOAT | EVALUACION JEFES | `PORCENTAJE CONCEPTO` | Porcentaje asociado al concepto. |
-| `cumplimiento_cd` | FLOAT | EVALUACION JEFES | `CUMPLIMIENTO CD` | Porcentaje de cumplimiento de compromisos de desempeño. |
-| `edd_total` | FLOAT | EVALUACION JEFES | `EDD` | Puntaje total de evaluación de desempeño docente. |
-| `edd_director` | FLOAT | EVALUACION JEFES | `EDD Director` | Componente director del EDD. |
-| `edd_docente` | FLOAT | EVALUACION JEFES | `EDD Docente` | Componente docente del EDD. |
-| `activo_ucen` | TEXT | EVALUACION JEFES | `ACTIVO EN UCEN` | Indica si el docente estaba activo al momento de la evaluación. |
-| `facultad_jefe` | TEXT | EVALUACION JEFES | `FACULTAD` | Facultad registrada en la evaluación de jefes. |
-| `carrera_jefe` | TEXT | EVALUACION JEFES | `CARRERA` | Carrera registrada en la evaluación de jefes. |
-| `sede_jefe` | TEXT | EVALUACION JEFES | `SEDE` | Sede registrada en la evaluación de jefes. |
-| `observacion_jefe` | TEXT | EVALUACION JEFES | `OBSERVACIÓN` | Texto cualitativo libre del director sobre el docente. |
-| `cod_observacion` | TEXT | EVALUACION JEFES | `COD_OBSERVACION` | Código de la observación cualitativa. |
+> **`consolidados.consolidado_jefes` — eliminada (2026-07-31).** Era una fusión congelada de
+> `consolidados.docente` + `evaluacion_jefes` cargada desde un CSV externo
+> (`P1_consolidado_con_evaluacion_jefes.csv`) sin ningún script activo que la regenerara —
+> quedaba cada vez más desalineada respecto a `consolidados.evaluacion_jefes` (la fuente viva).
+> Para el mismo cruce (perfil + EDD), usar `analisis.universo_base` LEFT JOIN
+> `consolidados.evaluacion_jefes` por `rut_key`.
 
 ---
 
@@ -250,7 +235,7 @@ Resumen ejecutivo de participación en formación por tipo y año.
 ### `analisis.p3_grupo_tratamiento`
 Una fila por docente × evento de formación para los 520 AMBOS con participación registrada.  
 Incluye períodos baseline/resultado calculados y flags de aptitud para análisis P3.  
-**Fuente:** ETL — cruza `analisis.docente_ambos` + `participacion_formacion` + `evaluacion_periodo` + `consolidado_jefes`.
+**Fuente:** ETL — cruza `analisis.docente_ambos` + `participacion_formacion` + `evaluacion_periodo` + `evaluacion_jefes`.
 
 | Columna | Tipo | Tabla origen | Columna origen | Descripción |
 |---|---|---|---|---|

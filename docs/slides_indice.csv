@@ -22,7 +22,7 @@ Slide,Nombre gráfica,Descripción,CSV,CSV madre
 21,SAT z-score: Formados vs Control (6 períodos),Líneas temporales z-score formados (azul) vs control (amarillo) 2023–2025,p3_sat_zscore_918.csv; control_918.csv,evaluacion_periodo.csv; participacion_formacion.csv
 22,SAT z-score por Facultad (dumbbell),Dumbbell plot: punto baseline → punto resultado + línea Δ por facultad,p3_sat_zscore_918.csv,evaluacion_periodo.csv; participacion_formacion.csv
 23,Separador Bloque III,Divisor visual — BLOQUE III: Aprobación de Alumnos,,
-24,Derivación Grupos de Control,Embudo árbol que explica cómo se define el control en cada bloque,docente_918.csv; p3_918.csv; scatter_sat_notas.csv; P1_consolidado_con_evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; calificacion_alumno.csv; evaluacion_periodo.csv
+24,Derivación Grupos de Control,Embudo árbol que explica cómo se define el control en cada bloque,docente_918.csv; p3_918.csv; scatter_sat_notas.csv; evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; calificacion_alumno.csv; evaluacion_periodo.csv
 25,Perfil B3: Formados vs Control (Aprobación),Gráficos butterfly pareados: jerarquía + tramo edad — formados vs control B3,p3_sat_zscore_918.csv; scatter_sat_notas.csv; docente_918.csv,evaluacion_periodo.csv; participacion_formacion.csv; calificacion_alumno.csv
 26,Scatter SAT vs Nota (3 paneles),Dispersión SAT vs nota promedio alumno por período (2023-01 / 2024-01 / 2025-01),scatter_sat_notas.csv,calificacion_alumno.csv; evaluacion_periodo.csv; participacion_formacion.csv
 27,Aprobación Global Formados vs Control,Barras comparativas: % aprobación y nota promedio global por grupo,scatter_sat_notas.csv,calificacion_alumno.csv; evaluacion_periodo.csv
@@ -31,8 +31,8 @@ Slide,Nombre gráfica,Descripción,CSV,CSV madre
 30,Aprobación por Jerarquía,Barras por jerarquía académica: % aprobación formados vs control,scatter_sat_notas.csv; docente_918.csv,calificacion_alumno.csv; evaluacion_periodo.csv; CONSOLIDADO DOCENTES.xlsx
 31,Efecto Acumulativo por Instancias,Barras por número de instancias P3: mayor participación → mayor aprobación,scatter_sat_notas.csv; p3_918.csv,calificacion_alumno.csv; evaluacion_periodo.csv; participacion_formacion.csv
 32,Separador Bloque IV,Divisor visual — BLOQUE IV: Evaluación de Desempeño (EDD),,
-33,Perfil B4: Formados vs Control (EDD),Gráficos butterfly pareados: jerarquía + tramo edad — formados vs control EDD,P1_consolidado_con_evaluacion_jefes.csv; docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
-34,Evolución EDD Formados vs Control,Líneas EDD promedio anual 2022–2025: formados (azul) vs control (amarillo),P1_consolidado_con_evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
-35,EDD por Tipo de Formación,Barras: EDD promedio por tipo (Taller/Diplomado/Proyecto/Mixto) vs línea control,P1_consolidado_con_evaluacion_jefes.csv; p3_sat_zscore_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES); participacion_formacion.csv
+33,Perfil B4: Formados vs Control (EDD),Gráficos butterfly pareados: jerarquía + tramo edad — formados vs control EDD,evaluacion_jefes.csv; docente_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
+34,Evolución EDD Formados vs Control,Líneas EDD promedio anual 2022–2025: formados (azul) vs control (amarillo),evaluacion_jefes.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES)
+35,EDD por Tipo de Formación,Barras: EDD promedio por tipo (Taller/Diplomado/Proyecto/Mixto) vs línea control,evaluacion_jefes.csv; p3_sat_zscore_918.csv,CONSOLIDADO DOCENTES.xlsx (hoja: EVALUACION DE JEFES A DOCENTES); participacion_formacion.csv
 36,Resumen Fuentes y Grupos,Tabla visual: grupos formados/control por bloque + fuente original + archivo derivado,Todos los CSV del proyecto,CONSOLIDADO DOCENTES.xlsx; participacion_formacion.csv; evaluacion_periodo.csv; calificacion_alumno.csv
 37,Conclusiones y Recomendaciones,4 cajas de texto: impacto SAT / Aprobación / EDD / Recomendaciones,,
