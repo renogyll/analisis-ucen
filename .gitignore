@@ -13,6 +13,12 @@ archive/legacy_918/NOTEBOOKS/*.pptx
 outputs/
 **/dark_slides_v3/
 
+# ── Caché de fondo/logo UCEN (shared/pptx_helpers.py) — igual en cada carpeta,
+#    se regenera desde assets/Fondotipop.pptx, no vale la pena versionarlo ─────
+**/_background.png
+**/_fondotipo_bg.jpg
+**/_fondotipo_logo.png
+
 # ── PPTXs pesadas en la raíz ──────────────────────────────────────────────────
 PRESENTACION_800.pptx
 

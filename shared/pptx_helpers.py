@@ -9,7 +9,7 @@ constantes de layout) — acá vive una sola vez.
 
 Uso típico (un script por sub-tema en products/<producto>/<carpeta>/<subtema>/):
 
-    import sys
+    import sys; sys.stdout.reconfigure(encoding="utf-8")  # evita UnicodeEncodeError en consola Windows
     from pathlib import Path
     ROOT = Path(__file__).resolve().parents[4]   # ajustar según profundidad real
     sys.path.insert(0, str(ROOT))
