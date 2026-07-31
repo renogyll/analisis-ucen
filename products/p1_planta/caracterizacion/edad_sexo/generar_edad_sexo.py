@@ -29,7 +29,10 @@ COL_HOMBRE = "#5C9BD6"   # mismo azul usado en P3 para "grupo 1"
 COL_MUJER  = "#FFB74D"   # mismo naranjo usado en P3 para "grupo 2"
 
 TRAMOS_ORD = ["<30", "30-34", "35-39", "40-44", "45-49",
-              "50-54", "55-59", "60-64", "65-69", "70+"]
+              "50-54", "55-59", "60-64", "65+"]
+# 60-64 queda como tramo propio; 65-69 + 70+ se agrupan en "65+"
+# (2026-08-01, pedido de la contraparte: restituir el corte en 65)
+TRAMO_MAP = {"65-69": "65+", "70+": "65+"}
 
 # ── Datos ───────────────────────────────────────────────────────────────────
 doc = pd.read_csv(Path(CASCADE) / "01_jornada" / "docentes_jornada.csv", encoding="utf-8-sig")
@@ -37,6 +40,7 @@ N_TOTAL = len(doc)
 
 con_datos = doc.dropna(subset=["sexo", "tramo_edad"]).copy()
 con_datos["sexo"] = con_datos["sexo"].str.strip().str.upper()
+con_datos["tramo_edad"] = con_datos["tramo_edad"].replace(TRAMO_MAP)
 N_CON_DATOS = len(con_datos)
 N_SIN_DATOS = N_TOTAL - N_CON_DATOS
 
@@ -63,15 +67,15 @@ sexo_mayor_en_brecha = "Mujeres" if tab.loc[tramo_mayor_brecha, "MUJER"] > tab.l
 kit = UcenSlideKit(out_dir=HERE)
 kit.ensure_bg()
 
-fig = kit.new_fig()
-ax = fig.add_axes(kit.chart_rect(pad=0.02), facecolor="none", zorder=5)
+fig = kit.new_chart_fig()
+ax = kit.chart_axes(fig)
 
 x = np.arange(len(TRAMOS_ORD))
 w = 0.38
 bars_h = ax.bar(x - w/2, tab["HOMBRE"], width=w, color=COL_HOMBRE, alpha=0.90,
-                 edgecolor="none", label=f"Hombre  (n={n_hombre})")
+                 edgecolor="none", label=f"Hombre  (N°={n_hombre})")
 bars_m = ax.bar(x + w/2, tab["MUJER"], width=w, color=COL_MUJER, alpha=0.90,
-                 edgecolor="none", label=f"Mujer  (n={n_mujer})")
+                 edgecolor="none", label=f"Mujer  (N°={n_mujer})")
 
 stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
 for bars, color in [(bars_h, COL_HOMBRE), (bars_m, COL_MUJER)]:
@@ -103,7 +107,7 @@ prs.slide_width, prs.slide_height = Emu(kit.SW_EMU), Emu(kit.SH_EMU)
 
 sl = kit.new_slide(prs)
 kit.pic(sl, prs, kit.SHARED_BG)
-kit.pic(sl, prs, chart_path)
+kit.pic_chart(sl, prs, chart_path)
 kit.title(sl, "Distribución por Sexo y Tramo de Edad — Docentes de Planta (Jornada)")
 kit.subtitulo(sl,
     f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con sexo y edad disponibles "

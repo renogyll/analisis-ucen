@@ -7,6 +7,15 @@ Reemplaza el bloque de ~100 líneas que cada script de P3 copiaba y pegaba
 individualmente (carga de Fondotipop.pptx, degradado, helpers de texto,
 constantes de layout) — acá vive una sola vez.
 
+CONVENCIONES (2026-08-01, pedido explícito de la contraparte) — aplican a
+todos los productos:
+  - Cualquier mención de un tamaño de muestra en leyendas, punteos o bajadas
+    se escribe "N°=", nunca "n=" — ej. `label=f"Hombre  (N°={n_hombre})"`.
+  - La bajada (`subtitulo()`) NO debe mencionar el nombre del archivo/CSV
+    fuente (ej. nada de "Fuente: docentes_jornada.csv") — es un detalle interno
+    de la generación, no aporta nada para la contraparte. Sí describir el
+    universo/población en palabras (ej. "Universo: 624 docentes Jornada").
+
 Uso típico (un script por sub-tema en products/<producto>/<carpeta>/<subtema>/):
 
     import sys; sys.stdout.reconfigure(encoding="utf-8")  # evita UnicodeEncodeError en consola Windows
@@ -25,16 +34,16 @@ Uso típico (un script por sub-tema en products/<producto>/<carpeta>/<subtema>/)
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(kit.SW_EMU), Emu(kit.SH_EMU)
 
-    fig = kit.new_fig()
-    ax = fig.add_axes(kit.chart_rect(), facecolor="none", zorder=5)
+    fig = kit.new_chart_fig()
+    ax = kit.chart_axes(fig)
     # ... dibujar el gráfico en ax ...
     chart_path = kit.save_chart(fig, "mi_grafico.png")
 
     sl = kit.new_slide(prs)
-    kit.pic(sl, prs, kit.SHARED_BG)
-    kit.pic(sl, prs, chart_path)
+    kit.pic(sl, prs, kit.SHARED_BG)          # fondo, a pantalla completa
+    kit.pic_chart(sl, prs, chart_path)       # gráfico, en su caja real (más chico y centrado)
     kit.title(sl, "Título de la diapositiva")
-    kit.subtitulo(sl, "Universo: 624 docentes Jornada  ·  fuente: docentes_jornada.csv")
+    kit.subtitulo(sl, "Universo: 624 docentes Jornada  ·  513 con dato disponible")
     kit.punteo_numerado(sl, ["Primer hallazgo...", "Segundo hallazgo..."])
     prs.save(OUT_PPTX)
 """
@@ -65,14 +74,40 @@ class UcenSlideKit:
     cachea ahí como `_background.png` para no recalcularlo en cada corrida.
     """
 
-    # ── Layout (idéntico al usado en products/p3_perfeccionamiento/) ──────────
+    # ── Layout ──────────────────────────────────────────────────────────────
+    # SW/SH en pulgadas; el resto en EMU (914400 EMU = 1 pulgada).
+    # CONTENT_* = ancho de texto (título/bajada/punteo) — franja amplia, fija.
+    # CHART_*   = caja del gráfico — más angosta y centrada, independiente del
+    #             ancho de texto (así el gráfico se ve "más chico y centrado"
+    #             sin angostar el título/bajada/punteo).
     SW, SH = 13.333, 7.5
     SW_EMU, SH_EMU = 12192000, 6858000
-    PIC_L, PIC_T, PIC_W, PIC_H = 786581, 1125000, 10599174, 3720000
-    BUL_L, BUL_T, BUL_W, BUL_H = 786581, 4870000, 10599174, 1870000
+    _IN = 914400  # 1 pulgada en EMU
+
+    CONTENT_L, CONTENT_W = 786581, 10599174   # franja de texto (título/bajada/punteo)
     LOGO_L, LOGO_T, LOGO_W, LOGO_H = 9813773, 656354, 1756626, 697725
-    TITLE_L, TITLE_T, TITLE_W, TITLE_H = PIC_L, 185000, PIC_W, 710000
-    POP_L, POP_T, POP_W, POP_H = PIC_L, 845000, 9000000, 255000
+
+    TITLE_L, TITLE_T, TITLE_W, TITLE_H = CONTENT_L, int(0.30 * _IN), CONTENT_W, int(0.50 * _IN)
+
+    # Gap título→bajada == gap bajada→gráfico == 0.55" (misma constante _GAP_TB
+    # para las dos, a pedido expreso del usuario — "mantener la distancia
+    # igualitaria de título con gráfico"). Gráfico y punteo corridos más abajo
+    # (2026-08-01, 2do ajuste) para usar todo el alto de la diapositiva.
+    _GAP_TB = int(0.55 * _IN)
+    POP_L, POP_W, POP_H = CONTENT_L, CONTENT_W, int(0.30 * _IN)
+    POP_T = TITLE_T + TITLE_H + _GAP_TB
+
+    CHART_W = int(9.5 * _IN)
+    CHART_L = (SW_EMU - CHART_W) // 2                      # centrado horizontal
+    CHART_T = POP_T + POP_H + _GAP_TB
+    CHART_H = int(3.3 * _IN)
+
+    BUL_L, BUL_W = CONTENT_L, CONTENT_W
+    BUL_T = CHART_T + CHART_H + int(0.65 * _IN)             # gap gráfico→punteo
+    BUL_H = int(1.10 * _IN)
+
+    # Alias retrocompatibles (algunos scripts ya usan PIC_*)
+    PIC_L, PIC_T, PIC_W, PIC_H = CHART_L, CHART_T, CHART_W, CHART_H
 
     def __init__(self, out_dir):
         self.out_dir = Path(out_dir)
@@ -154,9 +189,30 @@ class UcenSlideKit:
 
     # ── Figuras de gráfico (transparentes, se superponen sobre el fondo) ──────
     def new_fig(self):
+        """[modo legacy] Figura del tamaño completo de la diapositiva — usar
+        junto con `chart_rect()` + `pic()`. Deja mucho margen transparente
+        alrededor del gráfico en el PNG resultante; para un PNG ajustado al
+        contenido (recomendado) usar `new_chart_fig()` + `pic_chart()`."""
         fig = plt.figure(figsize=(self.SW, self.SH), facecolor="none")
         fig.patch.set_facecolor("none")
         return fig
+
+    def new_chart_fig(self):
+        """Figura transparente del tamaño real de la caja del gráfico (CHART_W ×
+        CHART_H), no de la diapositiva completa. El PNG queda ajustado al
+        contenido — usar junto con `chart_axes()` + `pic_chart()`."""
+        w_in = self.CHART_W / self._IN
+        h_in = self.CHART_H / self._IN
+        fig = plt.figure(figsize=(w_in, h_in), facecolor="none")
+        fig.patch.set_facecolor("none")
+        return fig
+
+    def chart_axes(self, fig, left=0.075, right=0.02, top=0.06, bottom=0.16):
+        """Ejes dentro de la figura creada con `new_chart_fig()`. Márgenes
+        asimétricos por defecto — dejan espacio para xlabel/xticklabels
+        (bottom) e ylabel/yticklabels (left) sin que se corten."""
+        return fig.add_axes([left, bottom, 1 - left - right, 1 - top - bottom],
+                             facecolor="none", zorder=5)
 
     def save_chart(self, fig, name):
         path = str(self.out_dir / name)
@@ -169,10 +225,18 @@ class UcenSlideKit:
         return prs.slides.add_slide(prs.slide_layouts[6])
 
     def pic(self, sl, prs, path):
+        """Imagen a pantalla completa (para el fondo `SHARED_BG`)."""
         sl.shapes.add_picture(path, Emu(0), Emu(0), prs.slide_width, prs.slide_height)
 
+    def pic_chart(self, sl, prs, chart_path):
+        """Coloca el PNG del gráfico (generado con `new_chart_fig()`) en su
+        posición y tamaño reales (CHART_L/T/W/H) — más chico y centrado,
+        no a pantalla completa."""
+        sl.shapes.add_picture(chart_path, Emu(self.CHART_L), Emu(self.CHART_T),
+                               Emu(self.CHART_W), Emu(self.CHART_H))
+
     def txt(self, sl, text, left, top, width, height, fs=12, bold=False, italic=False,
-            color="#FFFFFF", align=PP_ALIGN.LEFT, wrap=True, lspc=0):
+            color="#FFFFFF", align=PP_ALIGN.LEFT, wrap=True, lspc=0, font_name="Calibri"):
         txb = sl.shapes.add_textbox(Emu(left), Emu(top), Emu(width), Emu(height))
         tf = txb.text_frame; tf.word_wrap = wrap
         for i, line in enumerate(str(text).split("\n")):
@@ -182,6 +246,8 @@ class UcenSlideKit:
                 p.space_before = Pt(lspc)
             run = p.add_run(); run.text = line
             run.font.size = Pt(fs); run.font.bold = bold; run.font.italic = italic
+            if font_name:
+                run.font.name = font_name
             r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
             run.font.color.rgb = RGBColor(r, g, b)
 
@@ -191,11 +257,13 @@ class UcenSlideKit:
                   fs=fs, bold=True, color="#FFFFFF", align=PP_ALIGN.CENTER)
 
     def subtitulo(self, sl, text):
-        """Bajada explicativa de universo/población, bajo el título."""
+        """Bajada explicativa de universo/población, bajo el título.
+        No mencionar el nombre del archivo/CSV fuente (ej. "Fuente: x.csv") —
+        es un detalle interno, no aporta nada para la contraparte."""
         self.txt(sl, text, self.POP_L, self.POP_T, self.POP_W, self.POP_H,
-                  fs=7.5, italic=True, color="#C8DCF0")
+                  fs=10, italic=True, color="#C8DCF0", font_name="Calibri")
 
-    def punteo_numerado(self, sl, items, fs=11.5):
+    def punteo_numerado(self, sl, items, fs=13):
         """Lista numerada (1. 2. ...) al pie de la diapositiva."""
         txb = sl.shapes.add_textbox(Emu(self.BUL_L), Emu(self.BUL_T),
                                      Emu(self.BUL_W), Emu(self.BUL_H))
@@ -205,4 +273,5 @@ class UcenSlideKit:
             p.space_after = Pt(6); p.alignment = PP_ALIGN.LEFT
             run = p.add_run(); run.text = f"{i + 1}.  {item}"
             run.font.size = Pt(fs)
+            run.font.name = "Calibri"
             run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
