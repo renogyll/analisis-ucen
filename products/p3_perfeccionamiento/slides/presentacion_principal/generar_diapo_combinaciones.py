@@ -18,12 +18,11 @@ from pptx.enum.text import PP_ALIGN
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE    = os.path.dirname(os.path.abspath(__file__))
-REPO    = str(pathlib.Path(BASE).parents[1])
+REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 SCRATCH = os.path.join(REPO, "outputs", "scratch")
 OUT_DIR = os.path.join(BASE, "dark_slides_v3")
-FONDOTIPO = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-             r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 
 BG_PATH   = os.path.join(SCRATCH, "fondotipo_image1.jpg")
 LOGO_PATH = os.path.join(SCRATCH, "fondotipo_image2.png")

@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
+sys.path.insert(0, str(Path(__file__).parents[4]))
 from config import CASCADE
 
 OUT    = os.path.join(CASCADE, "complementarios")

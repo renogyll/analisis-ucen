@@ -58,7 +58,7 @@ checks_conteos = [
     ("intel.pre_during_post_sat (202)",      "SELECT COUNT(*) FROM intel.pre_during_post_sat",                            198,  206),
     ("intel.pre_post_sat (209)",             "SELECT COUNT(*) FROM intel.pre_post_sat",                                   205,  213),
     ("intel.trayectoria_alumno (~802)",      "SELECT COUNT(*) FROM intel.trayectoria_alumno",                             780,  820),
-    ("intel.notas_docente (sin placeholders)","SELECT COUNT(*) FROM intel.notas_docente",                                 328000, 333000),
+    ("intel.rendimiento_academico_alumnos (sin placeholders)","SELECT COUNT(*) FROM intel.rendimiento_academico_alumnos",                                 328000, 333000),
 ]
 
 for nombre, sql, minv, maxv in checks_conteos:
@@ -82,7 +82,7 @@ tablas_fk = [
     ("intel.pre_during_post_sat",            "rut_key"),
     ("intel.pre_post_sat",                   "rut_key"),
     ("intel.trayectoria_alumno",             "rut_docente"),
-    ("intel.notas_docente",                  "rut_docente"),
+    ("intel.rendimiento_academico_alumnos",                  "rut_docente"),
 ]
 
 for tabla, col in tablas_fk:
@@ -139,8 +139,8 @@ checks_rango = [
      "SELECT COUNT(*) FROM intel.pre_during_post_sat WHERE nota_pre NOT BETWEEN 1 AND 7"),
     ("nota_post fuera de 1–7 en pre_during_post_sat",
      "SELECT COUNT(*) FROM intel.pre_during_post_sat WHERE nota_post NOT BETWEEN 1 AND 7"),
-    ("nota alumno fuera de 1–7 en notas_docente",
-     "SELECT COUNT(*) FROM intel.notas_docente WHERE nota NOT BETWEEN 1 AND 7"),
+    ("nota alumno fuera de 1–7 en rendimiento_academico_alumnos",
+     "SELECT COUNT(*) FROM intel.rendimiento_academico_alumnos WHERE nota NOT BETWEEN 1 AND 7"),
     ("cobertura_pct fuera de 0–100",
      "SELECT COUNT(*) FROM consolidados.evaluacion_periodo WHERE cobertura_pct NOT BETWEEN 0 AND 100"),
     ("delta_pre_post fuera de -6 a +6",
@@ -178,7 +178,7 @@ seccion("6. PLACEHOLDERS EN TABLAS INTEL")
 # ══════════════════════════════════════════════════════════════════════════════
 
 tablas_intel_rut = [
-    ("intel.notas_docente",        "rut_docente"),
+    ("intel.rendimiento_academico_alumnos",        "rut_docente"),
     ("intel.pre_during_post_sat",  "rut_key"),
     ("intel.pre_post_sat",         "rut_key"),
     ("intel.trayectoria_alumno",   "rut_docente"),
@@ -256,7 +256,11 @@ else:
 n_db  = q("SELECT COUNT(*) FROM intel.pre_during_post_sat")
 try:
     import os
-    csv_path = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO\intel_pre_during_post_sat.csv"
+    from pathlib import Path as _Path
+    import sys as _sys
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[4]))
+    from config import DATA_STAGING
+    csv_path = os.path.join(DATA_STAGING, "intel_pre_during_post_sat.csv")
     n_csv = len(pd.read_csv(csv_path, dtype=str))
     if n_db == n_csv:
         ok(f"intel_pre_during_post_sat — CSV ({n_csv}) == DB ({n_db})")

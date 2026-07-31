@@ -1,4 +1,12 @@
 """
+generar_presentacion_v2.py — copia de generar_presentacion.py (2026-07-30)
+CAMBIO V2: corregido el bug del grupo control EDD, que usaba el universo
+"jerarquizados" (docente_918.csv, ruts_917) en vez de universo_base completo
+(nomina_x_dotacion.csv, 1.144). El propio texto del embudo del script (slide
+"cg_embudo") ya decía "control = universo base que nunca participó en P3" —
+el código no lo cumplía. Control EDD pasa de 130 a 134 docentes; "Docentes No
+Formados" del embudo pasa de ~215 a 418 (1.144 - 726).
+
 generar_ppt_v3_slides1_26.py  — VERSION CORREGIDA (24 slides)
 Arquitectura V3:
   - Fondo oscuro PNG compartido (foto B&N + gradiente navy + logo UCEN)
@@ -51,12 +59,11 @@ CASCADE   = os.path.join(REPO, "data", "cascade")
 COMP      = os.path.join(CASCADE, "complementarios")
 
 EDD_CSV    = os.path.join(COMP, "evaluacion_jefes.csv")
-DOC918_CSV = os.path.join(CASCADE, "03_jerarquizados", "docente_918.csv")
 SCAT_CSV   = os.path.join(COMP, "scatter_sat_notas.csv")
 FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 DOT_CSV    = os.path.join(REPO, "data", "raw", "consolidado_docentes",
               "CONSOLIDADO DOCENTES 3-05-2026.xlsx - DOTACION_CON_GRADOREC.csv")
-OUT_PPTX   = os.path.join(REPO, "outputs", "pptx", "PRESENTACION_316_P3_v5.pptx")
+OUT_PPTX   = os.path.join(REPO, "outputs", "pptx", "PRESENTACION_316_P3_v6.pptx")
 OUT_DIR    = os.path.join(BASE, "dark_slides_v3")
 SCRATCH    = os.path.join(REPO, "outputs", "scratch")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -185,6 +192,8 @@ p3ev["rut_key"] = p3ev["rut_key"].astype(str).str.strip()
 cvt  = pd.read_csv(os.path.join(COMP,"control_vs_trat_918.csv"), encoding="utf-8-sig")
 ctrl = pd.read_csv(os.path.join(COMP,"control_918.csv"), encoding="utf-8-sig")
 ctrl["rut_key"] = ctrl["rut_key"].astype(str).str.strip()
+bin_ = pd.read_csv(os.path.join(COMP,"bin_recomendacion_completo.csv"), encoding="utf-8-sig")
+bin_["rut_key"] = bin_["rut_key"].astype(str).str.strip()
 N197  = len(sat)                                          # aptos P3 (316)
 N_UNIV = 1144                                             # universo base fijo
 POP_197 = f"Universo: {N197} Aptos P3  ·  todos formados  ·  Periodos 2022–2025"
@@ -202,14 +211,14 @@ else:
 
 base_df = pd.read_csv(os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv"), encoding="utf-8-sig")
 base_df["rut_key"] = base_df["rut_key"].astype(str).str.strip()
-ruts_universo_base = set(base_df["rut_key"])
+ruts_universo_base = set(base_df["rut_key"])   # CORREGIDO v2: reemplaza ruts_917/docente_918.csv
 form_df = pd.read_csv(os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv"),
                       encoding="utf-8-sig").drop_duplicates("rut_key")
 form_df["rut_key"] = form_df["rut_key"].astype(str).str.strip()
 
 ruts_todos_formados = set(p3ev["rut_key"].astype(str).str.strip())
 N_FORM    = len(ruts_todos_formados)                      # formados en P3 (726)
-N_NO_FORM = len(ruts_universo_base - ruts_todos_formados)
+N_NO_FORM = len(ruts_universo_base - ruts_todos_formados) # CORREGIDO v2: era ruts_917 (~215), ahora universo_base (418)
 
 has_edd = os.path.exists(EDD_CSV)
 if has_edd:
@@ -225,7 +234,7 @@ if has_edd:
                 .drop_duplicates(subset=["rut_key", "anio_eval"]))
     edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_universo_base) & ~edd_df["rut_key"].isin(ruts_todos_formados)
                        & edd_df["edd_total"].notna() & edd_df["anio_eval"].notna()]
-                .drop_duplicates(subset=["rut_key", "anio_eval"]))
+                .drop_duplicates(subset=["rut_key", "anio_eval"]))  # CORREGIDO v2: era ruts_917 (130), ahora universo_base (134)
 else:
     edd_form = pd.DataFrame()
     edd_ctrl = pd.DataFrame()
@@ -240,6 +249,11 @@ ctrl_b3_doc["jerarquia_u"] = ctrl_b3_doc["jerarquia"].str.strip().str.upper()
 ctrl_b3_doc["tramo_g"]     = ctrl_b3_doc["tramo_edad"].map(TRAMOS_EDAD_RAW)
 N_B3_FORM = N197
 N_B3_CTRL = len(ctrl_b3_doc)
+
+# Control Bloque II (SAT): control_918.csv, deduplicado a nivel docente
+ctrl_b2_doc = base_df[base_df["rut_key"].isin(set(ctrl["rut_key"]))].drop_duplicates("rut_key").copy()
+N_B2_FORM = N197
+N_B2_CTRL = len(ctrl_b2_doc)
 sat["jerarquia_u"] = sat["jerarquia"].str.strip().str.upper()
 sat["tramo_g"]     = sat["tramo_edad"].map(TRAMOS_EDAD_RAW)
 
@@ -538,6 +552,201 @@ def slide_03(prs):
         _txt(sl, body, bx+40000, by+360000, bw-80000, bh-420000,
              fs=9.5, color="#FFFFFF", wrap=True, lspc=3)
     print("  ✓ slide 03 — Marco")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Lote B — grillas 2×2 de apertura (reemplazan Índice general + Marco)
+# ─────────────────────────────────────────────────────────────────────────────
+def _grid_2x2(prs, titulo, pop_txt, cajas, print_label):
+    """4 cajas navy en grilla 2×2. cajas = [(header, body), ...] (hasta 4)."""
+    _ensure_bg(); sl = _new_sl(prs); _pic(sl, SHARED_BG, prs)
+    _T(sl, titulo, fs=17)
+    _POP(sl, pop_txt)
+    pad_x=100000; gap_x=80000; gap_y=50000; pad_t=80000; pad_b=70000
+    bw = (PIC_W-2*pad_x-gap_x)//2; bh = (PIC_H-pad_t-gap_y-pad_b)//2
+    pos = [(PIC_L+pad_x, PIC_T+pad_t),(PIC_L+pad_x+bw+gap_x, PIC_T+pad_t),
+           (PIC_L+pad_x, PIC_T+pad_t+bh+gap_y),(PIC_L+pad_x+bw+gap_x, PIC_T+pad_t+bh+gap_y)]
+    for (bx,by),(hdr,body) in zip(pos, cajas):
+        sh = sl.shapes.add_shape(1, Emu(bx), Emu(by), Emu(bw), Emu(bh))
+        sh.fill.solid(); sh.fill.fore_color.rgb = RGBColor(0,33,71); sh.line.fill.background()
+        _txt(sl, hdr, bx+40000, by+38000, bw-80000, 300000, fs=11, bold=True, color="#90ABC4")
+        _txt(sl, body, bx+40000, by+360000, bw-80000, bh-420000, fs=9, color="#FFFFFF", lspc=3)
+    print(f"  ✓ {print_label}")
+
+
+def slide_grid_b1_b2(prs):
+    """Grilla 2×2 de apertura: Bloque I + Bloque II."""
+    cajas = [
+        ("Bloque I — Clasificación del Cuerpo Académico",
+         f"• Universo: {N197} Aptos P3 (todos formados, sin control interno)\n"
+         "• Edad, sexo, facultad, antigüedad, jerarquía, grado académico\n"
+         "• Combinaciones de modalidad de formación e intensidad de participación"),
+        ("Bloque II — Evaluación SAT y Recomendación",
+         f"• Tratamiento: {N197} Aptos P3  ·  Control: {N_B2_CTRL} docentes sin formación\n"
+         "• z-score SAT en 6 períodos (2023-01 a 2025-02)\n"
+         "• % de recomendación estudiantil  ·  perfil por facultad"),
+        ("Qué vas a ver en Bloque I",
+         "1. Universo Base y composición\n2. Venn de tipos de formación\n"
+         "3. Combinaciones de modalidad\n4. Edad, sexo, grado, facultad\n"
+         "5. Antigüedad y jerarquía  ·  intensidad de participación"),
+        ("Qué vas a ver en Bloque II",
+         "1. Derivación de grupos (Tratamiento vs Control)\n2. Perfil por facultad\n"
+         "3. SAT z-score — 6 períodos\n4. % de Recomendación Estudiantil"),
+    ]
+    _grid_2x2(prs, "Bloques I y II — Caracterización y Evaluación SAT",
+              f"Universo base: {N_UNIV:,} docentes  ·  {N_FORM} formados  ·  {N197} Aptos P3",
+              cajas, "slide grid_b1_b2 — Grilla apertura Bloque I+II (ref 02)")
+
+
+def slide_grid_b3_b4(prs):
+    """Grilla 2×2 de apertura: Bloque III + Bloque IV."""
+    cajas = [
+        ("Bloque III — Rendimiento Académico de Alumnos",
+         f"• Tratamiento: {N_B3_FORM} Aptos P3  ·  Control: {N_B3_CTRL} docentes sin formación\n"
+         "• % aprobación y nota promedio de alumnos, formados vs control\n"
+         "• Correlación SAT-notas por año  ·  evolución por período  ·  por facultad"),
+        ("Bloque IV — Evaluación de Desempeño Docente (EDD)",
+         f"• Tratamiento: {N_B4_FORM} Aptos P3 con EDD  ·  Control: {N_B4_CTRL} docentes sin actividad P3\n"
+         "• EDD evaluada por jefes académicos (escala 0–1), 2022–2025\n"
+         "• Evolución anual, por tipo de formación y por facultad"),
+        ("Qué vas a ver en Bloque III",
+         "1. Derivación de grupos (Tratamiento vs Control)\n2. Perfil demográfico\n"
+         "3. Aprobación global y evolución × período\n4. Correlación SAT-notas  ·  por facultad"),
+        ("Qué vas a ver en Bloque IV",
+         "1. Derivación de grupos (Tratamiento vs Control)\n2. Perfil demográfico\n"
+         "3. EDD por tipo de formación y evolución anual\n4. EDD por facultad"),
+    ]
+    _grid_2x2(prs, "Bloques III y IV — Rendimiento Académico y EDD",
+              f"Universo base: {N_UNIV:,} docentes  ·  {N_FORM} formados",
+              cajas, "slide grid_b3_b4 — Grilla apertura Bloque III+IV (ref 03)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Diapositivas "Universo / Índice / Hallazgos" — formato nuevo por Bloque (v2)
+# ─────────────────────────────────────────────────────────────────────────────
+def _uih_slide(prs, titulo, universo_txt, indice_items, hallazgos_items, print_label):
+    """Recuadro navy de 3 columnas: Universo (párrafo) | Índice (lista) | Hallazgos (lista)."""
+    _ensure_bg(); sl = _new_sl(prs); _pic(sl, SHARED_BG, prs)
+    _T(sl, titulo, fs=17)
+
+    box_l, box_t = PIC_L, PIC_T + 40000
+    box_w = PIC_W
+    box_h = (PIC_H + BUL_H) - 40000
+    sh = sl.shapes.add_shape(1, Emu(box_l), Emu(box_t), Emu(box_w), Emu(box_h))
+    sh.fill.solid(); sh.fill.fore_color.rgb = RGBColor(0, 33, 71)
+    sh.line.fill.background()
+
+    col_w = box_w // 3
+    headers = ["Universo", "Índice", "Hallazgos"]
+    for i, h in enumerate(headers):
+        cx = box_l + i * col_w
+        _txt(sl, h, cx + 50000, box_t + 45000, col_w - 100000, 260000,
+             fs=13, bold=True, color="#FFFFFF", align=PP_ALIGN.CENTER)
+        div = sl.shapes.add_shape(1, Emu(cx + 50000), Emu(box_t + 330000), Emu(col_w - 100000), Emu(9000))
+        div.fill.solid(); div.fill.fore_color.rgb = RGBColor(90, 140, 190)
+        div.line.fill.background()
+
+    _txt(sl, universo_txt, box_l + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+         fs=10, color="#FFFFFF", wrap=True, lspc=4)
+
+    idx_txt = "\n".join(f"{i+1}. {it}" for i, it in enumerate(indice_items))
+    _txt(sl, idx_txt, box_l + col_w + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+         fs=9.5, color="#FFFFFF", wrap=True, lspc=5)
+
+    hal_txt = "\n".join(f"{i+1}. {it}" for i, it in enumerate(hallazgos_items))
+    _txt(sl, hal_txt, box_l + 2*col_w + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+         fs=9.5, color="#FFFFFF", wrap=True, lspc=5)
+
+    print(f"  ✓ slide {print_label}")
+
+
+def slide_uih_b1(prs):
+    """Bloque I — Universo/Índice/Hallazgos."""
+    _uih_slide(prs,
+        f"Bloque I — Caracterización de la muestra de docentes formados antes-durante-después (N°{N197})",
+        f"{N197} docentes Aptos P3 — participaron en ≥1 instancia de formación y cuentan con SAT "
+        f"válido en al menos 3 períodos consecutivos (pre · durante · post). Este bloque es "
+        f"descriptivo: no existe grupo de control, todos los formados conforman la muestra de análisis.",
+        ["Universo Base: Selección y Composición de Aptos P3",
+         "Diagrama de Venn (nº 316 Aptos P3)",
+         "Distribución de Modalidades de Formación",
+         "Distribución de los docentes de la muestra según Tramo de Edad y Sexo",
+         "Grado Académico Reconocido",
+         "Distribución por Unidad/Facultad",
+         "Distribución de los docentes de la muestra según Antigüedad en la Institución",
+         "Participación en iniciativas de formación según Antigüedad y Tipo de Formación",
+         "Distribución de los docentes de la muestra según Jerarquía Académica",
+         "Participación por Jerarquía — Composición y Tasa Real",
+         "Intensidad de Participación en Formación"],
+        ["El perfil del docente Apto P3 observa mayor presencia en Asistente Docente e Instructor "
+         "Docente, con concentración en el tramo de edad 40–44 años.",
+         "La Oferta formativa domina de forma absoluta en todas las jerarquías académicas del "
+         "cuerpo docente y regular.",
+         "Corrección del sesgo de volumen en análisis de jerarquía: este indicador evita la "
+         "distorsión de mirar solo los totales absolutos, mostrando la proporción real frente "
+         "al tamaño total del estamento en la muestra."],
+        "uih_b1 — Bloque I Universo/Índice/Hallazgos")
+
+
+def slide_uih_b2(prs):
+    """Bloque II — Universo/Índice/Hallazgos."""
+    N_CTRL_B2 = ctrl.drop_duplicates("rut_key").shape[0]
+    _uih_slide(prs,
+        "Bloque II — Satisfacción y Recomendación",
+        f"Tratamiento (perfil): N°={N197} Aptos P3. Tratamiento (amplio): N°={N_FORM} formados con "
+        f"notas disponibles. Control: N°={N_CTRL_B2} docentes sin formación P3 con notas en "
+        f"2023–2025. Los {N197} docentes corresponden a un subconjunto de los {N_FORM}.",
+        ["Derivación de Grupos: Evaluación de Satisfacción y Recomendación estudiantes",
+         "Perfil por Facultad — Aptos P3 vs Grupo Control",
+         "SAT z-score: Formados vs Control — 6 Períodos",
+         "% de Recomendación Estudiantil",
+         "SAT — Grupo Selecto: Mejores vs Peores por Quintil SAT Baseline"],
+        ["Los docentes que recibieron formación mantienen consistentemente un z-score SAT positivo "
+         "a lo largo de los seis períodos analizados (2023-01 a 2025-02).",
+         "El % de Recomendación Estudiantil confirma y extiende el hallazgo SAT: los formados "
+         "obtienen mayor recomendación que el control, con una brecha creciente en el tiempo.",
+         "La formación docente no solo mejora la satisfacción estudiantil hacia el docente, sino "
+         "que se traduce también en mejores resultados académicos concretos para los alumnos."],
+        "uih_b2 — Bloque II Universo/Índice/Hallazgos")
+
+
+def slide_uih_b3(prs):
+    """Bloque III — Universo/Índice/Hallazgos."""
+    N_CTRL_B2 = ctrl.drop_duplicates("rut_key").shape[0]
+    _uih_slide(prs,
+        "Bloque III — Rendimiento Académico",
+        f"Tratamiento (perfil): N°={N197} Aptos P3. Tratamiento (amplio): N°={N_FORM} formados con "
+        f"notas disponibles. Control: N°={N_CTRL_B2} docentes sin formación P3 con notas en "
+        f"2023–2025. Los {N197} son subconjunto de los {N_FORM}.",
+        ["Derivación de Grupos: Rendimiento Académico",
+         "Perfil Demográfico: Formados vs Control (Rendimiento Académico)",
+         "Incidencia del Plan de Formación en el Rendimiento Académico de Estudiantes",
+         "Correlación Satisfacción Docente y Desempeño Académico Estudiantes según Nota Promedio de Año"],
+        [f"Los docentes formados obtienen mayor rendimiento académico en sus alumnos y nota promedio "
+         f"superior al control.",
+         "Correlación positiva y estadísticamente significativa entre SAT docente y nota promedio "
+         "de alumnos en los tres años (p<0.001 en todos los cortes)."],
+        "uih_b3 — Bloque III Universo/Índice/Hallazgos")
+
+
+def slide_uih_b4(prs):
+    """Bloque IV — Universo/Índice/Hallazgos."""
+    _uih_slide(prs,
+        "Bloque IV — Evaluación de Desempeño Docente (EDD)",
+        f"Tratamiento N°={N_B4_FORM} docentes Aptos P3 con EDD disponible ({N197-N_B4_FORM} de los "
+        f"{N197} docentes no tienen registro EDD — son excluidos). Control N°={N_B4_CTRL} docentes "
+        f"sin P3, con EDD disponible en ventana 2022–2025.",
+        ["Muestra de Grupos: Evaluación de Desempeño Docente (EDD)",
+         "Perfil Formados vs Control (EDD)",
+         "EDD por Tipo de Formación — Promedio vs Control",
+         "Evolución EDD — Aptos P3 vs Control (2022–2025)",
+         "Seguimiento trayectorias únicas EDD",
+         "EDD por Facultad — Formados vs Control"],
+        [f"Los docentes formados obtienen una EDD promedio superior a la del grupo control, con "
+         f"{N_B4_FORM} formados y {N_B4_CTRL} controles con dato disponible (2022–2025).",
+         "Los docentes que participaron en cualquier tipo de formación superan al grupo control "
+         "en EDD, confirmando que la incidencia de la formación en la percepción de los jefes es "
+         "positiva independientemente de la modalidad."],
+        "uih_b4 — Bloque IV Universo/Índice/Hallazgos")
 
 def slide_04(prs):
     """Separador BLOQUE I — texto centrado."""
@@ -1972,11 +2181,12 @@ def slide_32(prs):
     print("  ✓ slide 38 — EDD por Tipo")
 
 def slide_33(prs):
-    """Conclusiones y Recomendaciones — 4 cajas."""
+    """Conclusiones y Recomendaciones — 2 columnas (conclusiones | recomendaciones numeradas)."""
     _ensure_bg(); sl = _new_sl(prs); _pic(sl, SHARED_BG, prs)
     _T(sl, "Conclusiones y Recomendaciones")
     _POP(sl, f"Síntesis del análisis de impacto  ·  Universo: {N197} Aptos P3  ·  Períodos 2022–2025")
-    cajas = [
+
+    conclusiones = [
         ("1. Impacto en SAT (z-score)",
          "• Los formados mantienen z-score positivo y sostenido (6 períodos)\n"
          "• Brecha Formados − Control estadísticamente significativa\n"
@@ -1992,22 +2202,48 @@ def slide_33(prs):
          "• Proyecto (0.83) ≥ Oferta formativa (0.83) > Diplomado (0.85) > Control (0.71)\n"
          "• La brecha Formados−Control se amplía en 2024 y 2025\n"
          "• Múltiples métricas (SAT, Aprobación, EDD) convergen en el mismo efecto"),
-        ("4. Recomendaciones",
-         "• Priorizar Diplomados para docentes con 5–15 años de antigüedad\n"
-         "• Fomentar la participación repetida (multi-instancia) en Oferta formativa\n"
-         "• Monitorear la brecha Formados−Control semestralmente (SAT y EDD)\n"
-         f"• Los {N_FORM} participantes P3 son el universo de formados"),
     ]
-    pad_x=100000; gap_x=80000; gap_y=50000; pad_t=80000; pad_b=70000
-    bw = (PIC_W-2*pad_x-gap_x)//2; bh = (PIC_H-pad_t-gap_y-pad_b)//2
-    pos = [(PIC_L+pad_x, PIC_T+pad_t),(PIC_L+pad_x+bw+gap_x, PIC_T+pad_t),
-           (PIC_L+pad_x, PIC_T+pad_t+bh+gap_y),(PIC_L+pad_x+bw+gap_x, PIC_T+pad_t+bh+gap_y)]
-    for (bx,by),(hdr,body) in zip(pos, cajas):
-        sh = sl.shapes.add_shape(1, Emu(bx), Emu(by), Emu(bw), Emu(bh))
+    recomendaciones = [
+        "Priorizar Diplomados para docentes con 5–15 años de antigüedad, rango donde "
+        "el efecto de la formación prolongada es más pronunciado.",
+        "Fomentar la participación repetida (multi-instancia) en Talleres: el efecto "
+        "acumulativo se traduce en mayor aprobación y notas de alumnos.",
+        f"Monitorear la brecha Formados−Control semestralmente como KPI central de la "
+        f"política de perfeccionamiento.",
+        f"Ampliar la cobertura del análisis a los {N_FORM} participantes P3 totales para "
+        f"elevar la potencia estadística y reducir el sesgo de selección.",
+        "Incorporar la EDD como métrica de seguimiento sistemático: es el indicador con "
+        "mayor diferencia observable entre formados y control.",
+    ]
+
+    # ── Columna izquierda: 3 cajas de conclusiones apiladas ──────────────────
+    col_l_w = int(PIC_W * 0.58)
+    col_r_x = PIC_L + col_l_w + 60000
+    col_r_w = PIC_W - col_l_w - 60000
+    pad_t = 60000; gap_y = 45000; pad_b = 60000
+    bh = (PIC_H - pad_t - 2*gap_y - pad_b) // 3
+    for i, (hdr, body) in enumerate(conclusiones):
+        by = PIC_T + pad_t + i*(bh + gap_y)
+        sh = sl.shapes.add_shape(1, Emu(PIC_L), Emu(by), Emu(col_l_w), Emu(bh))
         sh.fill.solid(); sh.fill.fore_color.rgb = RGBColor(0,33,71); sh.line.fill.background()
-        _txt(sl, hdr, bx+40000, by+38000, bw-80000, 300000, fs=11, bold=True, color="#90ABC4")
-        _txt(sl, body, bx+40000, by+360000, bw-80000, bh-420000, fs=9.5, color="#FFFFFF", lspc=3)
-    print("  ✓ slide 35 — Conclusiones y Recomendaciones")
+        _txt(sl, hdr, PIC_L+40000, by+30000, col_l_w-80000, 260000, fs=11, bold=True, color="#90ABC4")
+        _txt(sl, body, PIC_L+40000, by+310000, col_l_w-80000, bh-360000, fs=9, color="#FFFFFF", lspc=3)
+
+    # ── Columna derecha: Recomendaciones numeradas ───────────────────────────
+    sh_r = sl.shapes.add_shape(1, Emu(col_r_x), Emu(PIC_T+pad_t), Emu(col_r_w), Emu(PIC_H-pad_t-pad_b))
+    sh_r.fill.solid(); sh_r.fill.fore_color.rgb = RGBColor(27,74,58); sh_r.line.fill.background()
+    _txt(sl, "Recomendaciones", col_r_x+40000, PIC_T+pad_t+30000, col_r_w-80000, 300000,
+         fs=13, bold=True, color="#A8E8A0")
+    txb = sl.shapes.add_textbox(Emu(col_r_x+40000), Emu(PIC_T+pad_t+360000),
+                                Emu(col_r_w-80000), Emu(PIC_H-pad_t-pad_b-420000))
+    tf = txb.text_frame; tf.word_wrap = True
+    for i, item in enumerate(recomendaciones):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(8); p.alignment = PP_ALIGN.LEFT
+        run = p.add_run(); run.text = f"{i+1}.  {item}"
+        run.font.size = Pt(9); run.font.color.rgb = RGBColor(255,255,255)
+
+    print("  ✓ slide 35 — Conclusiones y Recomendaciones (2 columnas)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2273,6 +2509,56 @@ def slide_fac_b2(prs):
     print("  ✓ slide fac_b2 — SAT z × Facultad (formados vs control)")
 
 
+def slide_fac_b2(prs):
+    """Perfil por Facultad B2 — cantidad de docentes Aptos P3 vs Control, por facultad."""
+    sat_fac = sat.copy()
+    sat_fac["fac"] = sat_fac["unidad_facultad"].apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+    ctrl_fac_df = ctrl_b2_doc.copy()
+    ctrl_fac_df["fac"] = ctrl_fac_df["unidad_facultad"].apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
+
+    form_fac = sat_fac.groupby("fac")["rut_key"].nunique().rename("n_f").reset_index()
+    ctrl_fac = ctrl_fac_df.groupby("fac")["rut_key"].nunique().rename("n_c").reset_index()
+
+    comp = form_fac.merge(ctrl_fac, on="fac", how="outer").fillna(0)
+    comp["n_f"] = comp["n_f"].astype(int); comp["n_c"] = comp["n_c"].astype(int)
+    comp = comp[(comp["n_f"] > 0) | (comp["n_c"] > 0)].sort_values("n_f", ascending=True).reset_index(drop=True)
+
+    n = len(comp); ya = np.arange(n)
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    h = 0.30
+    ax.barh(ya + h/2, comp["n_f"], height=h, color="#52C97A", alpha=0.90, label="Aptos P3", edgecolor="none")
+    ax.barh(ya - h/2, comp["n_c"], height=h, color="#FFB74D", alpha=0.90, label="Control", edgecolor="none")
+    for i, row in comp.iterrows():
+        ax.text(row["n_f"] + 0.3, i + h/2, str(int(row["n_f"])),
+                va="center", ha="left", fontsize=8.5, color="#52C97A",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+        ax.text(row["n_c"] + 0.3, i - h/2, str(int(row["n_c"])),
+                va="center", ha="left", fontsize=8.5, color="#FFB74D",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")])
+    ax.set_yticks(ya); ax.set_yticklabels(comp["fac"], fontsize=9.5, color="white")
+    ax.tick_params(axis="y", length=0, pad=6)
+    ax.set_xlabel("Nº de docentes", color="#AAAAAA", fontsize=9)
+    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+    ax.xaxis.grid(True, color="white", alpha=0.06, linewidth=0.5); ax.set_axisbelow(True)
+    ax.legend(fontsize=9, framealpha=0.22, labelcolor="white", facecolor="#101820",
+              edgecolor="#444", loc="lower right", borderaxespad=0.5)
+
+    _pic(sl := _new_sl(prs), SHARED_BG, prs); _pic(sl, _save_ch(fig, "fac_b2_chart.png"), prs)
+    _T(sl, "Perfil por Facultad — Aptos P3 vs Control")
+    _POP(sl, POP_CTR)
+    _CT(sl, "Nº de docentes por Unidad/Facultad · Aptos P3 vs grupo Control")
+    _BUL(sl, [
+        f"El grupo Tratamiento ({N_B2_FORM} Aptos P3) y el grupo Control ({N_B2_CTRL} docentes) "
+        f"se distribuyen de forma desigual entre facultades — algunas concentran mucha más "
+        f"participación en formación que otras.",
+        "Esta distribución es la base para interpretar las comparaciones de z-score SAT: "
+        "una facultad sobre-representada en el tratamiento puede sesgar el promedio global "
+        "si su desempeño basal difiere del resto.",
+    ])
+    print("  ✓ slide fac_b2 — Perfil por Facultad B2 (Aptos P3 vs Control)")
+
+
 def slide_fac_b3(prs):
     """Rendimiento Académico × Facultad — Formados vs Control."""
     base_fac = base_df[["rut_key","unidad_facultad"]].copy()
@@ -2328,7 +2614,7 @@ def slide_fac_b4(prs):
     if not has_edd or len(edd_form) == 0:
         print("  ✗ slide fac_b4 — sin datos EDD, omitida")
         return
-    fac_map = base_df.drop_duplicates("rut_key").set_index("rut_key")["unidad_facultad"].to_dict()
+    fac_map = base_df.drop_duplicates("rut_key").set_index("rut_key")["unidad_facultad"].to_dict()  # CORREGIDO v2: era doc918
     ef = edd_form.copy()
     ef["fac"] = ef["rut_key"].map(fac_map).apply(lambda x: _fac(x) if pd.notna(x) else "Sin unidad")
     ec = edd_ctrl.copy()
@@ -2636,222 +2922,123 @@ def slide_resumen_grupos(prs):
     print("  ✓ slide resumen_grupos — Composición Jornada/Honorario × Bloque (tartas 2×3)")
 
 
-def slide_embudo_b3(prs):
-    """Bloque III: embudo 1144→419→210 + barras Jornada/Honorario Tratamiento vs Control B3."""
+# ─────────────────────────────────────────────────────────────────────────────
+# Lote D — Derivación de grupos, rediseñada (sin paso 1.144, 2 bloques + 2
+# paneles de barras horizontales separados por tipo de contrato)
+# ─────────────────────────────────────────────────────────────────────────────
+def _jh_counts(df, col="tipo_contrato_tag"):
+    c = df[col].str.upper().value_counts() if col in df.columns else pd.Series(dtype=int)
+    return int(c.get("JORNADA", 0)), int(c.get("HONORARIO", 0))
+
+
+def _deriv_simple(fig, n_trat, n_ctrl, desc_trat, desc_ctrl, jh_trat, jh_ctrl,
+                   col_trat="#52C97A", col_ctrl="#FFB74D"):
+    """2 bloques simples (Tratamiento/Control) + 2 paneles hbar (Jornada/Honorario)."""
     import matplotlib.patches as _mp
 
-    def _jh(df, col="tipo_contrato_tag"):
-        c = df[col].str.upper().value_counts() if col in df.columns else pd.Series(dtype=int)
-        return int(c.get("JORNADA", 0)), int(c.get("HONORARIO", 0))
+    n_jor_t, n_hon_t = jh_trat
+    n_jor_c, n_hon_c = jh_ctrl
 
-    n_jor_f, n_hon_f = _jh(sat)
-    n_jor_c, n_hon_c = _jh(ctrl_b3_doc)
-    n_tot_f = n_jor_f + n_hon_f
-    n_tot_c = n_jor_c + n_hon_c
-
-    fig = _tr_fig()
-
-    # ── IZQUIERDO: Embudo 1144 → 419 → 210 + caja control ────────────────────
-    ew = PIC_RECT[2] * 0.46
+    # ── IZQUIERDO: 2 bloques simples ─────────────────────────────────────────
+    ew = PIC_RECT[2] * 0.36
     ex = PIC_RECT[0] + 0.01
-    ey = PIC_RECT[1] - 0.06
-    eh = PIC_RECT[3] * 0.85
+    ey = PIC_RECT[1] + 0.02
+    eh = PIC_RECT[3] - 0.06
     ax_e = fig.add_axes([ex, ey, ew, eh], facecolor="none", zorder=5)
     ax_e.set_xlim(0, 10); ax_e.set_ylim(0, 10); ax_e.axis("off")
 
-    steps = [
-        (9.0, 7.2, "1.144", "Universo base  ·  Jornada + Honorario",        "#3D6FA4"),
-        (7.0, 5.2,  f"{N_FORM}",  f"{N_FORM*100//N_UNIV}% de 1.144  ·  ≥1 iniciativa de formación",  "#4B9CD3"),
-        (5.2, 3.2,  f"{N197}",  f"{N197*100//N_FORM}% de {N_FORM}  ·  Tratamiento B3 (Aptos P3)",     "#52C97A"),
-    ]
-    tops = [9.65, 6.80, 3.95]
-    hh   = 2.50
-    for (tw, bw, n_lbl, desc, col), top in zip(steps, tops):
-        bot = top - hh
-        pts = np.array([[5-tw/2, top], [5+tw/2, top],
-                        [5+bw/2, bot], [5-bw/2, bot]])
-        ax_e.fill(pts[:,0], pts[:,1], color=col, alpha=0.82, zorder=2)
-        ax_e.plot(np.append(pts[:,0], pts[0,0]),
-                  np.append(pts[:,1], pts[0,1]),
-                  color="white", linewidth=0.7, alpha=0.40, zorder=3)
-        ax_e.text(5, top - hh*0.33, n_lbl,
-                  ha="center", va="center", fontsize=28, fontweight="bold",
-                  color="white", zorder=4,
+    boxes = [(6.85, n_trat, "Tratamiento", desc_trat, col_trat),
+             (2.35, n_ctrl, "Control",     desc_ctrl, col_ctrl)]
+    for cy, n, lbl, desc, col in boxes:
+        ax_e.add_patch(_mp.FancyBboxPatch((0.3, cy-2.05), 9.4, 4.10,
+                       boxstyle="round,pad=0.12", linewidth=1.3,
+                       edgecolor="white", facecolor=col, alpha=0.85, zorder=3))
+        ax_e.text(5, cy+0.75, str(n), ha="center", va="center",
+                  fontsize=34, fontweight="bold", color="white", zorder=5,
                   path_effects=[pe.withStroke(linewidth=3, foreground="#0A0F18")])
-        ax_e.text(5, top - hh*0.65, desc,
-                  ha="center", va="center", fontsize=8, color="#E0F0E0",
-                  fontweight="bold", zorder=4)
-    for ay, lbl in [(7.05, "37%"), (4.20, "50%")]:
-        ax_e.annotate("", xy=(5, ay-0.30), xytext=(5, ay+0.30),
-                      arrowprops=dict(arrowstyle="->", color="#FFD580", lw=1.5), zorder=5)
-        ax_e.text(5.5, ay, lbl, ha="left", va="center", fontsize=9,
-                  color="#FFD580", fontstyle="italic", fontweight="bold", zorder=5)
+        ax_e.text(5, cy-0.55, lbl, ha="center", va="center",
+                  fontsize=13, fontweight="bold", color="white", zorder=5)
+        ax_e.text(5, cy-1.30, desc, ha="center", va="center",
+                  fontsize=8, color="#F0F0F0", fontweight="bold", zorder=5, wrap=True)
 
-    # Caja control
-    ax_e.add_patch(_mp.FancyBboxPatch((0.4, 0.15), 9.2, 1.45,
-                                     boxstyle="round,pad=0.1", linewidth=1.5,
-                                     edgecolor="#FFB74D", facecolor="#1A3A5C", alpha=0.85, zorder=4))
-    ax_e.text(5, 1.05, f"{N_B3_CTRL}", ha="center", va="center", fontsize=22, fontweight="bold",
-              color="#FFB74D", zorder=5,
-              path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-    ax_e.text(5, 0.42, "Grupo Control B3  ·  sin formación, con datos notas+SAT",
-              ha="center", va="center", fontsize=7.5, color="#E0D0B0", fontweight="bold", zorder=5)
+    # ── DERECHO: 2 paneles hbar — Jornada / Honorario ────────────────────────
+    dx = PIC_RECT[0] + ew + 0.10
+    dw = PIC_RECT[2] - ew - 0.13
+    dy = PIC_RECT[1] + 0.06
+    dh = PIC_RECT[3] - 0.14
 
-    # ── DERECHO: Barras Jornada/Honorario por grupo ───────────────────────────
-    dx = PIC_RECT[0] + ew + 0.08
-    dw = PIC_RECT[2] - ew - 0.11
-    dy = PIC_RECT[1] + 0.01
-    dh = PIC_RECT[3] - 0.06
-
-    if n_tot_f > 0 and n_tot_c > 0:
-        pjf = n_jor_f/n_tot_f*100; phf = n_hon_f/n_tot_f*100
-        pjc = n_jor_c/n_tot_c*100; phc = n_hon_c/n_tot_c*100
-        ax_b = fig.add_axes([dx + dw*0.08, dy + dh*0.10, dw*0.38, dh*0.75],
-                            facecolor="none", zorder=5)
-        for xi, (pj, ph, nj, nh) in enumerate([
-            (pjf, phf, n_jor_f, n_hon_f),
-            (pjc, phc, n_jor_c, n_hon_c),
-        ]):
-            ax_b.bar([xi], [pj], color="#5C9BD6", alpha=0.90, width=0.55, edgecolor="none")
-            ax_b.bar([xi], [ph], bottom=[pj], color="#FFB74D", alpha=0.90, width=0.55, edgecolor="none")
-            ax_b.text(xi, pj/2, f"{pj:.0f}%\n({nj})",
-                      ha="center", va="center", fontsize=11, fontweight="bold", color="white",
+    panels = [("Jornada", n_jor_t, n_jor_c), ("Honorario", n_hon_t, n_hon_c)]
+    ph = (dh - 0.06) / 2
+    for i, (lbl_p, v_t, v_c) in enumerate(panels):
+        py = dy + dh - ph - i*(ph + 0.06)
+        ax_p = fig.add_axes([dx, py, dw, ph], facecolor="none", zorder=5)
+        vmax = max(v_t, v_c, 1) * 1.30
+        ax_p.barh([1], [v_t], color=col_trat, alpha=0.90, height=0.55, edgecolor="none")
+        ax_p.barh([0], [v_c], color=col_ctrl, alpha=0.90, height=0.55, edgecolor="none")
+        for y, v in [(1, v_t), (0, v_c)]:
+            ax_p.text(v + vmax*0.02, y, str(v), va="center", ha="left",
+                      fontsize=12, fontweight="bold", color="white",
                       path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-            ax_b.text(xi, pj + ph/2, f"{ph:.0f}%\n({nh})",
-                      ha="center", va="center", fontsize=11, fontweight="bold", color="white",
-                      path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-        ax_b.set_xlim(-0.5, 1.5); ax_b.set_ylim(0, 105)
-        ax_b.set_xticks([0, 1])
-        ax_b.set_xticklabels([f"Tratamiento B3\n(nº {n_tot_f})", f"Control B3\n(nº {n_tot_c})"],
-                             color="white", fontsize=10)
-        ax_b.tick_params(axis="x", length=0, pad=10)
-        ax_b.tick_params(axis="y", left=False, labelleft=False)
-        for sp in ax_b.spines.values():
+        ax_p.set_xlim(0, vmax); ax_p.set_ylim(-0.6, 1.6)
+        ax_p.set_yticks([1, 0]); ax_p.set_yticklabels(["Tratam.", "Control"],
+                        fontsize=9.5, color="white")
+        ax_p.tick_params(axis="y", length=0)
+        ax_p.tick_params(axis="x", colors="#AAAAAA", labelsize=8)
+        for sp in ax_p.spines.values():
             sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-        from matplotlib.patches import Patch
-        ax_b.legend(handles=[Patch(facecolor="#5C9BD6", alpha=0.9, label="Jornada"),
-                              Patch(facecolor="#FFB74D", alpha=0.9, label="Honorario")],
-                    fontsize=10, framealpha=0.25, labelcolor="white",
-                    facecolor="#101820", edgecolor="#444",
-                    loc="upper right", bbox_to_anchor=(1.55, 1.02))
+        ax_p.set_title(lbl_p, color="white", fontsize=10.5, fontweight="bold", pad=6)
 
+
+def slide_embudo_b2(prs):
+    """Bloque II: derivación de grupos SAT (Tratamiento/Control), sin paso 1.144."""
+    jh_t = _jh_counts(sat); jh_c = _jh_counts(ctrl_b2_doc)
+    fig = _tr_fig()
+    _deriv_simple(fig, N_B2_FORM, N_B2_CTRL,
+                  "Aptos P3  ·  SAT pre + post disponible",
+                  "Sin formación P3  ·  SAT disponible",
+                  jh_t, jh_c, col_trat="#52C97A", col_ctrl="#FFB74D")
+    _ensure_bg()
+    sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "embudo_b2.png"), prs)
+    _T(sl, "Bloque II — Derivación de Grupos: Evaluación SAT")
+    _POP(sl, f"Tratamiento: {N_B2_FORM} Aptos P3  ·  Control: {N_B2_CTRL} docentes sin formación con SAT disponible")
+    _CT(sl, "Izq.: tamaño de cada grupo  ·  Der.: composición por tipo de contrato — Jornada / Honorario")
+    print("  ✓ slide embudo_b2 — Derivación grupos B2")
+
+
+def slide_embudo_b3(prs):
+    """Bloque III: derivación de grupos Rendimiento Académico, sin paso 1.144."""
+    jh_t = _jh_counts(sat); jh_c = _jh_counts(ctrl_b3_doc)
+    fig = _tr_fig()
+    _deriv_simple(fig, N_B3_FORM, N_B3_CTRL,
+                  "Aptos P3  ·  con datos notas+SAT",
+                  "Sin formación  ·  con datos notas+SAT",
+                  jh_t, jh_c, col_trat="#52C97A", col_ctrl="#FFB74D")
     _ensure_bg()
     sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "embudo_b3.png"), prs)
     _T(sl, "Bloque III — Derivación de Grupos: Rendimiento Académico")
     _POP(sl, f"Tratamiento: {N_B3_FORM} Aptos P3 con datos notas+SAT  ·  Control: {N_B3_CTRL} docentes sin formación con datos comparables")
-    _CT(sl, "Izq.: embudo de derivación desde universo base hasta tratamiento B3  ·  Der.: composición Jornada/Honorario Tratamiento vs Control")
+    _CT(sl, "Izq.: tamaño de cada grupo  ·  Der.: composición por tipo de contrato — Jornada / Honorario")
     print("  ✓ slide embudo_b3 — Derivación grupos B3")
 
 
 def slide_embudo_b4(prs):
-    """Bloque IV: embudo 1144→419→N_B4_FORM + barras Jornada/Honorario Tratamiento vs Control B4."""
-    import matplotlib.patches as _mp
+    """Bloque IV: derivación de grupos EDD, sin paso 1.144."""
     if not has_edd or N_B4_FORM == 0:
         sl = _new_sl(prs); _pic(sl, SHARED_BG, prs)
         _T(sl, "Bloque IV — Derivación de Grupos (datos EDD no disponibles)")
         return
 
-    def _jh(df, col="tipo_contrato_tag"):
-        c = df[col].str.upper().value_counts() if col in df.columns else pd.Series(dtype=int)
-        return int(c.get("JORNADA", 0)), int(c.get("HONORARIO", 0))
-
-    n_jor_f, n_hon_f = _jh(b4_form_doc)
-    n_jor_c, n_hon_c = _jh(b4_ctrl_doc)
-    n_tot_f = n_jor_f + n_hon_f
-    n_tot_c = n_jor_c + n_hon_c
-
+    jh_t = _jh_counts(b4_form_doc); jh_c = _jh_counts(b4_ctrl_doc)
     fig = _tr_fig()
-
-    # ── IZQUIERDO: Embudo 1144 → 419 → N_B4_FORM + caja control ──────────────
-    ew = PIC_RECT[2] * 0.46
-    ex = PIC_RECT[0] + 0.01
-    ey = PIC_RECT[1] - 0.06
-    eh = PIC_RECT[3] * 0.85
-    ax_e = fig.add_axes([ex, ey, ew, eh], facecolor="none", zorder=5)
-    ax_e.set_xlim(0, 10); ax_e.set_ylim(0, 10); ax_e.axis("off")
-
-    pct_b4 = f"{N_B4_FORM*100//N_FORM}% de {N_FORM}" if N_FORM > 0 else ""
-    steps = [
-        (9.0, 7.2, "1.144",        "Universo base  ·  Jornada + Honorario",               "#3D6FA4"),
-        (7.0, 5.2, f"{N_FORM}",    f"{N_FORM*100//N_UNIV}% de 1.144  ·  ≥1 iniciativa de formación", "#4B9CD3"),
-        (5.2, 3.2, str(N_B4_FORM), f"{pct_b4}  ·  Tratamiento B4 (Aptos P3 con EDD)",    "#A47BD6"),
-    ]
-    tops = [9.65, 6.80, 3.95]
-    hh   = 2.50
-    for (tw, bw, n_lbl, desc, col), top in zip(steps, tops):
-        bot = top - hh
-        pts = np.array([[5-tw/2, top], [5+tw/2, top],
-                        [5+bw/2, bot], [5-bw/2, bot]])
-        ax_e.fill(pts[:,0], pts[:,1], color=col, alpha=0.82, zorder=2)
-        ax_e.plot(np.append(pts[:,0], pts[0,0]),
-                  np.append(pts[:,1], pts[0,1]),
-                  color="white", linewidth=0.7, alpha=0.40, zorder=3)
-        ax_e.text(5, top - hh*0.33, n_lbl,
-                  ha="center", va="center", fontsize=28, fontweight="bold",
-                  color="white", zorder=4,
-                  path_effects=[pe.withStroke(linewidth=3, foreground="#0A0F18")])
-        ax_e.text(5, top - hh*0.65, desc,
-                  ha="center", va="center", fontsize=8, color="#E0F0E0",
-                  fontweight="bold", zorder=4)
-    for ay, lbl in [(7.05, "37%"), (4.20, f"{N_B4_FORM/419*100:.0f}%")]:
-        ax_e.annotate("", xy=(5, ay-0.30), xytext=(5, ay+0.30),
-                      arrowprops=dict(arrowstyle="->", color="#FFD580", lw=1.5), zorder=5)
-        ax_e.text(5.5, ay, lbl, ha="left", va="center", fontsize=9,
-                  color="#FFD580", fontstyle="italic", fontweight="bold", zorder=5)
-
-    # Caja control
-    ax_e.add_patch(_mp.FancyBboxPatch((0.4, 0.15), 9.2, 1.45,
-                                     boxstyle="round,pad=0.1", linewidth=1.5,
-                                     edgecolor="#FFB74D", facecolor="#1A3A5C", alpha=0.85, zorder=4))
-    ax_e.text(5, 1.05, f"{N_B4_CTRL}", ha="center", va="center", fontsize=22, fontweight="bold",
-              color="#FFB74D", zorder=5,
-              path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-    ax_e.text(5, 0.42, "Grupo Control B4  ·  sin actividad P3, con EDD disponible",
-              ha="center", va="center", fontsize=7.5, color="#E0D0B0", fontweight="bold", zorder=5)
-
-    # ── DERECHO: Barras Jornada/Honorario por grupo ───────────────────────────
-    dx = PIC_RECT[0] + ew + 0.08
-    dw = PIC_RECT[2] - ew - 0.11
-    dy = PIC_RECT[1] + 0.01
-    dh = PIC_RECT[3] - 0.06
-
-    if n_tot_f > 0 and n_tot_c > 0:
-        pjf = n_jor_f/n_tot_f*100; phf = n_hon_f/n_tot_f*100
-        pjc = n_jor_c/n_tot_c*100; phc = n_hon_c/n_tot_c*100
-        ax_b = fig.add_axes([dx + dw*0.08, dy + dh*0.10, dw*0.38, dh*0.75],
-                            facecolor="none", zorder=5)
-        for xi, (pj, ph, nj, nh) in enumerate([
-            (pjf, phf, n_jor_f, n_hon_f),
-            (pjc, phc, n_jor_c, n_hon_c),
-        ]):
-            ax_b.bar([xi], [pj], color="#5C9BD6", alpha=0.90, width=0.55, edgecolor="none")
-            ax_b.bar([xi], [ph], bottom=[pj], color="#FFB74D", alpha=0.90, width=0.55, edgecolor="none")
-            ax_b.text(xi, pj/2, f"{pj:.0f}%\n({nj})",
-                      ha="center", va="center", fontsize=11, fontweight="bold", color="white",
-                      path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-            ax_b.text(xi, pj + ph/2, f"{ph:.0f}%\n({nh})",
-                      ha="center", va="center", fontsize=11, fontweight="bold", color="white",
-                      path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
-        ax_b.set_xlim(-0.5, 1.5); ax_b.set_ylim(0, 105)
-        ax_b.set_xticks([0, 1])
-        ax_b.set_xticklabels([f"Tratamiento B4\n(nº {n_tot_f})", f"Control B4\n(nº {n_tot_c})"],
-                             color="white", fontsize=10)
-        ax_b.tick_params(axis="x", length=0, pad=10)
-        ax_b.tick_params(axis="y", left=False, labelleft=False)
-        for sp in ax_b.spines.values():
-            sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-        from matplotlib.patches import Patch
-        ax_b.legend(handles=[Patch(facecolor="#5C9BD6", alpha=0.9, label="Jornada"),
-                              Patch(facecolor="#FFB74D", alpha=0.9, label="Honorario")],
-                    fontsize=10, framealpha=0.25, labelcolor="white",
-                    facecolor="#101820", edgecolor="#444",
-                    loc="upper right", bbox_to_anchor=(1.55, 1.02))
-
+    _deriv_simple(fig, N_B4_FORM, N_B4_CTRL,
+                  "Aptos P3  ·  con EDD disponible",
+                  "Sin actividad P3  ·  con EDD disponible",
+                  jh_t, jh_c, col_trat="#A47BD6", col_ctrl="#FFB74D")
     _ensure_bg()
     sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "embudo_b4.png"), prs)
     _T(sl, "Bloque IV — Derivación de Grupos: Evaluación de Desempeño Docente")
     _POP(sl, f"Tratamiento: {N_B4_FORM} Aptos P3 con EDD disponible  ·  Control: {N_B4_CTRL} docentes sin actividad P3 con EDD comparable")
-    _CT(sl, "Izq.: embudo de derivación desde universo base hasta tratamiento B4  ·  Der.: composición Jornada/Honorario Tratamiento vs Control")
+    _CT(sl, "Izq.: tamaño de cada grupo  ·  Der.: composición por tipo de contrato — Jornada / Honorario")
     print("  ✓ slide embudo_b4 — Derivación grupos B4")
 
 
@@ -3076,67 +3263,326 @@ def slide_metodo_b4(prs):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Lote C — Grupo Selecto (ref 21), versión simplificada y segura
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTA METODOLÓGICA (2026-07-31): el script original `generar_grupo_selecto.py` tiene,
+# además de este perfil, 3 slides de trayectoria PRE/DURANTE/POST (SAT, Notas, EDD) que
+# NO se portan acá. Su lógica de "etapas" (`_pivot_staged`) tenía un bug de contigüidad
+# de períodos confirmado por el usuario: PRE agregaba TODO período <= baseline (no solo el
+# inmediato anterior) y POST TODO período >= resultado (no solo el inmediato posterior),
+# en vez de exigir 3 períodos estrictamente contiguos (Taller: ej. 2023-01 pre / 2023-02
+# durante / 2024-01 post — 3 semestres seguidos; Diplomado: 2023 pre / 2024 durante / 2025
+# post — 3 años seguidos). Corregir esa lógica es trabajo nuevo, no un porteo — queda
+# pendiente para una pasada dedicada. Este slide de perfil NO usa esa lógica de etapas
+# (es solo un conteo de instancias por docente), así que es seguro portarlo ahora.
+def slide_grupo_selecto(prs):
+    """Grupo Selecto — docentes Aptos P3 con 3+ instancias de formación (ref 21)."""
+    hvy = sat[sat["n_instancias"] >= 3].copy().sort_values("n_instancias", ascending=False)
+    N_HVY_TOTAL = len(hvy)
+    TOP_N = min(25, N_HVY_TOTAL)
+    top = hvy.head(TOP_N).sort_values("n_instancias", ascending=True).reset_index(drop=True)
+
+    def _short(n):
+        parts = str(n).title().split()
+        return f"{parts[0]} {parts[-1]}" if len(parts) >= 2 else parts[0]
+
+    N = len(top); y = np.arange(N)
+    nt = top["n_taller"].values; nd = top["n_diplomado"].values; npy = top["n_proyecto"].values
+
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y - 0.02, CHART_W, CHART_H + 0.10], facecolor="none", zorder=5)
+    ax.barh(y, nt, height=0.72, color="#5C9BD6", alpha=0.90, label="Taller", edgecolor="none")
+    ax.barh(y, nd, left=nt, height=0.72, color="#A5D6A7", alpha=0.90, label="Diplomado", edgecolor="none")
+    ax.barh(y, npy, left=nt+nd, height=0.72, color="#FFB74D", alpha=0.90, label="Proyecto", edgecolor="none")
+    for i, tot in enumerate(top["n_instancias"]):
+        ax.text(tot + 0.10, i, str(int(tot)), va="center", ha="left", fontsize=8,
+                fontweight="bold", color="white",
+                path_effects=[pe.withStroke(linewidth=2, foreground="#0A0F18")])
+    ax.set_yticks(y)
+    ax.set_yticklabels([_short(n) for n in top["nombre"]], fontsize=7.5, color="white")
+    ax.tick_params(axis="y", length=0, pad=4)
+    ax.tick_params(axis="x", colors="#AAAAAA", labelsize=8.5, length=0)
+    ax.set_xlim(0, top["n_instancias"].max()*1.20)
+    ax.set_ylim(-0.6, N-0.4)
+    ax.set_xlabel("Nº de instancias formativas", color="#AAAAAA", fontsize=9)
+    for sp in ax.spines.values(): sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.6)
+    ax.xaxis.grid(True, color="white", alpha=0.07, linewidth=0.5); ax.set_axisbelow(True)
+    ax.legend(fontsize=9, framealpha=0.28, labelcolor="white",
+              facecolor="#101820", edgecolor="#444", loc="lower right", ncol=3)
+
+    sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "sel_perfil.png"), prs)
+    _T(sl, "Grupo Selecto — Aptos P3 de Alta Intensidad Formativa", fs=17)
+    _POP(sl, f"{N_HVY_TOTAL} de los {N197} Aptos P3 tienen 3+ instancias de formación  ·  "
+             f"se muestran los {TOP_N} con mayor intensidad")
+    _BUL(sl, [
+        f"{N_HVY_TOTAL} de los {N197} Aptos P3 ({100*N_HVY_TOTAL/N197:.0f}%) participaron en "
+        f"3 o más instancias de formación entre 2022 y 2025 — el resto participó en 1 o 2.",
+        "El Taller domina la composición de este grupo de alta intensidad, consistente con "
+        "su predominio en el universo formado general.",
+        "Este grupo es el más relevante para observar el efecto acumulativo de la formación "
+        "repetida sobre SAT, rendimiento académico y EDD.",
+    ])
+    print(f"  ✓ slide_grupo_selecto — Grupo Selecto (ref 21, {N_HVY_TOTAL} heavy users, top {TOP_N} mostrados)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Lote C — porteado de generar_diapo_evolucion_trazabilidad.py
+# ─────────────────────────────────────────────────────────────────────────────
+def _spaghetti_traz(ax, pivot_ap, pivot_ct, xs, ylabel, ylim=None):
+    """Líneas individuales + media grupal para dos grupos sobre eje x dado."""
+    x_idx = list(range(len(xs)))
+    for _, row in pivot_ap.iterrows():
+        vals = row.values.astype(float); mask = ~np.isnan(vals)
+        if mask.sum() >= 2:
+            xi = [x_idx[j] for j in range(len(xs)) if mask[j]]
+            ax.plot(xi, vals[mask], color="#5C9BD6", alpha=0.09, lw=0.9, zorder=2)
+    for _, row in pivot_ct.iterrows():
+        vals = row.values.astype(float); mask = ~np.isnan(vals)
+        if mask.sum() >= 2:
+            xi = [x_idx[j] for j in range(len(xs)) if mask[j]]
+            ax.plot(xi, vals[mask], color="#FFB74D", alpha=0.09, lw=0.9, zorder=2)
+
+    mean_ap = pivot_ap.mean(skipna=True).values
+    ax.plot(x_idx, mean_ap, color="#5C9BD6", lw=2.8, marker="o", markersize=8,
+            label=f"Aptos P3  (nº {len(pivot_ap)})", zorder=5)
+    for xi, yi in zip(x_idx, mean_ap):
+        if not np.isnan(yi):
+            ax.text(xi, yi+0.04, f"{yi:.2f}", ha="center", va="bottom", fontsize=8,
+                    fontweight="bold", color="#5C9BD6",
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")], zorder=6)
+
+    mean_ct = pivot_ct.mean(skipna=True).values
+    ax.plot(x_idx, mean_ct, color="#FFB74D", lw=2.8, marker="s", markersize=8,
+            linestyle="--", label=f"Control  (nº {len(pivot_ct)})", zorder=5)
+    for xi, yi in zip(x_idx, mean_ct):
+        if not np.isnan(yi):
+            ax.text(xi, yi-0.04, f"{yi:.2f}", ha="center", va="top", fontsize=8,
+                    fontweight="bold", color="#FFB74D",
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground="#0A0F18")], zorder=6)
+
+    ax.set_xticks(x_idx); ax.set_xticklabels(xs)
+    if ylim: ax.set_ylim(ylim)
+    _style(ax, xlabel=None)
+    if ylabel: ax.set_ylabel(ylabel, color="#AAAAAA", fontsize=9)
+    ax.legend(fontsize=9, framealpha=0.25, labelcolor="white",
+              facecolor="#101820", edgecolor="#555", loc="upper left")
+
+
+def slide_traz_nota(prs):
+    """Bloque III: trayectoria individual + media — Nota Promedio Alumnos (ref 29)."""
+    ruts_aptos = set(sat["rut_key"])
+    sc = scat.copy()
+    sc["rut_key"] = sc["rut_docente"].astype(str).str.strip()
+    sc["nota_promedio"] = pd.to_numeric(sc["nota_promedio"], errors="coerce")
+    agg = sc.groupby(["rut_key","periodo"])["nota_promedio"].mean().reset_index()
+    periodos_ord = sorted(agg["periodo"].unique().tolist())
+
+    ruts_ctrl_b3 = set(sc[~sc["formado"]]["rut_key"].unique())
+    agg_ap = agg[agg["rut_key"].isin(ruts_aptos)]
+    agg_ct = agg[agg["rut_key"].isin(ruts_ctrl_b3)]
+
+    pivot_ap = agg_ap.pivot_table(index="rut_key", columns="periodo", values="nota_promedio")
+    pivot_ct = agg_ct.pivot_table(index="rut_key", columns="periodo", values="nota_promedio")
+    for p in periodos_ord:
+        if p not in pivot_ap.columns: pivot_ap[p] = np.nan
+        if p not in pivot_ct.columns: pivot_ct[p] = np.nan
+    pivot_ap = pivot_ap[periodos_ord]; pivot_ct = pivot_ct[periodos_ord]
+    n_ap, n_ct = len(pivot_ap), len(pivot_ct)
+
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    _spaghetti_traz(ax, pivot_ap, pivot_ct, periodos_ord,
+                     ylabel="Nota promedio alumnos (1–7)", ylim=(1.0, 7.5))
+    ax.set_title("Evolución Nota Promedio Alumnos por Período", color="white",
+                 fontsize=12, pad=10, fontfamily="Calibri")
+
+    sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "traz_nota.png"), prs)
+    _T(sl, "Bloque III — Evolución Nota Promedio Alumnos — Aptos P3 vs Control")
+    _POP(sl, f"Aptos P3: nº {n_ap} con dato de nota  ·  Control B3: nº {n_ct}  ·  "
+             f"Líneas individuales por docente + media grupal  ·  2023–2025")
+    _CT(sl, f"Nota promedio de alumnos por semestre  ·  Aptos P3 (azul, nº {n_ap})  ·  "
+            f"Control sin formación (naranja, nº {n_ct})  ·  media sobre secciones agregadas por docente")
+    _BUL(sl, [
+        f"Los Aptos P3 (línea azul) mantienen una nota promedio de alumnos consistentemente "
+        f"superior a la del grupo control a lo largo de los {len(periodos_ord)} semestres.",
+        "La dispersión individual (líneas finas) muestra alta variabilidad dentro de cada grupo, "
+        "pero la media grupal permite comparar la tendencia central entre tratamiento y control.",
+        "Una brecha positiva sostenida sugiere que los cursos de los Aptos P3 generan "
+        "mejores resultados académicos para sus estudiantes en el tiempo.",
+    ])
+    print("  ✓ slide_traz_nota — Evolución Nota Promedio (ref 29)")
+
+
+def slide_traz_edd(prs):
+    """Bloque IV: trayectoria individual + media — EDD (ref 35)."""
+    if not has_edd or len(edd_form) == 0:
+        print("  ✗ slide_traz_edd — sin datos EDD, omitida")
+        return
+
+    pivot_ap = edd_form.pivot_table(index="rut_key", columns="anio_eval", values="edd_total", aggfunc="mean")
+    pivot_ct = edd_ctrl.pivot_table(index="rut_key", columns="anio_eval", values="edd_total", aggfunc="mean")
+    anios_ord = sorted(set(pivot_ap.columns) | set(pivot_ct.columns))
+    for a in anios_ord:
+        if a not in pivot_ap.columns: pivot_ap[a] = np.nan
+        if a not in pivot_ct.columns: pivot_ct[a] = np.nan
+    pivot_ap = pivot_ap[anios_ord]; pivot_ct = pivot_ct[anios_ord]
+    n_ap, n_ct = len(pivot_ap), len(pivot_ct)
+
+    fig = _tr_fig()
+    ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
+    _spaghetti_traz(ax, pivot_ap, pivot_ct, anios_ord, ylabel="EDD Total (0–1)", ylim=(0.0, 1.10))
+    ax.set_title("Evolución EDD por Año de Evaluación", color="white",
+                 fontsize=12, pad=10, fontfamily="Calibri")
+
+    sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "traz_edd.png"), prs)
+    _T(sl, "Bloque IV — Evolución EDD — Aptos P3 vs Control")
+    _POP(sl, f"Aptos P3 con EDD: nº {n_ap}  ·  Control B4 (sin formación, con EDD): nº {n_ct}  ·  "
+             f"Líneas individuales por docente + media grupal")
+    _CT(sl, f"EDD Total (escala 0–1) por año de evaluación  ·  Aptos P3 (azul, nº {n_ap})  ·  "
+            f"Control B4 sin formación (naranja, nº {n_ct})")
+    _BUL(sl, [
+        f"La evolución del EDD muestra la trayectoria de evaluación directiva de los "
+        f"{n_ap} Aptos P3 con registro EDD frente a los {n_ct} del grupo control.",
+        "Las líneas individuales permiten identificar docentes con trayectorias atípicas "
+        "(ascendentes o descendentes marcadas) dentro de cada grupo.",
+        "La comparación de medias grupales por año revela si la formación P3 se asocia "
+        "con una mejora sostenida en la evaluación de desempeño directivo.",
+    ])
+    print("  ✓ slide_traz_edd — Evolución EDD (ref 35)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Lote C — porteado de generar_diapo_recomendacion.py
+# ─────────────────────────────────────────────────────────────────────────────
+def slide_recomendacion(prs):
+    """% de Recomendación SAT — Formados P3 vs Control, por año (ref 20)."""
+    trat_ruts = set(sat["rut_key"])
+    ctrl_ruts = set(ctrl["rut_key"])
+
+    bin_trat = bin_[bin_["rut_key"].isin(trat_ruts)].copy()
+    bin_ctrl = bin_[bin_["rut_key"].isin(ctrl_ruts)].copy()
+    bin_trat["anio"] = bin_trat["periodo"].str[:4].astype(int)
+    bin_ctrl["anio"] = bin_ctrl["periodo"].str[:4].astype(int)
+
+    t_year = bin_trat.groupby("anio").agg(pct=("bin","mean"), n=("rut_key","nunique")).reset_index()
+    c_year = bin_ctrl.groupby("anio").agg(pct=("bin","mean"), n=("rut_key","nunique")).reset_index()
+    anios = sorted(set(t_year["anio"]) | set(c_year["anio"]))
+
+    t_pct = [t_year.loc[t_year["anio"]==a,"pct"].values[0] if a in t_year["anio"].values else np.nan for a in anios]
+    c_pct = [c_year.loc[c_year["anio"]==a,"pct"].values[0] if a in c_year["anio"].values else np.nan for a in anios]
+    n_trat_total = int(bin_trat["rut_key"].nunique())
+    n_ctrl_total = int(bin_ctrl["rut_key"].nunique())
+
+    fig, ax = _ax()
+    xs = np.arange(len(anios)); BW = 0.32
+    ax.bar(xs - BW/2, t_pct, width=BW, color="#5C9BD6", alpha=0.90, edgecolor="none",
+           label=f"Formados P3  (nº {n_trat_total})")
+    ax.bar(xs + BW/2, c_pct, width=BW, color="#FFB74D", alpha=0.90, edgecolor="none",
+           label=f"No Formados — Control  (nº {n_ctrl_total})")
+    stroke = [pe.withStroke(linewidth=2.5, foreground="#0A0F18")]
+    for i, v in enumerate(t_pct):
+        ax.text(xs[i]-BW/2, v+0.18, f"{v:.1f}%", ha="center", va="bottom",
+                fontsize=11, fontweight="bold", color="#5C9BD6", path_effects=stroke)
+    for i, v in enumerate(c_pct):
+        ax.text(xs[i]+BW/2, v+0.18, f"{v:.1f}%", ha="center", va="bottom",
+                fontsize=11, fontweight="bold", color="#FFB74D", path_effects=stroke)
+    ax.plot(xs-BW/2, t_pct, color="#5C9BD6", linewidth=1.8, linestyle="--", alpha=0.55, zorder=3)
+    ax.plot(xs+BW/2, c_pct, color="#FFB74D", linewidth=1.8, linestyle="--", alpha=0.55, zorder=3)
+
+    y_min = min(min(t_pct), min(c_pct)) - 2
+    y_max = max(max(t_pct), max(c_pct)) + 3
+    ax.set_ylim(y_min, y_max)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([str(a) for a in anios], fontsize=13, fontweight="bold", color="white")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v,_: f"{v:.0f}%"))
+    _style(ax)
+    leg = ax.legend(loc="upper left", bbox_to_anchor=(0.01,0.99), fontsize=10.5,
+                    framealpha=0, labelcolor="white", handlelength=1.4,
+                    handletextpad=0.6, borderpad=0)
+    for t in leg.get_texts(): t.set_fontweight("bold")
+
+    sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "recomendacion_chart.png"), prs)
+    _T(sl, "% de Recomendación Estudiantil — Formados P3 vs No Formados")
+    _POP(sl, f"Pregunta 4526: «¿Recomendaría a este profesor/a a otro/a estudiante que quiera "
+             f"lograr un real aprendizaje?»  ·  Tratamiento nº {n_trat_total}  ·  "
+             f"Control nº {n_ctrl_total}  ·  Períodos 2023–2025")
+    delta_2023 = t_pct[anios.index(2023)] - c_pct[anios.index(2023)]
+    delta_2025 = t_pct[anios.index(2025)] - c_pct[anios.index(2025)]
+    trend_t = t_pct[-1] - t_pct[0]; trend_c = c_pct[-1] - c_pct[0]
+    _BUL(sl, [
+        f"Los docentes Formados P3 muestran un porcentaje de recomendación consistentemente "
+        f"superior al grupo control en todos los años analizados "
+        f"(diferencia {delta_2023:+.1f} pp en 2023 y {delta_2025:+.1f} pp en 2025).",
+        f"Tendencia Formados P3: {t_pct[0]:.1f}% → {t_pct[-1]:.1f}% ({trend_t:+.1f} pp de 2023 a 2025). "
+        f"Tendencia Control: {c_pct[0]:.1f}% → {c_pct[-1]:.1f}% ({trend_c:+.1f} pp).",
+    ])
+    print("  ✓ slide_recomendacion — % Recomendación Estudiantil (ref 20)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Ensamblar PPTX
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("Generando PRESENTACION_210_P3_v4.pptx (43 slides) …")
+    print("Generando PRESENTACION_316_P3_v6.pptx (objetivo: 37 slides, Lote A en curso) …")
     _ensure_bg()
     prs = Presentation()
     prs.slide_width  = Emu(SW_EMU)
     prs.slide_height = Emu(SH_EMU)
 
+    # ── Apertura ──────────────────────────────────────────────────────────────
+    slide_01(prs)                  # ref 01 Portada
+    slide_grid_b1_b2(prs)          # ref 02 Grilla Bloque I + II
+    slide_grid_b3_b4(prs)          # ref 03 Grilla Bloque III + IV
+
     # BLOQUE I — Clasificación Cuerpo Académico
-    slide_01(prs)                  # 01 Portada
-    slide_02(prs)                  # 02 Índice
-    slide_nuevo_02(prs)            # 03 Embudo 1144→419→210 + JORNADA/HONORARIO
-    slide_resumen_grupos(prs)      # 04 Composición grupos × Bloque (tartas 2×3)
-    slide_03(prs)                  # 05 Metodología
-    slide_04(prs)                  # 04 Sep BLOQUE I
-    slide_05(prs)                  # 05 Edad/Sexo
-    slide_06(prs)                  # 06 Facultad
-    slide_07(prs)                  # 07 Antigüedad
-    slide_08(prs)                  # 08 Jerarquía
-    slide_09(prs)                  # 09 Grado
-    slide_10(prs)                  # 10 Institución Grado
+    slide_uih_b1(prs)              # ref 04 Bloque I — Universo/Índice/Hallazgos
+    slide_nuevo_02(prs)            # ref 05 Universo Base: Composición Aptos P3
+    slide_12(prs)                  # ref 06 Venn tipos formación (TODO Lote B: agregar bullets)
+    slide_19(prs)                  # ref 07 Combinaciones de modalidad
+    slide_05(prs)                  # ref 08 Edad + Sexo
+    slide_09(prs)                  # ref 09 Grado Académico
+    slide_06(prs)                  # ref 10 Facultad
+    slide_07(prs)                  # ref 11 Antigüedad
+    slide_17(prs)                  # ref 12 Participación × Antigüedad
+    slide_08(prs)                  # ref 13 Jerarquía
+    slide_16(prs)                  # ref 14 Participación × Jerarquía
+    slide_18(prs)                  # ref 15 Intensidad participación
 
     # BLOQUE II — Evaluación SAT
-    slide_11(prs)                  # 11 Sep BLOQUE II
-    slide_metodo_b2(prs)           # Nota Metodológica B2
-    slide_12(prs)                  # 12 Venn tipos formación
-    slide_13(prs)                  # 13 Universo SAT P3
-    # slide_14(prs)          # eliminado — Embudo compacto (cubierto por slide_nuevo_02)
-    slide_15(prs)                  # 15 Sep 2.1 Caracterización
-    slide_16(prs)                  # 16 Participación × Jerarquía
-    slide_17(prs)                  # 17 Participación × Antigüedad
-    slide_18(prs)                  # 18 Intensidad participación
-    slide_19(prs)                  # 19 Combinaciones modalidad
-    slide_20(prs)                  # 20 Perfil grupo control
-    slide_21(prs)                  # SAT z formados vs control (6 períodos)
-    slide_fac_b2(prs)              # SAT z × Facultad (formados vs control)
+    slide_uih_b2(prs)              # ref 16 Bloque II — Universo/Índice/Hallazgos
+    slide_embudo_b2(prs)           # ref 17 Derivación de Grupos B2
+    slide_fac_b2(prs)              # ref 18 Perfil por Facultad B2
+    slide_21(prs)                  # ref 19 SAT z-score: Formados vs Control (6 períodos)
+    slide_recomendacion(prs)       # ref 20 % Recomendación Estudiantil
+    slide_grupo_selecto(prs)       # ref 21 Grupo Selecto
 
     # BLOQUE III — Rendimiento Académico de Alumnos
-    slide_23(prs)                  # Sep BLOQUE III
-    slide_metodo_b3(prs)           # Nota Metodológica B3
-    slide_embudo_b3(prs)           # Embudo derivación B3 + Jornada/Honorario
-    slide_perfil_b3(prs)           # Perfil B3: formados vs control
-    slide_24(prs)                  # Scatter SAT vs Nota (3 paneles)
-    slide_25(prs)                  # Rendimiento global formados vs control
-    slide_26(prs)                  # Evolución Rendimiento × período
-    slide_27(prs)                  # Rendimiento × Antigüedad
-    slide_28(prs)                  # Rendimiento × Jerarquía
-    slide_29(prs)                  # Efecto acumulativo × instancias
-    slide_fac_b3(prs)              # Rendimiento Académico × Facultad (formados vs control)
+    slide_uih_b3(prs)              # ref 22 Bloque III — Universo/Índice/Hallazgos
+    slide_embudo_b3(prs)           # ref 23 Muestra de Grupos B3 (TODO Lote D: quitar paso 1.144)
+    slide_perfil_b3(prs)           # ref 24 Perfil Demográfico B3
+    slide_25(prs)                  # ref 25 Incidencia Plan Formación (acumulado)
+    slide_24(prs)                  # ref 26 Correlación SAT-Notas (scatter 3 paneles)
+    slide_26(prs)                  # ref 27 Incidencia Plan Formación (evolución × período)
+    slide_fac_b3(prs)              # ref 28 Rendimiento Académico × Facultad
+    slide_traz_nota(prs)           # ref 29 Evolución Nota Promedio (trazabilidad)
 
     # BLOQUE IV — EDD
-    slide_30(prs)                  # Sep BLOQUE IV
-    slide_metodo_b4(prs)           # Nota Metodológica B4
-    slide_embudo_b4(prs)           # Embudo derivación B4 + Jornada/Honorario
-    slide_perfil_b4(prs)           # Perfil B4: formados vs control EDD
-    slide_31(prs)                  # Evolución EDD formados vs control
-    slide_32(prs)                  # EDD por tipo de formación
-    slide_fac_b4(prs)              # EDD × Facultad (formados vs control)
-    # slide_tabla(prs)             # eliminado — Tabla resumen fuentes y grupos
-    slide_33(prs)                  # Conclusiones y Recomendaciones
+    slide_uih_b4(prs)              # ref 30 Bloque IV — Universo/Índice/Hallazgos
+    slide_embudo_b4(prs)           # ref 31 Muestra de Grupos B4 (TODO Lote D: quitar paso 1.144)
+    slide_perfil_b4(prs)           # ref 32 Perfil Formados vs Control (EDD)
+    slide_32(prs)                  # ref 33 EDD por Tipo de Formación
+    slide_31(prs)                  # ref 34 Evolución EDD (ya corregido: control=134)
+    slide_traz_edd(prs)            # ref 35 Evolución EDD (trazabilidad)
+    slide_fac_b4(prs)              # ref 36 EDD × Facultad
+    # TODO Lote B: redisenar slide_33 a formato 2 columnas + Recomendaciones   -> ref 37
+    slide_33(prs)                  # ref 37 Conclusiones y Recomendaciones (provisional, sin redisenar)
+
+    # ── Eliminadas definitivamente (no están en las 37 finales) ────────────────
+    # slide_02 (Índice), slide_resumen_grupos, slide_03 (Marco), slide_10 (Institución
+    # Grado), slide_11 (Sep BLOQUE II), slide_13 (Universo SAT P3 4 cajas),
+    # slide_15 (Sep 2.1), slide_20 (Perfil Control solo), slide_fac_b2 (SAT z×Facultad),
+    # slide_23 (Sep BLOQUE III), slide_27/28/29 (Rendimiento×Antigüedad/Jerarquía/
+    # Efecto Acumulativo), slide_30 (Sep BLOQUE IV) — confirmado con el usuario 2026-07-30.
 
     prs.save(OUT_PPTX)
     print(f"\n✓ Guardado: {OUT_PPTX}")

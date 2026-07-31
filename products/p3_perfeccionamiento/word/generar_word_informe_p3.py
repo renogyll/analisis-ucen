@@ -1,8 +1,16 @@
 """
-generar_word_informe_p3.py — v5
+generar_word_informe_p3.py — v6
 Estructura doble: Resumen Ejecutivo + Informe Producto 3
 Narrativa analítica densa, graficos clave seleccionados, sin tablas t-test.
 Conclusiones de CONCLUSIONES 6-07-2026 (1).docx + adicionales.
+
+REESCRITO 2026-07-31 sobre `data/cascade/` (universo vigente: universo_base
+1.144, 726 formados, 316 Aptos P3) — antes leía `p3_sat_zscore_918.csv` y
+`docente_918.csv` desde una carpeta "PROCESADO" fantasma con el universo
+viejo 917/918, y el texto narrativo afirmaba por escrito "El análisis parte
+de 917 docentes jerarquizados UCEN (universo base)" — metodología ya
+reemplazada. Los literales hardcodeados (917/357/197/486) se reemplazaron
+por las variables ya calculadas (N_BASE/N_FORM_TOTAL/N197/N_CTRL_SAT).
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os, io
@@ -20,41 +28,49 @@ from docx.oxml import OxmlElement
 # Rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE      = os.path.dirname(os.path.abspath(__file__))
-PROC      = os.path.join(BASE, "..", "PROCESADO")
-ROOT_PROC = os.path.normpath(os.path.join(BASE, "..", "..", "PROCESADO"))
+ROOT      = os.path.normpath(os.path.join(BASE, "..", "..", ".."))
+sys.path.insert(0, ROOT)
+from config import CASCADE, OUTPUTS
+
+COMP      = os.path.join(CASCADE, "complementarios")
 SLIDES    = os.path.join(BASE, "dark_slides_v3", "word_charts_v6")
-ROOT      = os.path.normpath(os.path.join(BASE, "..", ".."))
-SCRATCH   = (r"C:\Users\RGONZA~1.LAP\AppData\Local\Temp\claude"
-             r"\c--Users-r-gonzalez-fluxsolar-LAPTOP-FLUX-ECO-Downloads-Analisis-UCEN-v2"
-             r"\19e6fc3f-6ca1-4150-9da7-8dfa38be71ca\scratchpad")
-OUT_DOCX  = os.path.join(ROOT, "INFORME_P3_v8.docx")
-IMG_CACHE = os.path.join(SCRATCH, "word_imgs_v6")
+IMG_CACHE = os.path.join(BASE, "dark_slides_v3", "word_imgs_v6")
+OUT_DOCX  = os.path.join(OUTPUTS, "docx", "INFORME_P3_v9.docx")
 os.makedirs(IMG_CACHE, exist_ok=True)
+os.makedirs(os.path.join(OUTPUTS, "docx"), exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Carga de datos y calculos clave
 # ─────────────────────────────────────────────────────────────────────────────
-sat  = pd.read_csv(os.path.join(PROC, "p3_sat_zscore_918.csv"), encoding="utf-8-sig")
+sat  = pd.read_csv(os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv"), encoding="utf-8-sig")
 sat["rut_key"] = sat["rut_key"].astype(str).str.strip()
-cvt  = pd.read_csv(os.path.join(PROC, "control_vs_trat_918.csv"), encoding="utf-8-sig")
+cvt  = pd.read_csv(os.path.join(COMP, "control_vs_trat_918.csv"), encoding="utf-8-sig")
 cvt["z_trat"] = pd.to_numeric(cvt["z_trat"], errors="coerce")
 cvt["z_ctrl"] = pd.to_numeric(cvt["z_ctrl"], errors="coerce")
 cvt["n_trat"]  = pd.to_numeric(cvt["n_trat"],  errors="coerce").astype(int)
 cvt["n_ctrl"]  = pd.to_numeric(cvt["n_ctrl"],  errors="coerce").astype(int)
-ctrl = pd.read_csv(os.path.join(PROC, "control_918.csv"), encoding="utf-8-sig")
-scat = pd.read_csv(os.path.join(PROC, "scatter_sat_notas.csv"), encoding="utf-8-sig")
+scat = pd.read_csv(os.path.join(COMP, "scatter_sat_notas.csv"), encoding="utf-8-sig")
 scat["pct_aprobacion"] = pd.to_numeric(scat["pct_aprobacion"], errors="coerce")
 scat["nota_promedio"]  = pd.to_numeric(scat["nota_promedio"],  errors="coerce")
 scat["formado"] = (scat["formado"].astype(str).str.strip().str.upper()
                    .isin(["TRUE","1","SI","SÍ","YES"]))
 
-# EDD
-EDD_CSV   = os.path.join(ROOT_PROC, "P1_consolidado_con_evaluacion_jefes.csv")
-DOC918    = os.path.join(PROC, "docente_918.csv")
-doc918    = pd.read_csv(DOC918, dtype={"rut_key": str}, encoding="utf-8-sig")
+# universo_base + formados
+BASE_CSV  = os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv")
+FORM_CSV  = os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv")
+doc918    = pd.read_csv(BASE_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
 doc918["rut_key"] = doc918["rut_key"].str.strip()
-ruts_917  = set(doc918["rut_key"])
+ruts_917  = set(doc918["rut_key"])                 # universo_base (1.144)
 ruts_form = set(sat["rut_key"])
+form_df   = pd.read_csv(FORM_CSV, encoding="utf-8-sig")
+ruts_todos_formados = set(form_df["rut_key"].astype(str).str.strip())
+N_BASE       = len(ruts_917)                       # 1.144
+N_FORM_TOTAL = len(ruts_todos_formados)             # 726
+
+ctrl = pd.read_csv(os.path.join(COMP, "control_918.csv"), encoding="utf-8-sig")
+
+# EDD
+EDD_CSV   = os.path.join(COMP, "evaluacion_jefes.csv")
 
 edd_df = pd.read_csv(EDD_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
 edd_df["rut_key"]   = edd_df["rut_key"].str.strip()
@@ -64,7 +80,7 @@ edd_df["anio_eval"] = edd_df["anio_evaluacion"].apply(
 edd_f = (edd_df[edd_df["rut_key"].isin(ruts_form) & edd_df["edd_total"].notna()
                 & edd_df["anio_eval"].notna()]
          .drop_duplicates(subset=["rut_key","anio_eval"]))
-edd_c = (edd_df[edd_df["rut_key"].isin(ruts_917) & ~edd_df["rut_key"].isin(ruts_form)
+edd_c = (edd_df[edd_df["rut_key"].isin(ruts_917) & ~edd_df["rut_key"].isin(ruts_todos_formados)
                 & edd_df["edd_total"].notna() & edd_df["anio_eval"].notna()]
          .drop_duplicates(subset=["rut_key","anio_eval"]))
 
@@ -506,21 +522,23 @@ def build_resumen_ejecutivo(doc):
     # ── 2. Universo de Análisis y Metodología ────────────────────────────────
     _h2(doc, "2. Universo de Análisis y Metodología")
     _body(doc,
-        "El análisis parte de 917 docentes jerarquizados UCEN (universo base). De este "
-        "universo, 357 participaron en al menos una iniciativa de formación entre 2022 y 2025 "
-        "(39%). El criterio «Apto P3» exige contar con evaluación SAT en el semestre "
-        "inmediatamente anterior a la formación (baseline) y en el semestre posterior "
-        "(resultado), lo que reduce el universo a 197 docentes. Todos los 197 son formados; "
-        "no existe control interno. La métrica central es el z-score SAT, calculado como "
-        "z = (SAT docente − media de su facultad en ese período) / desviación estándar, "
-        "lo que estandariza la comparación entre facultades y semestres.")
+        f"El análisis parte de {N_BASE:,} docentes UCEN (universo base: Jornada + Honorario). "
+        f"De este universo, {N_FORM_TOTAL} participaron en al menos una iniciativa de "
+        f"formación entre 2022 y 2025 ({100*N_FORM_TOTAL/N_BASE:.0f}%). El criterio «Apto P3» "
+        f"exige contar con evaluación SAT en el semestre inmediatamente anterior a la "
+        f"formación (baseline) y en el semestre posterior (resultado), lo que reduce el "
+        f"universo a {N197} docentes. Todos los {N197} son formados; no existe control "
+        f"interno. La métrica central es el z-score SAT, calculado como "
+        f"z = (SAT docente − media de su facultad en ese período) / desviación estándar, "
+        f"lo que estandariza la comparación entre facultades y semestres.")
     _body(doc,
-        "El grupo control proviene del mismo universo de 917 jerarquizados, excluyendo a "
-        "quienes participaron en formación. Se seleccionan docentes con SAT disponible en "
-        "al menos un período de comparación (2023-01 a 2025-02), resultando en 486 "
-        "docentes control. Dado que la asignación no es aleatoria, se reconoce la "
-        "posibilidad de sesgo por autoselección: los docentes con mayor motivación "
-        "intrínseca podrían buscar formación independientemente de su incidencia real.")
+        f"El grupo control proviene del mismo universo_base de {N_BASE:,} docentes, "
+        f"excluyendo a quienes participaron en formación. Se seleccionan docentes con SAT "
+        f"disponible en al menos un período de comparación (2023-01 a 2025-02), resultando "
+        f"en {N_CTRL_SAT} docentes control. Dado que la asignación no es aleatoria, se "
+        f"reconoce la posibilidad de sesgo por autoselección: los docentes con mayor "
+        f"motivación intrínseca podrían buscar formación independientemente de su "
+        f"incidencia real.")
 
     # ── 3. Principales Hallazgos y Resultados ────────────────────────────────
     _h2(doc, "3. Principales Hallazgos y Resultados")
@@ -672,9 +690,9 @@ def build_resumen_ejecutivo(doc):
         f"actualidad) como KPI central de la política de perfeccionamiento, con alertas "
         f"si la brecha se reduce por debajo de un umbral mínimo acordado.")
     _bullet(doc,
-        "Ampliar la cobertura del análisis P3 a los 357 participantes de P2 con el fin "
-        "de elevar la potencia estadística y reducir el sesgo de selección en el grupo "
-        "de 197 Aptos P3 actuales.")
+        f"Ampliar la cobertura del análisis P3 a los {N_FORM_TOTAL} participantes de P2 "
+        f"con el fin de elevar la potencia estadística y reducir el sesgo de selección en "
+        f"el grupo de {N197} Aptos P3 actuales.")
     _bullet(doc,
         "Consolidar la interoperabilidad entre el sistema de RRHH, la Plataforma de "
         "Formación Continua y el sistema SAT para habilitar el seguimiento longitudinal "
@@ -698,18 +716,18 @@ def build_informe_p3(doc):
     # ── 1. Universo de Análisis ────────────────────────────────────────────────
     _h2(doc, "1. Universo de Análisis")
     _body(doc,
-        f"El análisis parte del universo de {len(doc918)} docentes jerarquizados de la "
+        f"El análisis parte del universo de {N_BASE:,} docentes (Jornada + Honorario) de la "
         f"Universidad Central de Chile con datos disponibles en el período 2022–2025 "
         f"(universo base). La cadena de filtros que define los grupos de análisis se "
         f"describe en la tabla siguiente:")
     _table_2col(doc, [
         ("Etapa de filtro", "N / Criterio"),
-        ("Universo base: docentes jerarquizados UCEN",
-         "917"),
+        ("Universo base: docentes UCEN (Jornada + Honorario)",
+         f"{N_BASE:,}"),
         ("Participaron en ≥1 iniciativa de formación (2022–2025)",
-         f"357  ({100*357/917:.1f}% del universo base)"),
+         f"{N_FORM_TOTAL}  ({100*N_FORM_TOTAL/N_BASE:.1f}% del universo base)"),
         ("Aptos P3: SAT válido en baseline y resultado",
-         f"{N197}  ({100*N197/357:.1f}% de los 357 formados)"),
+         f"{N197}  ({100*N197/N_FORM_TOTAL:.1f}% de los {N_FORM_TOTAL} formados)"),
         ("Grupo control externo (SAT disponible, sin formación)",
          f"{N_CTRL_SAT}"),
         ("Docentes con dato EDD disponible — Formados",
@@ -739,21 +757,21 @@ def build_informe_p3(doc):
         "facultad en ese período; z < 0 indica lo contrario.")
     _h3(doc, "2.2  Diseño de comparación")
     _body(doc,
-        "El análisis emplea un diseño cuasi-experimental de comparación pre-post con "
-        "grupo de control no equivalente. Para cada docente formado, se registra el "
-        "z-score del semestre inmediatamente anterior a la formación (baseline) y del "
-        "semestre posterior (resultado). El grupo control agrupa docentes del mismo "
-        "universo de 917 jerarquizados que no participaron en formación en el mismo "
-        "período. La normalización z-score controla las diferencias por facultad y "
-        "semestre, aunque no elimina el sesgo de autoselección.")
+        f"El análisis emplea un diseño cuasi-experimental de comparación pre-post con "
+        f"grupo de control no equivalente. Para cada docente formado, se registra el "
+        f"z-score del semestre inmediatamente anterior a la formación (baseline) y del "
+        f"semestre posterior (resultado). El grupo control agrupa docentes del mismo "
+        f"universo_base de {N_BASE:,} que no participaron en formación en el mismo "
+        f"período. La normalización z-score controla las diferencias por facultad y "
+        f"semestre, aunque no elimina el sesgo de autoselección.")
     _h3(doc, "2.3  Fuentes de datos")
     _body(doc,
-        "Las fuentes de datos utilizadas en este informe son: (1) p3_sat_zscore_918.csv "
-        "(197 docentes Aptos P3, con z_baseline, z_resultado y delta_z); "
-        "(2) control_vs_trat_918.csv (z-score promedio formados y control por período); "
-        "(3) scatter_sat_notas.csv (registros de aprobación y nota promedio de alumnos); "
-        "(4) P1_consolidado_con_evaluacion_jefes.csv (datos EDD 2022–2025); "
-        "(5) docente_918.csv (universo base de 917 docentes jerarquizados).")
+        f"Las fuentes de datos utilizadas en este informe son: (1) p3_sat_zscore.csv "
+        f"({N197} docentes Aptos P3, con z_baseline, z_resultado y delta_z); "
+        f"(2) control_vs_trat_918.csv (z-score promedio formados y control por período); "
+        f"(3) scatter_sat_notas.csv (registros de aprobación y nota promedio de alumnos); "
+        f"(4) evaluacion_jefes.csv (datos EDD 2022–2025); "
+        f"(5) nomina_x_dotacion.csv (universo base de {N_BASE:,} docentes UCEN).")
 
     # ── 3. Formados vs Control: Evolución por Período ─────────────────────────
     _h2(doc, "3. Formados vs Control: Evolución por Período")
@@ -1027,7 +1045,7 @@ def build_informe_p3(doc):
 def build_conclusiones(doc):
     _h1(doc, "CONCLUSIONES")
 
-    _h2(doc, "Síntesis del Perfil Académico en Formación (N=197)")
+    _h2(doc, f"Síntesis del Perfil Académico en Formación (N={N197})")
     _body(doc,
         f"El docente que participa en las iniciativas de formación (Aptos P3) posee, "
         f"mayoritariamente, un grado de Magíster (Profesional o Académico), se encuentra "

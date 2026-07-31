@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 engine = create_engine("postgresql://ucen_user:ucen2026@localhost:5432/ucen")
 
 with engine.connect() as conn:
-    # Total registros en notas_docente con y sin nota
+    # Total registros en rendimiento_academico_alumnos con y sin nota
     resumen = pd.read_sql(text("""
         SELECT
             COUNT(*)                                      AS total_registros,
@@ -17,7 +17,7 @@ with engine.connect() as conn:
             COUNT(DISTINCT CASE WHEN nota IS NOT NULL THEN cod_asignatura END) AS asignaturas_con_nota,
             COUNT(DISTINCT rut_docente)                   AS docentes_totales,
             COUNT(DISTINCT CASE WHEN nota IS NOT NULL THEN rut_docente END) AS docentes_con_nota
-        FROM intel.notas_docente
+        FROM intel.rendimiento_academico_alumnos
     """), conn)
     print("=== RESUMEN GENERAL ===")
     print(resumen.T.to_string())
@@ -31,7 +31,7 @@ with engine.connect() as conn:
             COUNT(nota) AS filas_con_nota,
             COUNT(*) - COUNT(nota) AS filas_sin_nota,
             ROUND(COUNT(nota)::numeric / COUNT(*) * 100, 1) AS pct_con_nota
-        FROM intel.notas_docente
+        FROM intel.rendimiento_academico_alumnos
         GROUP BY nombre_asignatura, facultad
         HAVING COUNT(nota) = 0
         ORDER BY total_filas DESC
@@ -51,7 +51,7 @@ with engine.connect() as conn:
                 ELSE '> 7'
             END AS rango,
             COUNT(*) AS n
-        FROM intel.notas_docente
+        FROM intel.rendimiento_academico_alumnos
         GROUP BY 1 ORDER BY 2 DESC
     """), conn)
     print("\n=== DISTRIBUCIÓN DE VALORES DE NOTA ===")

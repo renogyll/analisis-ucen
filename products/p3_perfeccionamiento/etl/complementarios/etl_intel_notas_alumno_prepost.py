@@ -3,16 +3,20 @@ ETL intel.notas_alumno_pre_during_post
 Una fila por alumno × asignatura × docente × evento de formación,
 etiquetada como pre / durante / post respecto del evento.
 
-Fuente: analisis.p3_grupo_tratamiento × intel.notas_docente
+Fuente: analisis.p3_grupo_tratamiento × intel.rendimiento_academico_alumnos
 No requiere que sea el mismo alumno en los 3 períodos.
 """
 
-import sys
+import sys, os
 sys.stdout.reconfigure(encoding="utf-8")
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine
 
-OUT    = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
+OUT    = DATA_STAGING
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine = create_engine(DB_URL)
 
@@ -28,7 +32,7 @@ nd = pd.read_sql("""
     SELECT calificacion_id, periodo, rut_alumno,
            cod_asignatura, nombre_asignatura, nota,
            rut_docente, nombre_docente, sede, facultad, plan
-    FROM intel.notas_docente
+    FROM intel.rendimiento_academico_alumnos
     WHERE nota IS NOT NULL
 """, engine)
 
@@ -125,6 +129,7 @@ resumen = df.groupby(["tipo_formacion", "periodo_label"]).agg(
 print(resumen.to_string())
 
 # ── Guardar ───────────────────────────────────────────────────────────────────
+os.makedirs(OUT, exist_ok=True)
 df.to_csv(f"{OUT}/intel_notas_alumno_pre_during_post.csv", index=False, encoding="utf-8-sig")
 df.to_sql("notas_alumno_pre_during_post", engine, schema="intel",
           if_exists="replace", index=False)

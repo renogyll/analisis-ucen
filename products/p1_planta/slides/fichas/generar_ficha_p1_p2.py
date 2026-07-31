@@ -31,10 +31,10 @@ from pptx.enum.text import PP_ALIGN
 # Rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE      = os.path.dirname(os.path.abspath(__file__))
-REPO      = os.path.normpath(os.path.join(BASE, "..", ".."))       # analisis-ucen/
+REPO      = os.path.normpath(os.path.join(BASE, "..", "..", "..", ".."))  # analisis-ucen/
 DOWNLOADS = os.path.dirname(REPO)                                   # Downloads/
 CASCADE   = os.path.join(REPO, "data", "cascade")
-FONDOTIPO = os.path.join(DOWNLOADS, "Analisis_UCEN_v2", "Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
 OUT_PPTX  = os.path.join(DOWNLOADS, "FICHA_P1_P2_v2.pptx")
 os.makedirs(OUT_DIR, exist_ok=True)

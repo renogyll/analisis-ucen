@@ -16,10 +16,10 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
-from config import CASCADE
+sys.path.insert(0, str(Path(__file__).parents[4]))
+from config import CASCADE, DATA_RAW
 
-RAW    = Path(r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\CONSOLIDADO DOCENTES 3-05-2026")
+RAW    = Path(DATA_RAW) / "consolidado_docentes"
 OUT    = os.path.join(CASCADE, "complementarios")
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine = create_engine(DB_URL)

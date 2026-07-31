@@ -1,10 +1,16 @@
 """
-generar_slides_comparacion_grupos.py  — v2
+generar_slides_comparacion_grupos.py  — v3
 4 slides que explican los grupos de control y comparan perfiles demográficos:
   Slide 1: Embudo de grupos (derivación por bloque)
   Slide 2: Bloque III — Perfil jerarquía + tramo edad (formados vs control aprobación)
   Slide 3: Bloque IV  — Perfil jerarquía + tramo edad (formados vs control EDD)
   Slide 4: Tabla resumen (fuentes originales + derivadas)
+
+REESCRITO 2026-07-31 sobre `data/cascade/` (universo vigente: universo_base
+1.144, 726 formados, 316 Aptos P3) — antes leía `p3_sat_zscore_918.csv`,
+`p3_918.csv` y `docente_918.csv` desde una carpeta "PROCESADO" fantasma con
+el universo viejo 917/918, y el control EDD tenía el mismo bug de jerarquía
+ya corregido en el resto del deck (ruts_917 → universo_base).
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os, zipfile
@@ -24,15 +30,21 @@ from pptx.enum.text import PP_ALIGN
 # Rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE       = os.path.dirname(os.path.abspath(__file__))
-PROC       = os.path.join(BASE, "..", "PROCESADO")
-ROOT_PROC  = os.path.normpath(os.path.join(BASE, "..", "..", "PROCESADO"))
-EDD_CSV    = os.path.join(ROOT_PROC, "P1_consolidado_con_evaluacion_jefes.csv")
-DOC918_CSV = os.path.join(PROC, "docente_918.csv")
-SCAT_CSV   = os.path.join(PROC, "scatter_sat_notas.csv")
-FONDOTIPO  = os.path.normpath(os.path.join(BASE, "..", "..", "Fondotipop.pptx"))
-OUT_PPTX   = os.path.join(BASE, "COMPARACION_GRUPOS_CONTROL.pptx")
+ROOT       = os.path.normpath(os.path.join(BASE, "..", "..", "..", ".."))
+sys.path.insert(0, ROOT)
+from config import CASCADE, OUTPUTS
+
+COMP       = os.path.join(CASCADE, "complementarios")
+EDD_CSV    = os.path.join(COMP, "evaluacion_jefes.csv")
+BASE_CSV   = os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv")
+SAT_CSV    = os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv")
+FORM_CSV   = os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv")
+SCAT_CSV   = os.path.join(COMP, "scatter_sat_notas.csv")
+FONDOTIPO  = os.path.join(ROOT, "assets", "Fondotipop.pptx")
+OUT_PPTX   = os.path.join(OUTPUTS, "pptx", "COMPARACION_GRUPOS_CONTROL.pptx")
 OUT_DIR    = os.path.join(BASE, "dark_slides_v3")
 os.makedirs(OUT_DIR, exist_ok=True)
+os.makedirs(os.path.join(OUTPUTS, "pptx"), exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Assets
@@ -279,30 +291,32 @@ def _BUL(sl, items, fs=11):
 # ─────────────────────────────────────────────────────────────────────────────
 print("Cargando datos...")
 
-sat = pd.read_csv(os.path.join(PROC, "p3_sat_zscore_918.csv"), encoding="utf-8-sig")
+sat = pd.read_csv(SAT_CSV, encoding="utf-8-sig")
 sat["rut_key"] = sat["rut_key"].astype(str).str.strip()
 sat["jerarquia_u"] = sat["jerarquia"].str.strip().str.upper()
 sat["tramo_g"] = sat["tramo_edad"].map(TRAMOS_EDAD_RAW)
-ruts_197 = set(sat["rut_key"])
+ruts_aptos = set(sat["rut_key"])
+N_APTOS = len(sat)
 
-p3ev = pd.read_csv(os.path.join(PROC, "p3_918.csv"), encoding="utf-8-sig")
+p3ev = pd.read_csv(FORM_CSV, encoding="utf-8-sig")
 p3ev["rut_key"] = p3ev["rut_key"].astype(str).str.strip()
 ruts_todos_formados = set(p3ev["rut_key"])
 
-doc918 = pd.read_csv(DOC918_CSV, dtype=str, encoding="utf-8-sig")
-doc918["rut_key"] = doc918["rut_key"].str.strip()
-doc918["jerarquia_u"] = doc918["jerarquia"].str.strip().str.upper()
-doc918["tramo_g"] = doc918["tramo_edad"].map(TRAMOS_EDAD_RAW)
-ruts_917 = set(doc918["rut_key"])
+base_df = pd.read_csv(BASE_CSV, dtype=str, encoding="utf-8-sig")
+base_df["rut_key"] = base_df["rut_key"].str.strip()
+base_df["jerarquia_u"] = base_df["jerarquia"].str.strip().str.upper()
+base_df["tramo_g"] = base_df["tramo_edad"].map(TRAMOS_EDAD_RAW)
+ruts_universo_base = set(base_df["rut_key"])
+N_BASE = len(base_df)
 
 # scatter_sat_notas — grupos Bloque III
 scat = pd.read_csv(SCAT_CSV, encoding="utf-8-sig")
 scat["formado"] = scat["formado"].astype(str).str.strip().str.upper().isin(
     ["TRUE", "1", "SI", "SÍ", "YES"])
 scat_ctrl_ruts = set(scat[~scat["formado"]]["rut_docente"].astype(str).str.strip().unique())
-# Perfil del control Bloque III (uniendo con doc918)
-ctrl_b3_doc = doc918[doc918["rut_key"].isin(scat_ctrl_ruts)].drop_duplicates("rut_key")
-N_B3_FORM = len(sat)                         # 197 docentes
+# Perfil del control Bloque III (uniendo con universo_base)
+ctrl_b3_doc = base_df[base_df["rut_key"].isin(scat_ctrl_ruts)].drop_duplicates("rut_key")
+N_B3_FORM = len(sat)                         # 316 docentes
 N_B3_CTRL = len(ctrl_b3_doc)
 
 # EDD — grupos Bloque IV
@@ -313,20 +327,20 @@ if has_edd:
     edd_df["edd_total"] = pd.to_numeric(edd_df["edd_total"], errors="coerce")
     edd_df["anio_eval"] = edd_df["anio_evaluacion"].apply(
         lambda x: str(int(float(x)))[:4] if pd.notna(x) else None)
-    edd_form = (edd_df[edd_df["rut_key"].isin(ruts_197)
+    edd_form = (edd_df[edd_df["rut_key"].isin(ruts_aptos)
                        & edd_df["edd_total"].notna()
                        & edd_df["anio_eval"].notna()]
                 .drop_duplicates(subset=["rut_key", "anio_eval"]))
-    edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_917)
+    edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_universo_base)
                        & ~edd_df["rut_key"].isin(ruts_todos_formados)
                        & edd_df["edd_total"].notna()
                        & edd_df["anio_eval"].notna()]
                 .drop_duplicates(subset=["rut_key", "anio_eval"]))
     edd_form_ruts = set(edd_form["rut_key"].unique())
     edd_ctrl_ruts = set(edd_ctrl["rut_key"].unique())
-    # Perfil usando doc918
-    b4_form_doc = doc918[doc918["rut_key"].isin(edd_form_ruts)].drop_duplicates("rut_key")
-    b4_ctrl_doc = doc918[doc918["rut_key"].isin(edd_ctrl_ruts)].drop_duplicates("rut_key")
+    # Perfil usando universo_base
+    b4_form_doc = base_df[base_df["rut_key"].isin(edd_form_ruts)].drop_duplicates("rut_key")
+    b4_ctrl_doc = base_df[base_df["rut_key"].isin(edd_ctrl_ruts)].drop_duplicates("rut_key")
     N_B4_FORM = len(b4_form_doc)
     N_B4_CTRL = len(b4_ctrl_doc)
 else:
@@ -335,7 +349,7 @@ else:
     edd_form_ruts = edd_ctrl_ruts = set()
     N_B4_FORM = N_B4_CTRL = 0
 
-N_NO_FORM = len(ruts_917 - ruts_todos_formados)
+N_NO_FORM = len(ruts_universo_base - ruts_todos_formados)
 print(f"  B3: formados={N_B3_FORM} doc | control={N_B3_CTRL} doc")
 print(f"  B4: formados={N_B4_FORM} doc | control={N_B4_CTRL} doc")
 
@@ -389,7 +403,7 @@ def slide_embudo(prs):
     L4 = 0.25;  L4_top = L4 + BHH; L4_bot = L4 - BHH   # top=0.292, bot=0.208
 
     # ── Nivel 1: raíz ───────────────────────────────────────────────────────
-    _box(0.50, L1, "917 Docentes Jerarquizados",
+    _box(0.50, L1, f"{N_BASE:,} Docentes (universo_base)",
          color="#1A3A5C", w=0.46, h=BHH*2, fsize=10.5)
 
     # ── Bifurcación L1 → L2: diagonales directas (sin kink) ─────────────────
@@ -402,8 +416,8 @@ def slide_embudo(prs):
     ax.text(0.645, MID12_y + 0.012, "No participa en P3",
             ha="center", va="bottom", fontsize=8, color=COL_CTRL, style="italic")
 
-    # ── Nivel 2: 357 formados / 560 no formados ─────────────────────────────
-    _box(0.27, L2, "357 Docentes Formados",  color="#1A4E7A", w=0.36, h=BHH*2)
+    # ── Nivel 2: formados / no formados ─────────────────────────────────────
+    _box(0.27, L2, f"{len(ruts_todos_formados)} Docentes Formados",  color="#1A4E7A", w=0.36, h=BHH*2)
     _box(0.73, L2, f"{N_NO_FORM} Docentes No Formados", color="#6B4A1A", w=0.36, h=BHH*2)
 
     # ── Flechas L2 → L3 ─────────────────────────────────────────────────────
@@ -415,8 +429,8 @@ def slide_embudo(prs):
     ax.text(0.73, MID23, "Con EDD disponible",
             ha="center", va="center", fontsize=7.5, color="#AAAAAA", style="italic")
 
-    # ── Nivel 3: 197 Aptos P3 / ctrl EDD ───────────────────────────────────
-    _box(0.27, L3, "197 Aptos P3  (SAT pre + post)",
+    # ── Nivel 3: Aptos P3 / ctrl EDD ────────────────────────────────────────
+    _box(0.27, L3, f"{N_APTOS} Aptos P3  (SAT pre + post)",
          color=COL_FORM, w=0.40, h=BHH*2)
     _box(0.73, L3, f"{N_B4_CTRL} Docentes  (Control EDD)",
          color=COL_CTRL, w=0.40, h=BHH*2)
@@ -441,7 +455,7 @@ def slide_embudo(prs):
     # ── Nota inferior ─────────────────────────────────────────────────────────
     ax.text(0.50, 0.10,
             "Bloque III: control = docentes sin formación en scatter_sat_notas  ·  "
-            "Bloque IV: control = universo 918 que nunca participó en P3, con EDD disponible",
+            "Bloque IV: control = universo_base que nunca participó en P3, con EDD disponible",
             ha="center", va="center", fontsize=8, color="#C0D0E0",
             style="italic", zorder=5,
             bbox=dict(boxstyle="round,pad=0.35", facecolor="#0D1E30",
@@ -449,7 +463,8 @@ def slide_embudo(prs):
 
     sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "cg_embudo.png"), prs)
     _T(sl, "¿Quién es el Grupo de Control?   Derivación por Bloque de Análisis")
-    _POP(sl, "Universo base: 917 docentes jerarquizados (docente_918.csv)  ·  Cada bloque usa una definición distinta de control")
+    _POP(sl, f"Universo base: {N_BASE:,} docentes (nomina_x_dotacion.csv)  ·  "
+             f"Ambos bloques parten del mismo universo_base, filtrado por la disponibilidad de dato requerida en cada bloque (SAT vs EDD)")
     print("  ✓ Slide 1 — Embudo")
 
 
@@ -612,22 +627,22 @@ def slide_tabla(prs):
 
     rows = [
         ("SAT\nBloques\nI – II",
-         "197 Aptos P3\n(SAT pre+post\ndisponibles)",
-         "486 doc sin\nformación\ncon SAT",
-         "evaluacion_periodo.csv\n+ nomina_docente.csv",
-         "(p3_sat_zscore_918.csv)\n(control_918.csv)",
-         "197 / 486\ndocentes"),
+         f"{N_APTOS} Aptos P3\n(SAT pre+post\ndisponibles)",
+         f"{N_B3_CTRL} doc sin\nformación\ncon SAT",
+         "evaluacion_periodo.csv\n+ nomina_x_dotacion.csv",
+         "(p3_sat_zscore.csv)\n(scatter_sat_notas.csv)",
+         f"{N_APTOS} / {N_B3_CTRL}\ndocentes"),
         ("Aprobación\nalumnos\nBloque III",
-         "Secciones de\nlos 197 Aptos P3\ncon nota y SAT",
+         f"Secciones de\nlos {N_APTOS} Aptos P3\ncon nota y SAT",
          "Secciones de\ndoc sin formación\ncon nota y SAT",
          "calificacion_alumno.csv\n+ evaluacion_periodo.csv\n+ participacion_formacion.csv",
          "(scatter_sat_notas.csv)\nformado = True / False",
          f"~{len(scat):,} filas\n({N_B3_FORM}/{N_B3_CTRL} doc)"),
         ("EDD\nBloque IV",
-         f"197 Aptos P3\ncon EDD\ndisponible",
-         f"{N_B4_CTRL} doc del\nuniverso 918 que\nnunca participaron en P3",
+         f"{N_APTOS} Aptos P3\ncon EDD\ndisponible",
+         f"{N_B4_CTRL} doc del\nuniverso_base que\nnunca participaron en P3",
          "CONSOLIDADO DOCENTES.xlsx\n(hoja: EVALUACION DE\nJEFES A DOCENTES)",
-         "(P1_consolidado_con_\nevaluacion_jefes.csv)",
+         "(evaluacion_jefes.csv)",
          f"{N_B4_FORM} / {N_B4_CTRL}\ndocentes\n(varía por año)"),
     ]
 
@@ -662,7 +677,7 @@ def slide_tabla(prs):
     _POP(sl, "Blanco = fuente original entregada por UCEN  ·  Azul = archivo procesado/derivado por ETL del análisis")
     _BUL(sl, [
         "Bloque I–II (SAT): fuente madre es evaluacion_periodo.csv; los z-scores se calculan "
-        "por facultad×período y se almacenan en p3_sat_zscore_918.csv (formados) y control_918.csv.",
+        "por facultad×período y se almacenan en p3_sat_zscore.csv (formados, sobre analisis.docente_ambos en vivo).",
         "Bloque III (Aprobación): scatter_sat_notas.csv es un archivo ad-hoc que cruza notas, "
         "SAT y el flag de formación — sin ETL documentado; reconstruible desde las tres fuentes originales.",
         "Bloque IV (EDD): la fuente original es la hoja 'EVALUACION DE JEFES A DOCENTES' del Excel "

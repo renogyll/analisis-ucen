@@ -21,11 +21,11 @@ from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from config import CASCADE
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-REPO     = Path(__file__).resolve().parents[2]
+REPO     = Path(__file__).resolve().parents[4]
 SCRATCH  = os.path.join(REPO, "outputs", "scratch")
 OUT_DIR  = os.path.join(REPO, "outputs", "scratch", "tray_slides")
 OUT_PPTX = os.path.join(REPO, "outputs", "pptx", "TRAYECTORIAS_v1.pptx")

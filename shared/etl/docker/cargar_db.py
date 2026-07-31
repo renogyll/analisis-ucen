@@ -8,9 +8,13 @@ Requiere: pip install sqlalchemy psycopg2-binary pandas
 
 import pandas as pd
 from sqlalchemy import create_engine, text
-import os, time
+import os, sys, time
+from pathlib import Path
 
-PROCESADO = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_STAGING
+
+PROCESADO = DATA_STAGING
 DB_URL    = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 
 # (schema, nombre_tabla, archivo_csv, columnas_date, columnas_numeric)
@@ -80,7 +84,7 @@ TABLAS = [
      ["nota_1", "nota_durante", "nota_2",
       "delta_pre_post", "delta_pre_durante", "antiguedad_anios"]),
 
-    ("intel", "notas_docente", "intel_notas_docente.csv", [],
+    ("intel", "rendimiento_academico_alumnos", "rendimiento_academico_alumnos.csv", [],
      ["nota"]),
 ]
 

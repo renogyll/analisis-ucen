@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-generar_ficha_p1_p2_jornada.py  v2
+generar_ficha_p1_p2_jornada.py  v3
 Genera FICHA_Ampliar_P1_P2_Jornada.pptx en formato dark v3.
 UNIVERSO: solo docentes Jornada / Planta (excluye Honorarios).
+
+REESCRITO 2026-07-31 sobre `data/cascade/` (universo vigente, 624 Jornada) —
+antes leía `docente_918.csv`/`participacion_p2_918.csv` desde una carpeta
+"PROCESADO" fantasma con el universo viejo 917/918.
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os, zipfile
@@ -21,44 +25,47 @@ from pptx.enum.text import PP_ALIGN
 # Rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE      = os.path.dirname(os.path.abspath(__file__))
-PROC918   = os.path.join(BASE, "..", "PROCESADO")
-ROOT      = os.path.normpath(os.path.join(BASE, "..", ".."))
-FONDOTIPO = os.path.join(ROOT, "Fondotipop.pptx")
+ROOT      = os.path.normpath(os.path.join(BASE, "..", "..", "..", ".."))
+sys.path.insert(0, ROOT)
+from config import CASCADE, OUTPUTS
+
+FONDOTIPO = os.path.join(ROOT, "assets", "Fondotipop.pptx")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
-OUT_PPTX  = os.path.join(ROOT, "FICHA_Ampliar_P1_P2_Jornada_v4.pptx")
+OUT_PPTX  = os.path.join(OUTPUTS, "pptx", "FICHA_Ampliar_P1_P2_Jornada_v5.pptx")
 os.makedirs(OUT_DIR, exist_ok=True)
+os.makedirs(os.path.join(OUTPUTS, "pptx"), exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Datos
 # ─────────────────────────────────────────────────────────────────────────────
-doc_all = pd.read_csv(os.path.join(PROC918, "docente_918.csv"), encoding="utf-8-sig")
-p2_all  = pd.read_csv(os.path.join(PROC918, "participacion_p2_918.csv"), encoding="utf-8-sig")
+doc = pd.read_csv(os.path.join(CASCADE, "01_jornada", "docentes_jornada.csv"),
+                  encoding="utf-8-sig")
+doc["rut_key"] = doc["rut_key"].astype(str).str.strip()
 
-jor_mask = doc_all["tipo_contrato"].str.strip().str.lower().str.startswith("jornada")
-doc      = doc_all[jor_mask].copy().reset_index(drop=True)
-jor_ruts = set(doc["rut_key"])
-p2       = p2_all[p2_all["rut_key"].isin(jor_ruts)].copy()
+p2_all = pd.read_csv(os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv"),
+                     encoding="utf-8-sig")
+p2 = p2_all[p2_all["tipo_contrato_tag"] == "JORNADA"].copy()
 
-N_TOTAL    = len(doc)                                          # 545
-N_CON_JER  = int(doc["jerarquia"].notna().sum())              # 545
-dot_mask   = doc["fuente"].isin(["NOMINA_DOTACION", "SOLO_DOTACION"])
+N_TOTAL    = len(doc)                                          # 624
+N_CON_JER  = int(doc["jerarquia"].notna().sum())
+dot_mask   = doc["fecha_ingreso"].notna()                     # AMBOS + SOLO_DOTACION
 jor_dot    = doc[dot_mask].copy()
-N_DOTACION = len(jor_dot)                                     # 485
-N_SIN_DOT  = int((~dot_mask).sum())                          # 60
+N_DOTACION = len(jor_dot)                                     # 534
+N_SIN_DOT  = int((~dot_mask).sum())                          # 90
 
 def _ni(ser):
     return ser.notna() & ~ser.isin({"NO INFORMA", "NO INFORMA "})
 
-m_ant  = jor_dot["fecha_ingreso"].notna()
-m_jer  = m_ant  & jor_dot["fecha_nacimiento"].notna() & _ni(jor_dot["jerarquia_dot"])
+m_jer  = jor_dot["fecha_nacimiento"].notna() & _ni(jor_dot["jerarquia_dot"])
 m_niv  = m_jer  & _ni(jor_dot["nivel_formacion"])
 m_grd  = m_niv  & _ni(jor_dot["nombre_grado"])
+m_fec  = m_grd  & jor_dot["fecha_jerarquizacion"].notna()
 
 c0    = N_DOTACION
-c_jer = int(m_jer.sum())    # 474
-c_niv = int(m_niv.sum())    # 469
-c_grd = int(m_grd.sum())    # 469
-c_fec = c_grd - int(round(45 * c_grd / 967))  # ~447
+c_jer = int(m_jer.sum())
+c_niv = int(m_niv.sum())
+c_grd = int(m_grd.sum())
+c_fec = int(m_fec.sum())
 
 D_JER = c0 - c_jer
 D_NIV = c_jer - c_niv
@@ -70,7 +77,7 @@ SUBCASC = [
     (c_jer,"Jerarquia clasif.",  "Edad x Jerarquia"),
     (c_niv,"Nivel formacion",    "Nivel Formacion · Institucion · Pais"),
     (c_grd,"Grado clasificado",  "GRADOREC · Jerarquia x Nivel Formacion"),
-    (c_fec,"Fechas completas*",  "Anos hasta Jerarquizacion  (*estimado)"),
+    (c_fec,"Fechas completas",   "Anos hasta Jerarquizacion"),
 ]
 
 N_FORMADOS    = int(p2["rut_key"].nunique())
@@ -80,7 +87,7 @@ N_DIP         = int((p2["tipo_formacion"] == "DIPLOMADO").sum())
 N_PROY        = int((p2["tipo_formacion"] == "PROYECTO").sum())
 N_SIN_FORM    = N_TOTAL - N_FORMADOS
 
-F_DOC = "CONSOLIDADO DOCENTES 3-05-2026.xlsx"
+F_DOC = "data/cascade/01_jornada + 04_formados_p3 (fuente: CONSOLIDADO DOCENTES 3-05-2026.xlsx)"
 
 print(f"Jornada: {N_TOTAL} | {N_DOTACION} dotacion | {N_SIN_DOT} sin dotacion")
 print(f"Sub-cascadas: {c0}→{c_jer}→{c_niv}→{c_grd}→{c_fec}")
@@ -288,13 +295,12 @@ def slide_cascada_p1(prs):
 
     # Node 1: 545 (y0=7.50, top at 9.00 — below logo threshold 9.30)
     _box(ax, BX, 7.50, BW, BH, str(N_TOTAL),
-         "docentes Jornada jerarquizados",
-         "Hoja NOMINA",
+         "docentes Jornada (planta)",
+         "universo_base filtrado por Jornada",
          f"({F_DOC})", "#1B4E8F")
 
-    # "100% con jerarquia" — pequeña nota verde en la parte baja de Node 1
     ax.text(BX+0.28, 7.50+0.22,
-            "[OK]  100% con jerarquia informada",
+            f"[OK]  {N_CON_JER} de {N_TOTAL} con jerarquia informada ({100*N_CON_JER/N_TOTAL:.0f}%)",
             ha="left", va="center", fontsize=6.8, color="#80FF80",
             fontstyle="italic", zorder=6)
 
@@ -361,12 +367,13 @@ def slide_cascada_p1(prs):
     _POP(sl, f"Fuente: {F_DOC}  |  "
              f"Hoja NOMINA ({N_TOTAL} Jornada) cruzada con hoja DOTACION ({N_DOTACION} con perfil)")
     _BUL(sl, [
-        f"Los {N_TOTAL} docentes Jornada/planta tienen 100% con jerarquia informada. "
-        f"El salto critico es la dotacion: {N_SIN_DOT} Jornada estan en NOMINA pero NO en DOTACION, "
-        f"quedando sin edad, antiguedad, nivel de formacion y carga academica.",
+        f"De los {N_TOTAL} docentes Jornada/planta, {N_CON_JER} ({100*N_CON_JER/N_TOTAL:.0f}%) "
+        f"tienen jerarquia informada. El salto critico es la dotacion: {N_SIN_DOT} Jornada "
+        f"estan en NOMINA pero NO en DOTACION, quedando sin edad, antiguedad, nivel de "
+        f"formacion y carga academica.",
         f"Dentro de los {N_DOTACION} con dotacion las sub-cascadas son brechas menores: "
         f"{D_JER} con jerarquia 'NO INFORMA', {D_NIV} con nivel formacion 'NO INFORMA', "
-        f"y ~{D_FEC} sin fecha de jerarquizacion (estimado desde hoja NOMINA).",
+        f"y {D_FEC} sin fecha de jerarquizacion.",
     ])
     print("  slide 2 - Cascada P1 OK")
 
@@ -728,14 +735,14 @@ def slide_solicitudes(prs):
         },
         {
             "num": "3", "col": "#3A5080",
-            "title": f"P1  —  Completar FECHA JERARQUIZACION (~{D_FEC} sin dato)",
+            "title": f"P1  —  Completar FECHA JERARQUIZACION ({D_FEC} sin dato)",
             "lines": [
-                f"La hoja NOMINA tiene ~45 nulos en FECHA JERARQUIZACION (967 filas)."
-                f" Proporcional a Jornada: ~{D_FEC} sin dato.",
+                f"De los {c_grd} Jornada con grado clasificado, {D_FEC} no tienen fecha de"
+                f" jerarquizacion registrada en NOMINA.",
                 "Campo necesario para calcular 'Anos hasta jerarquizacion' y trayectoria.",
                 "Solicitar: completar FECHA JERARQUIZACION en NOMINA o listado complementario.",
             ],
-            "impacto": f"Sube de {c_fec} a ~{c_grd} los disponibles para analisis de trayectoria",
+            "impacto": f"Sube de {c_fec} a {c_grd} los disponibles para analisis de trayectoria",
         },
         {
             "num": "4", "col": "#4A7030",

@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-ROOT = Path(__file__).parents[2]
+ROOT = Path(__file__).parents[4]
 XLSX = ROOT / "data/raw/consolidado_docentes/CERTIFICACION OFERTA FORMATIVA 2025.xlsx"
 
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"

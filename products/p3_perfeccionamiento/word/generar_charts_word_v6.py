@@ -4,6 +4,10 @@ generar_charts_word_v6.py
 Regenera los 8 graficos del INFORME_P3_v6.docx con texto negro (ejes, leyendas,
 titulos de eje, ticks) para que sean legibles sobre fondo gris claro (235,235,235).
 Guarda en dark_slides_v3/word_charts_v6/ como PNGs transparentes.
+
+REESCRITO 2026-07-31 sobre `data/cascade/` (universo vigente: universo_base
+1.144, 316 Aptos P3) — antes leía `p3_sat_zscore_918.csv`/`docente_918.csv`
+desde una carpeta "PROCESADO" fantasma con el universo viejo 917/918.
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os
@@ -15,36 +19,39 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 from scipy import stats as scipy_stats
 
-BASE   = os.path.dirname(os.path.abspath(__file__))
-PROC   = os.path.join(BASE, "..", "PROCESADO")
-ROOT_PROC = os.path.normpath(os.path.join(BASE, "..", "..", "PROCESADO"))
-OUT    = os.path.join(BASE, "dark_slides_v3", "word_charts_v6")
+BASE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.normpath(os.path.join(BASE, "..", "..", ".."))
+sys.path.insert(0, ROOT)
+from config import CASCADE
+
+COMP = os.path.join(CASCADE, "complementarios")
+OUT  = os.path.join(BASE, "dark_slides_v3", "word_charts_v6")
 os.makedirs(OUT, exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Datos
 # ─────────────────────────────────────────────────────────────────────────────
-sat  = pd.read_csv(os.path.join(PROC, "p3_sat_zscore_918.csv"), encoding="utf-8-sig")
+sat  = pd.read_csv(os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv"), encoding="utf-8-sig")
 sat["rut_key"] = sat["rut_key"].astype(str).str.strip()
 
-cvt  = pd.read_csv(os.path.join(PROC, "control_vs_trat_918.csv"), encoding="utf-8-sig")
+cvt  = pd.read_csv(os.path.join(COMP, "control_vs_trat_918.csv"), encoding="utf-8-sig")
 cvt["z_trat"] = pd.to_numeric(cvt["z_trat"], errors="coerce")
 cvt["z_ctrl"] = pd.to_numeric(cvt["z_ctrl"], errors="coerce")
 cvt["n_trat"]  = pd.to_numeric(cvt["n_trat"], errors="coerce").astype(int)
 cvt["n_ctrl"]  = pd.to_numeric(cvt["n_ctrl"], errors="coerce").astype(int)
 
-scat = pd.read_csv(os.path.join(PROC, "scatter_sat_notas.csv"), encoding="utf-8-sig")
+scat = pd.read_csv(os.path.join(COMP, "scatter_sat_notas.csv"), encoding="utf-8-sig")
 scat["pct_aprobacion"] = pd.to_numeric(scat["pct_aprobacion"], errors="coerce")
 scat["nota_promedio"]  = pd.to_numeric(scat["nota_promedio"],  errors="coerce")
 scat["sat"]            = pd.to_numeric(scat["sat"],            errors="coerce")
 scat["formado"] = (scat["formado"].astype(str).str.strip().str.upper()
                    .isin(["TRUE","1","SI","SI","YES"]))
 
-DOC918   = os.path.join(PROC, "docente_918.csv")
-EDD_CSV  = os.path.join(ROOT_PROC, "P1_consolidado_con_evaluacion_jefes.csv")
-doc918   = pd.read_csv(DOC918, dtype={"rut_key": str}, encoding="utf-8-sig")
-doc918["rut_key"] = doc918["rut_key"].str.strip()
-ruts_917 = set(doc918["rut_key"])
+BASE_CSV = os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv")
+EDD_CSV  = os.path.join(COMP, "evaluacion_jefes.csv")
+base_df  = pd.read_csv(BASE_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
+base_df["rut_key"] = base_df["rut_key"].str.strip()
+ruts_universo_base = set(base_df["rut_key"])
 ruts_form = set(sat["rut_key"])
 
 has_edd = os.path.exists(EDD_CSV)
@@ -57,7 +64,7 @@ if has_edd:
     edd_form = (edd_df[edd_df["rut_key"].isin(ruts_form) & edd_df["edd_total"].notna()
                        & edd_df["anio_eval"].notna()]
                 .drop_duplicates(subset=["rut_key","anio_eval"]))
-    edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_917) & ~edd_df["rut_key"].isin(ruts_form)
+    edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_universo_base) & ~edd_df["rut_key"].isin(ruts_form)
                        & edd_df["edd_total"].notna() & edd_df["anio_eval"].notna()]
                 .drop_duplicates(subset=["rut_key","anio_eval"]))
 else:

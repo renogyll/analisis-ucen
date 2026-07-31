@@ -9,8 +9,13 @@ Nuevas columnas agregadas a analisis.docente_ambos:
   sexo                 : recodificado a HOMBRE / MUJER
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_STAGING
 
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine = create_engine(DB_URL)
@@ -49,7 +54,8 @@ print(f"\ntramo_antiguedad:\n{df['tramo_antiguedad'].value_counts().sort_index()
 df.to_sql("docente_ambos", engine, schema="analisis", if_exists="replace", index=False)
 print("\nActualizado: analisis.docente_ambos")
 
-OUT = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+OUT = DATA_STAGING
+os.makedirs(OUT, exist_ok=True)
 df.to_csv(f"{OUT}/docente_ambos.csv", index=False, encoding="utf-8-sig")
 print("Guardado: docente_ambos.csv")
 print("\nPED-001 completado.")

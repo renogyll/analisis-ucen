@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine, text
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
+sys.path.insert(0, str(Path(__file__).parents[4]))
 from config import CASCADE
 
 DB_URL  = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"

@@ -9,13 +9,16 @@ Tabla resultante (una fila por registro de nota):
   calificacion, nota, rut_docente, nombre_docente
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
-import os
 
-BASE  = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2"
-SRC   = os.path.join(BASE, "DETALLE DE EVALUACION DE CADA ESTUDIANTE A DOCENTE 3-5-2026",
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_RAW, DATA_STAGING
+
+SRC   = os.path.join(DATA_RAW, "detalle_evaluacion_estudiante_docente",
                      "DETALLE DE EVALUACION DE CADA ESTUDIANTE A DOCENTE 3-5-2026.xlsx - datos.csv")
-OUT   = os.path.join(BASE, "PROCESADO")
+OUT   = DATA_STAGING
 
 def strip_dv(serie):
     return (serie.astype(str).str.strip()
@@ -66,6 +69,7 @@ out = pd.DataFrame({
 out.insert(0, "calificacion_id", range(1, len(out) + 1))
 
 # ── Guardar ───────────────────────────────────────────────────────────────────
+os.makedirs(OUT, exist_ok=True)
 out_path = os.path.join(OUT, "calificacion_alumno.csv")
 out.to_csv(out_path, index=False, encoding="utf-8-sig")
 

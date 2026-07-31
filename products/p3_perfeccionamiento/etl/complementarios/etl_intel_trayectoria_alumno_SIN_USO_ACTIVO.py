@@ -5,12 +5,23 @@ Una fila por alumno x docente x evento de formación.
 
 Nota promedio por período = promedio de todas las asignaturas que el alumno
 cursó con ese docente en ese período (puede ser más de una asignatura).
+
+SIN USO ACTIVO (2026-07-30): intel.trayectoria_alumno e intel.pre_during_post_sat
+son una rama muerta — solo los consultan qa/core/qa_runner.py y
+qa/core/cobertura_runner.py (validación/reporte de cobertura). Ninguna llega a
+la presentación final. La rama que sí llega al deck es otra:
+intel.prepost_sat/intel.pre_post_sat → etl_p3_sat_zscore.py → slides.
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine
 
-OUT    = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
+OUT    = DATA_STAGING
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 
 engine = create_engine(DB_URL)
@@ -20,7 +31,7 @@ trat = pd.read_sql("SELECT * FROM intel.pre_during_post_sat", engine)
 nd   = pd.read_sql("""
     SELECT rut_alumno, rut_docente, periodo,
            cod_asignatura, nombre_asignatura, nota
-    FROM intel.notas_docente
+    FROM intel.rendimiento_academico_alumnos
     WHERE nota IS NOT NULL
 """, engine)
 
@@ -104,6 +115,7 @@ print(df.groupby("tipo_formacion").agg(
 ).round(3).to_string())
 
 # ── Guardar ───────────────────────────────────────────────────────────────────
+os.makedirs(OUT, exist_ok=True)
 df.to_csv(f"{OUT}/intel_trayectoria_alumno.csv", index=False, encoding="utf-8-sig")
 df.to_sql("trayectoria_alumno", engine, schema="intel", if_exists="replace", index=False)
 print("\nCargado: intel.trayectoria_alumno")

@@ -11,7 +11,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 
 BASE      = os.path.dirname(os.path.abspath(__file__))
-REPO      = str(pathlib.Path(BASE).parents[1])
+REPO      = str(pathlib.Path(BASE).parents[3])
 CASCADE   = os.path.join(REPO, "data", "cascade")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
 SHARED_BG = os.path.join(OUT_DIR, "_background.png")

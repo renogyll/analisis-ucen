@@ -9,12 +9,15 @@ Opcion A: columnas de DOTACION integradas directamente en tabla_docente.
 Deduplicacion NOMINA documentada en DECISIONES_METODOLOGICAS.md seccion 2.
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
-import os
 
-BASE = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2"
-DOCS = os.path.join(BASE, "CONSOLIDADO DOCENTES 3-05-2026")
-OUT  = os.path.join(BASE, "PROCESADO")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_RAW, DATA_STAGING
+
+DOCS = os.path.join(DATA_RAW, "consolidado_docentes")
+OUT  = DATA_STAGING
 
 def strip_dv(serie):
     return (serie.astype(str).str.strip()
@@ -245,6 +248,7 @@ tabla_docente = pd.concat(
     ignore_index=True
 )
 
+os.makedirs(OUT, exist_ok=True)
 out_path = os.path.join(OUT, "tabla_docente.csv")
 tabla_docente.to_csv(out_path, index=False, encoding="utf-8-sig")
 

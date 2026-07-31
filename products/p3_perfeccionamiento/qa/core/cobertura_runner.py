@@ -4,14 +4,19 @@ Mapea el funnel completo desde el universo de docentes hasta los análisis P3.
 Genera también PROCESADO/docente_cobertura.csv (520 filas × métricas cruzadas).
 """
 
-import sys, time
+import sys, os, time
 sys.stdout.reconfigure(encoding="utf-8")
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine  = create_engine(DB_URL)
-OUT     = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+OUT     = DATA_STAGING
+os.makedirs(OUT, exist_ok=True)
 PERIODOS = ["2023-01","2023-02","2024-01","2024-02","2025-01","2025-02"]
 
 t0 = time.time()
@@ -46,7 +51,7 @@ pf  = qdf("SELECT rut_key, tipo_formacion, anio_evento FROM consolidados.partici
 p3  = qdf("SELECT rut_key, tipo_formacion, apto_p3 FROM analisis.p3_grupo_tratamiento")
 sat = qdf("SELECT rut_key, tipo_formacion, nota_pre, nota_durante, nota_post, delta_pre_post FROM intel.pre_during_post_sat")
 pp  = qdf("SELECT rut_key FROM intel.pre_post_sat")
-nd  = qdf("SELECT rut_docente, nota FROM intel.notas_docente WHERE nota IS NOT NULL")
+nd  = qdf("SELECT rut_docente, nota FROM intel.rendimiento_academico_alumnos WHERE nota IS NOT NULL")
 nap = qdf("SELECT DISTINCT rut_docente FROM intel.notas_alumno_pre_during_post")
 
 # convertir a str

@@ -9,7 +9,7 @@ with engine.connect() as conn:
     nd = pd.read_sql(text("""
         SELECT n.rut_docente, n.cod_asignatura, n.nombre_asignatura,
                n.facultad, n.periodo, n.nota
-        FROM intel.notas_docente n
+        FROM intel.rendimiento_academico_alumnos n
         WHERE n.nota IS NOT NULL
     """), conn)
 

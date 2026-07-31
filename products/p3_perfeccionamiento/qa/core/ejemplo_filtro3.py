@@ -11,7 +11,7 @@ with engine.connect() as conn:
                n.nombre_asignatura, n.periodo,
                ROUND(AVG(n.nota)::numeric, 2) AS nota_avg,
                COUNT(*) AS n_alumnos
-        FROM intel.notas_docente n
+        FROM intel.rendimiento_academico_alumnos n
         WHERE n.nota IS NOT NULL
         GROUP BY n.rut_docente, n.nombre_docente, n.cod_asignatura,
                  n.nombre_asignatura, n.periodo

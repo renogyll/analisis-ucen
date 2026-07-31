@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
+sys.path.insert(0, str(Path(__file__).parents[4]))
 from config import CASCADE
 
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
@@ -41,7 +41,7 @@ with engine.connect() as conn:
                ROUND(AVG(nota)::numeric, 3)                    AS nota_promedio,
                COUNT(*)                                         AS n_alumnos,
                ROUND(AVG(CASE WHEN nota >= 4 THEN 1 ELSE 0 END)::numeric * 100, 1) AS pct_aprobacion
-        FROM intel.notas_docente
+        FROM intel.rendimiento_academico_alumnos
         WHERE nota IS NOT NULL
         GROUP BY rut_docente, periodo, cod_asignatura, nombre_asignatura, facultad
     """), conn)

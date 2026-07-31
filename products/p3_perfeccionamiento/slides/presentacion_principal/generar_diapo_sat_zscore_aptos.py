@@ -19,14 +19,13 @@ import pathlib
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE    = os.path.dirname(os.path.abspath(__file__))
-REPO    = str(pathlib.Path(BASE).parents[1])
+REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 COMP    = os.path.join(CASCADE, "complementarios")
 
 CVT_CSV   = os.path.join(COMP, "control_vs_trat_918.csv")
 APTOS_CSV = os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv")
-FONDOTIPO = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-             r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 OUT_PPTX  = os.path.join(REPO, "outputs", "pptx", "DIAPO_sat_zscore_aptos.pptx")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
 SCRATCH   = os.path.join(REPO, "outputs", "scratch")

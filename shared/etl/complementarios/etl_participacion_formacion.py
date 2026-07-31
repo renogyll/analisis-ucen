@@ -7,13 +7,16 @@ Output:
   P3_resumen_participacion.csv    -> conteos por tipo y anio para la contraparte
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
-import os
 
-BASE   = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2"
-DOCS   = os.path.join(BASE, "CONSOLIDADO DOCENTES 3-05-2026")
-EVALS  = os.path.join(BASE, "CONSOLIDADO EVALUACION ESTUDIANTES UCEN 3-5-2026")
-OUT    = os.path.join(BASE, "PROCESADO")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_RAW, DATA_STAGING
+
+DOCS   = os.path.join(DATA_RAW, "consolidado_docentes")
+EVALS  = os.path.join(DATA_RAW, "consolidado_evaluacion_estudiantes")
+OUT    = DATA_STAGING
 
 def strip_dv(serie):
     return (serie.astype(str).str.strip()

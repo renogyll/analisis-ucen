@@ -7,9 +7,11 @@ import os
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 # ── Rutas de datos ────────────────────────────────────────────────────────────
-DATA_RAW = os.path.join(BASE, "data", "raw")
-CASCADE  = os.path.join(BASE, "data", "cascade")
-OUTPUTS  = os.path.join(BASE, "outputs")
+DATA_RAW     = os.path.join(BASE, "data", "raw")
+DATA_STAGING = os.path.join(BASE, "data", "staging")   # antes: Analisis_UCEN_v2\PROCESADO
+CASCADE      = os.path.join(BASE, "data", "cascade")
+OUTPUTS      = os.path.join(BASE, "outputs")
+ASSETS       = os.path.join(BASE, "assets")            # plantillas de diseño (ej. Fondotipop.pptx)
 
 # Atajos a cada nivel de la cascada
 C00_BASE          = os.path.join(CASCADE, "00_base")

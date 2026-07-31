@@ -15,8 +15,7 @@ Git guarda el historial completo de decisiones.
 | 04 | `04_formados_p3` | pendiente | participó en ≥1 actividad P3 — desde universo_base sin filtro jerarquía | 2026-07-15 |
 | 05 | `05_aptos_p3` | pendiente | SAT docente disponible en período PRE y POST — desde formados_p3 sin filtro jerarquía | 2026-07-15 |
 
-> **Nota:** Los N pendientes se confirman al correr `etl/00_base/etl_universo_base.py`
-> (pendiente en rama `feat/universo-base`).
+> **Nota:** Los N pendientes se confirman al correr `shared/etl/00_base/etl_universo_base.py`.
 >
 > El N=917 (nivel 03) corresponde al universo con jerarquía válida después de excluir ESPINOZA (RUT 16322128),
 > persona eliminada por ambigüedad de identidad. La cifra histórica 918 era previa a esa exclusión.

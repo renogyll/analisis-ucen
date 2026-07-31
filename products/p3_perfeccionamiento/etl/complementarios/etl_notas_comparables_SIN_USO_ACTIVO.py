@@ -2,15 +2,24 @@
 ETL: notas_comparables.csv
 Una fila por asignatura con nota promedio cap vs no-cap y delta.
 Base: 347 asignaturas con cap + no-cap y 3+ períodos.
+
+SIN USO ACTIVO (2026-07-30): no escribe a Postgres (solo CSV), 0 consumidores en slides.
+Único consumidor confirmado: qa/core/check_347_vs_333.py (validación de cobertura).
+No llega a la presentación final. Se conserva para no perder el análisis; revisar
+si se retoma, se archiva, o se borra.
 """
-import sys
+import sys, os
 sys.stdout.reconfigure(encoding="utf-8")
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine, text
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
-OUT    = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO\notas_comparables.csv"
+OUT    = os.path.join(DATA_STAGING, "notas_comparables.csv")
 
 engine = create_engine(DB_URL)
 
@@ -20,7 +29,7 @@ with engine.connect() as conn:
                n.nombre_asignatura, n.facultad, n.periodo,
                ROUND(AVG(n.nota)::numeric, 3) AS nota_avg,
                COUNT(*) AS n_alumnos
-        FROM intel.notas_docente n
+        FROM intel.rendimiento_academico_alumnos n
         WHERE n.nota IS NOT NULL
         GROUP BY n.rut_docente, n.nombre_docente, n.cod_asignatura,
                  n.nombre_asignatura, n.facultad, n.periodo
@@ -139,5 +148,6 @@ cols_out = ["cod_asignatura","nombre","facultad","tipo_formacion",
             "periodos","n_secciones_cap","n_secciones_nocap",
             "n_alumnos_cap","n_alumnos_nocap",
             "nota_cap","nota_nocap","delta_nota","cap_mejor"]
+os.makedirs(DATA_STAGING, exist_ok=True)
 resultado[cols_out].to_csv(OUT, index=False, encoding="utf-8-sig")
 print(f"\nGuardado: {OUT}")

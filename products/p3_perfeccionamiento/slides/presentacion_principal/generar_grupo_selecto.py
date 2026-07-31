@@ -23,16 +23,15 @@ from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from config import CASCADE
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-REPO     = Path(__file__).resolve().parents[2]
+REPO     = Path(__file__).resolve().parents[4]
 SCRATCH  = REPO / "outputs" / "scratch"
 OUT_DIR  = REPO / "outputs" / "scratch" / "selecto_slides"
 OUT_PPTX = REPO / "outputs" / "pptx" / "GRUPO_SELECTO_v7.pptx"
-FONDOTIPO = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-             r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 COMP = Path(CASCADE) / "complementarios"
 for d in [SCRATCH, OUT_DIR, OUT_PPTX.parent]:
     os.makedirs(d, exist_ok=True)
@@ -166,11 +165,11 @@ edd["year"] = pd.to_numeric(edd["anio_evaluacion"],errors="coerce").astype("Int6
 ctrl_b2 = pd.read_csv(COMP/"control_918.csv", encoding="utf-8-sig")
 ctrl_b2["rut_key"] = ctrl_b2["rut_key"].astype(str).str.strip()
 
-# B4 control: 918 jerarquizados sin formación P3, con EDD válida
-doc918 = pd.read_csv(Path(CASCADE)/"03_jerarquizados"/"docente_918.csv",
-                     dtype={"rut_key":str}, encoding="utf-8-sig")
-doc918["rut_key"] = doc918["rut_key"].str.strip()
-ruts_918 = set(doc918["rut_key"])
+# B4 control: universo_base sin formación P3, con EDD válida
+base_df = pd.read_csv(Path(CASCADE)/"00_base"/"nomina_x_dotacion.csv",
+                      encoding="utf-8-sig")
+base_df["rut_key"] = base_df["rut_key"].astype(str).str.strip()
+ruts_universo_base = set(base_df["rut_key"])
 
 # ── Grupo Selecto ───────────────────────────────────────────────────────────────
 inst = p3ev.groupby("rut_key").agg(
@@ -221,8 +220,8 @@ per_range = (_p3_sel.groupby("rut_key")
 # Controles correctos por bloque
 ctrl_ruts_b2  = set(ctrl_b2["rut_key"].unique())          # B2: 569 con SAT
 ctrl_ruts_b3  = set(scatter[~scatter["formado"]]["rut_docente"].unique())  # B3: 539 scatter
-ctrl_ruts_b4  = set(                                       # B4: 918 jerarquizados sin P3 con EDD
-    edd[edd["rut_key"].isin(ruts_918) &
+ctrl_ruts_b4  = set(                                       # B4: universo_base sin P3 con EDD
+    edd[edd["rut_key"].isin(ruts_universo_base) &
         ~edd["rut_key"].isin(all_form_ruts) &
         edd["edd_num"].notna()]["rut_key"].unique())
 

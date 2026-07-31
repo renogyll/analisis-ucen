@@ -19,15 +19,14 @@ import pathlib
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE    = os.path.dirname(os.path.abspath(__file__))
-REPO    = str(pathlib.Path(BASE).parents[1])
+REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 COMP    = os.path.join(CASCADE, "complementarios")
 
 APTOS_CSV = os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv")
 EDD_CSV   = os.path.join(COMP, "evaluacion_jefes.csv")
 DOC918_CSV = os.path.join(CASCADE, "03_jerarquizados", "docente_918.csv")
-FONDOTIPO = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-             r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 OUT_PPTX  = os.path.join(REPO, "outputs", "pptx", "DIAPO_edd_aptos_v2.pptx")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
 SCRATCH   = os.path.join(REPO, "outputs", "scratch")
@@ -181,9 +180,13 @@ aptos["rut_key"] = aptos["rut_key"].astype(str).str.strip()
 ruts_aptos = set(aptos["rut_key"])
 N_APTOS = len(ruts_aptos)
 
-doc918 = pd.read_csv(DOC918_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
-doc918["rut_key"] = doc918["rut_key"].str.strip()
-ruts_917 = set(doc918["rut_key"])
+base_df = pd.read_csv(os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv"), encoding="utf-8-sig")
+base_df["rut_key"] = base_df["rut_key"].astype(str).str.strip()
+ruts_universo_base = set(base_df["rut_key"])
+
+form_df = pd.read_csv(os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv"),
+                      encoding="utf-8-sig").drop_duplicates("rut_key")
+ruts_todos_formados = set(form_df["rut_key"].astype(str).str.strip())
 
 if not os.path.exists(EDD_CSV):
     print("ERROR: No se encontró evaluacion_jefes.csv"); exit(1)
@@ -200,9 +203,12 @@ edd_form = (edd_df[edd_df["rut_key"].isin(ruts_aptos)
                    & edd_df["anio_eval"].notna()]
             .drop_duplicates(subset=["rut_key", "anio_eval"]))
 
-# Control: en universo 918 pero NO en aptos P3, con EDD
-edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_917)
-                   & ~edd_df["rut_key"].isin(ruts_aptos)
+# Control: en universo_base pero SIN ninguna formación P3 (no solo sin ser "apto"), con EDD
+# CORREGIDO 2026-07-30: antes excluía solo ruts_aptos (316) y restringía a ruts_917
+# (jerarquizados), dejando colar 162 formados-no-aptos dentro del "control" (daba 292
+# en vez de 134). Ver plan: bug de definición de control + bug de jerarquía, cuantificados.
+edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_universo_base)
+                   & ~edd_df["rut_key"].isin(ruts_todos_formados)
                    & edd_df["edd_total"].notna()
                    & edd_df["anio_eval"].notna()]
             .drop_duplicates(subset=["rut_key", "anio_eval"]))

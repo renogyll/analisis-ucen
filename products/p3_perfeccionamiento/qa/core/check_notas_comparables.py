@@ -9,7 +9,7 @@ with engine.connect() as conn:
     nd = pd.read_sql(text("""
         SELECT rut_docente, cod_asignatura, nombre_asignatura, facultad, periodo,
                AVG(nota) AS nota_avg, COUNT(*) AS n_alumnos
-        FROM intel.notas_docente
+        FROM intel.rendimiento_academico_alumnos
         WHERE nota IS NOT NULL
         GROUP BY rut_docente, cod_asignatura, nombre_asignatura, facultad, periodo
     """), conn)

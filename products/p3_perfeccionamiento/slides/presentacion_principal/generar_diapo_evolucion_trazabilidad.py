@@ -20,7 +20,7 @@ import pathlib
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE    = os.path.dirname(os.path.abspath(__file__))
-REPO    = str(pathlib.Path(BASE).parents[1])
+REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 COMP    = os.path.join(CASCADE, "complementarios")
 
@@ -28,9 +28,8 @@ APTOS_CSV  = os.path.join(CASCADE, "05_aptos_p3",  "p3_sat_zscore.csv")
 SCAT_CSV   = os.path.join(COMP,                    "scatter_sat_notas.csv")
 EDD_CSV    = os.path.join(COMP,                    "evaluacion_jefes.csv")
 P918_CSV   = os.path.join(CASCADE, "04_formados_p3","p3_918.csv")
-D918_CSV   = os.path.join(CASCADE, "03_jerarquizados","docente_918.csv")
-FONDOTIPO  = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-              r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+BASE_CSV   = os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 OUT_PPTX   = os.path.join(REPO, "outputs", "pptx", "DIAPO_evolucion_trazabilidad.pptx")
 OUT_DIR    = os.path.join(BASE, "dark_slides_v3")
 SCRATCH    = os.path.join(REPO, "outputs", "scratch")
@@ -207,10 +206,10 @@ N_APTOS = len(ruts_aptos)
 p918   = pd.read_csv(P918_CSV,   encoding="utf-8-sig")
 ruts_todos_form = set(p918["rut_key"].astype(str).str.strip())
 
-d918   = pd.read_csv(D918_CSV,   encoding="utf-8-sig")
-ruts_917 = set(d918["rut_key"].astype(str).str.strip())
+base_df = pd.read_csv(BASE_CSV, encoding="utf-8-sig")
+ruts_universo_base = set(base_df["rut_key"].astype(str).str.strip())
 
-print(f"Aptos P3: {N_APTOS}  |  Todos formados: {len(ruts_todos_form)}  |  Universo 918: {len(ruts_917)}")
+print(f"Aptos P3: {N_APTOS}  |  Todos formados: {len(ruts_todos_form)}  |  Universo base: {len(ruts_universo_base)}")
 
 # ── SLIDE 1 — Nota Promedio Alumnos ───────────────────────────────────────────
 scat = pd.read_csv(SCAT_CSV, encoding="utf-8-sig")
@@ -257,7 +256,7 @@ edd["anio"] = edd["anio_evaluacion"].astype(int).astype(str)
 anios_ord = sorted(edd["anio"].unique().tolist())
 
 edd_ap = edd[edd["rut_key"].isin(ruts_aptos)]
-edd_ct = edd[edd["rut_key"].isin(ruts_917) & ~edd["rut_key"].isin(ruts_todos_form)]
+edd_ct = edd[edd["rut_key"].isin(ruts_universo_base) & ~edd["rut_key"].isin(ruts_todos_form)]
 
 pivot_ap_edd = edd_ap.pivot_table(index="rut_key", columns="anio", values="edd_total", aggfunc="mean")
 pivot_ct_edd = edd_ct.pivot_table(index="rut_key", columns="anio", values="edd_total", aggfunc="mean")

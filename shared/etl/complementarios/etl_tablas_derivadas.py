@@ -4,9 +4,14 @@ Genera los 4 subconjuntos filtrando por fuente — siempre consistentes con tabl
 Reemplaza los P1_docente_*.csv generados antes de la deduplicacion completa.
 """
 
-import pandas as pd, os
+import sys, os
+from pathlib import Path
+import pandas as pd
 
-OUT = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_STAGING
+
+OUT = DATA_STAGING
 
 td = pd.read_csv(os.path.join(OUT, "tabla_docente.csv"), dtype=str)
 print(f"tabla_docente cargada: {len(td)} filas | {td['rut_key'].nunique()} RUTs unicos")

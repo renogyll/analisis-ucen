@@ -13,11 +13,15 @@ Notas de estructura:
   - Columna  67      : SAT_NOTA (promedio nota 1-7)
 """
 
+import sys, os
+from pathlib import Path
 import pandas as pd
-import os
 
-EVALS = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\CONSOLIDADO EVALUACION ESTUDIANTES UCEN 3-5-2026"
-OUT   = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_RAW, DATA_STAGING
+
+EVALS = os.path.join(DATA_RAW, "consolidado_evaluacion_estudiantes")
+OUT   = DATA_STAGING
 
 # ── Definicion de preguntas por posicion de columna ───────────────────────────
 # (pregunta_id, tipo, [indices de columnas en el df])
@@ -142,6 +146,7 @@ df_periodos = pd.concat(all_periodos, ignore_index=True)
 df_respuestas = pd.concat(all_respuestas, ignore_index=True)
 df_respuestas.insert(0, "id", range(1, len(df_respuestas) + 1))
 
+os.makedirs(OUT, exist_ok=True)
 out_periodos   = os.path.join(OUT, "evaluacion_periodo.csv")
 out_respuestas = os.path.join(OUT, "evaluacion_respuesta.csv")
 df_periodos.to_csv(out_periodos,   index=False, encoding="utf-8-sig")

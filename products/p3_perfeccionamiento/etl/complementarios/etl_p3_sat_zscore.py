@@ -3,18 +3,27 @@ ETL: p3_sat_zscore.csv
 Una fila por docente × instancia de capacitación (209 filas).
 Combina:
   - intel.pre_post_sat          → SAT pre/post crudo
-  - ped-001 - pd001 - jerarquizados.csv → perfil completo
+  - analisis.docente_ambos      → perfil completo (en vivo)
   - consolidados.evaluacion_periodo × docente_ambos → z-score por unidad_facultad × período
+
+CAMBIO 2026-07-30: antes leía un CSV congelado ("ped-001 - pd001 - jerarquizados.csv",
+495 filas, 14-mayo) que resultó ser un snapshot viejo de analisis.docente_ambos
+(520 filas en vivo, mismas 31 columnas). Se reemplaza por lectura directa de la
+tabla en vivo — elimina la dependencia de un archivo sin script generador y
+repara la desactualización (25 filas) que afectaba el número "316 Aptos P3".
 """
-import sys
+import sys, os
 sys.stdout.reconfigure(encoding="utf-8")
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
-OUT    = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO\p3_sat_zscore.csv"
-CSV_JER = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO\ped-001 - pd001 - jerarquizados.csv"
+OUT    = os.path.join(DATA_STAGING, "p3_sat_zscore.csv")
 
 engine = create_engine(DB_URL)
 
@@ -32,8 +41,8 @@ sat = pd.read_sql("""
 sat["rut_key"] = sat["rut_key"].astype(str).str.strip()
 print(f"pre_post_sat        : {len(sat)} filas, {sat['rut_key'].nunique()} RUTs únicos")
 
-# ── 2. Perfil completo (jerarquizados CSV) ─────────────────────────────────────
-jer = pd.read_csv(CSV_JER, encoding="utf-8-sig")
+# ── 2. Perfil completo (analisis.docente_ambos, en vivo) ───────────────────────
+jer = pd.read_sql("SELECT * FROM analisis.docente_ambos", engine)
 jer["rut_key"] = jer["rut_key"].astype(str).str.strip().str.replace(".0", "", regex=False)
 
 cols_perfil = [
@@ -188,6 +197,7 @@ print(out.groupby("tipos_formacion").agg(
 ).round(3).to_string())
 
 # ── 7. Guardar ────────────────────────────────────────────────────────────────
+os.makedirs(DATA_STAGING, exist_ok=True)
 out.to_csv(OUT, index=False, encoding="utf-8-sig")
 print(f"\nGuardado: {OUT}")
 print(f"Columnas: {list(df.columns)}")

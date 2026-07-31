@@ -27,7 +27,7 @@ import numpy as np
 from sqlalchemy import create_engine
 
 # ── Config ────────────────────────────────────────────────────────────────────
-sys.path.insert(0, str(Path(__file__).parents[2]))
+sys.path.insert(0, str(Path(__file__).parents[3]))
 from config import DATA_RAW, C00_BASE
 
 RAW    = Path(DATA_RAW) / "consolidado_docentes"

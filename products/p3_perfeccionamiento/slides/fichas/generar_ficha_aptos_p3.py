@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-generar_ficha_aptos_p3.py  v2
+generar_ficha_aptos_p3.py  v3
 Genera FICHA_Ampliar_Aptos_P3.pptx en formato dark v3:
   Slide 1 - Portada
   Slide 2 - Pipeline de datos (flujo con N y archivos originales)
-  Slide 3 - Los 160 excluidos (categorias no solapadas que suman 160)
+  Slide 3 - Los excluidos (categorias no solapadas)
   Slide 4 - Inventario de archivos originales entregados
   Slide 5 - Datos adicionales para ampliar el universo
+
+REESCRITO 2026-07-31 sobre `data/cascade/` + Postgres (universo vigente,
+1.144 universo_base / 726 formados / 316 Aptos P3) — antes leía
+`p3_918.csv`/`p3_sat_zscore_918.csv`/`evaluacion_periodo.csv` desde una
+carpeta "PROCESADO" fantasma con el universo viejo 917/918.
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os, zipfile
@@ -20,25 +25,34 @@ from pptx import Presentation
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+from sqlalchemy import create_engine
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE      = os.path.dirname(os.path.abspath(__file__))
-PROC918   = os.path.join(BASE, "..", "PROCESADO")
-PROC_ROOT = os.path.normpath(os.path.join(BASE, "..", "..", "PROCESADO"))
-ROOT      = os.path.normpath(os.path.join(BASE, "..", ".."))
-FONDOTIPO = os.path.join(ROOT, "Fondotipop.pptx")
+ROOT      = os.path.normpath(os.path.join(BASE, "..", "..", "..", ".."))
+sys.path.insert(0, ROOT)
+from config import CASCADE, OUTPUTS
+
+FONDOTIPO = os.path.join(ROOT, "assets", "Fondotipop.pptx")
 OUT_DIR   = os.path.join(BASE, "dark_slides_v3")
-OUT_PPTX  = os.path.join(ROOT, "FICHA_Ampliar_Aptos_P3_v2.pptx")
+OUT_PPTX  = os.path.join(OUTPUTS, "pptx", "FICHA_Ampliar_Aptos_P3_v3.pptx")
 os.makedirs(OUT_DIR, exist_ok=True)
+os.makedirs(os.path.join(OUTPUTS, "pptx"), exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Datos
 # ─────────────────────────────────────────────────────────────────────────────
-p3     = pd.read_csv(os.path.join(PROC918, "p3_918.csv"), encoding="utf-8-sig")
-p3_sat = pd.read_csv(os.path.join(PROC918, "p3_sat_zscore_918.csv"), encoding="utf-8-sig")
-ep     = pd.read_csv(os.path.join(PROC_ROOT, "evaluacion_periodo.csv"), encoding="utf-8-sig")
+DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
+engine = create_engine(DB_URL)
+
+base_df = pd.read_csv(os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv"), encoding="utf-8-sig")
+N_BASE  = len(base_df)                                                          # 1.144
+
+p3     = pd.read_csv(os.path.join(CASCADE, "04_formados_p3", "docentes_formados.csv"), encoding="utf-8-sig")
+p3_sat = pd.read_csv(os.path.join(CASCADE, "05_aptos_p3", "p3_sat_zscore.csv"), encoding="utf-8-sig")
+ep     = pd.read_sql("SELECT rut_docente, periodo FROM consolidados.evaluacion_periodo", engine)
 
 N_TOTAL_EVENTOS = len(p3)
 N_FORMADOS      = p3["rut_key"].nunique()
@@ -49,12 +63,12 @@ N_DOC_SAT       = ep["rut_docente"].nunique()
 PERIODOS        = sorted(ep["periodo"].unique())
 PER_STR         = f"{PERIODOS[0]} a {PERIODOS[-1]}"
 
-# Exclusiones NO solapadas que sumen exactamente 160
+# Exclusiones NO solapadas (grupos mutuamente excluyentes)
 p3_doc = p3.groupby("rut_key").agg(
     tiene_bl  = ("tiene_sat_baseline",   "max"),
     tiene_res = ("tiene_sat_resultado", "max"),
 ).reset_index()
-# Los 160 excluidos caen en 4 grupos mutuamente excluyentes:
+# Los excluidos caen en 4 grupos mutuamente excluyentes:
 N_SOLO_BL  = int(((p3_doc["tiene_bl"] == False) & (p3_doc["tiene_res"] == True)).sum())
 N_SOLO_RES = int(((p3_doc["tiene_bl"] == True)  & (p3_doc["tiene_res"] == False)).sum())
 N_SIN_BOTH = int(((p3_doc["tiene_bl"] == False) & (p3_doc["tiene_res"] == False)).sum())
@@ -251,12 +265,12 @@ def slide_pipeline(prs):
             "yc":     9.00,
         },
         {
-            "n_big":  "917",
-            "n_lbl":  "docentes jerarquizados",
-            "sub":    "Universo base del analisis UCEN",
+            "n_big":  str(N_BASE),
+            "n_lbl":  "universo_base",
+            "sub":    "Jornada + Honorario, cruce NOMINA x DOTACION",
             "file1":  F_DOC,
             "file2":  F_DOC_NOM,
-            "filter": "Filtro: ranking UCEN vigente (jerarquia activa)",
+            "filter": "Filtro: RUT unico, sin restriccion de jerarquia",
             "col":    "#2E6AAD",
             "yc":     6.75,
         },
@@ -323,11 +337,11 @@ def slide_pipeline(prs):
     # Flechas + porcentajes entre nodos
     arrows = [
         (nodes[0]["yc"] - BOX_H/2, nodes[1]["yc"] + BOX_H/2,
-         f"917 de {N_DOC_SAT:,}"),
+         f"{N_BASE:,} de {N_DOC_SAT:,}"),
         (nodes[1]["yc"] - BOX_H/2, nodes[2]["yc"] + BOX_H/2,
-         f"{N_FORMADOS} de 917  (39%)"),
+         f"{N_FORMADOS} de {N_BASE:,}  ({100*N_FORMADOS/N_BASE:.0f}%)"),
         (nodes[2]["yc"] - BOX_H/2, nodes[3]["yc"] + BOX_H/2,
-         f"{N_APTOS} de {N_FORMADOS}  (55%)"),
+         f"{N_APTOS} de {N_FORMADOS}  ({100*N_APTOS/N_FORMADOS:.0f}%)"),
     ]
     ax_x = BOX_X + BOX_W / 2 - 0.2
     for y_from, y_to, lbl in arrows:
@@ -344,9 +358,9 @@ def slide_pipeline(prs):
     sl = _new_sl(prs)
     _pic(sl, SHARED_BG, prs)
     _pic(sl, path, prs)
-    _T(sl, "Pipeline de Datos   De la Evaluacion SAT a los 197 Aptos P3", fs=14)
+    _T(sl, f"Pipeline de Datos   De la Evaluacion SAT a los {N_APTOS} Aptos P3", fs=14)
     _POP(sl, f"Base SAT: {PER_STR}  |  Formacion: 2022-2025  |  "
-             f"Universo base: 917 docentes jerarquizados UCEN")
+             f"Universo base: {N_BASE:,} docentes UCEN (Jornada + Honorario)")
     _BUL(sl, [
         f"Cada docente formado requiere SAT registrado en el semestre ANTERIOR "
         f"(baseline) y POSTERIOR (resultado) a su actividad de formacion. "
@@ -361,7 +375,7 @@ def slide_pipeline(prs):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SLIDE 3 — Los 160 excluidos (4 grupos mutuamente excluyentes que suman 160)
+# SLIDE 3 — Los excluidos (4 grupos mutuamente excluyentes)
 # ─────────────────────────────────────────────────────────────────────────────
 def slide_excluidos(prs):
     fig = _tr_fig()
@@ -499,9 +513,9 @@ def slide_inventario(prs):
         },
         {
             "file":  "CONSOLIDADO DOCENTES\n3-05-2026.xlsx\n(hojas: DOTACION, NOMINA)",
-            "cont":  "917 docentes\njerarquizados UCEN",
-            "cols":  "rut_key\nnombre\njerarquia\nunidad_facultad\ntipo_contrato",
-            "rol":   "Universo base:\ndefine los 917 docentes\nelegibles para P3",
+            "cont":  f"{N_BASE:,} docentes\nUCEN (universo_base)",
+            "cols":  "rut_key\nnombre\njerarquia\nunidad_facultad\ntipo_contrato_tag",
+            "rol":   f"Universo base:\ndefine los {N_BASE:,} docentes\nelegibles para P3",
             "col":   "#2E6AAD",
             "yc":    5.35,
         },
@@ -557,7 +571,7 @@ def slide_inventario(prs):
     _pic(sl, path, prs)
     _T(sl, "Inventario de Archivos Originales Entregados por UCEN", fs=16)
     _POP(sl, "2 archivos Excel origen  |  1 archivo construido en el analisis  "
-             "|  Todos disponibles en UNIVERSO_918/PROCESADO/")
+             "|  Disponibles en data/raw/ y data/cascade/")
     print("  slide 4 - Inventario OK")
 
 

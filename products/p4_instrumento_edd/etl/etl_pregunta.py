@@ -4,9 +4,14 @@ Catalogo canonico de preguntas del instrumento de evaluacion estudiantil.
 IDs semanticos: APR_01-03, MET_01-05, AFO_01-09, SAT_BIN, SAT_NOTA
 """
 
-import pandas as pd, os
+import sys, os
+from pathlib import Path
+import pandas as pd
 
-OUT = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from config import DATA_STAGING
+
+OUT = DATA_STAGING
 
 # texto_principal = version vigente (2023-02 en adelante)
 # texto_alternativo = version usada solo en 2023-01 (MET_04)
@@ -75,6 +80,7 @@ cols = ["pregunta_id","dimension","orden","tipo_respuesta",
         "texto_principal","texto_alternativo","periodos_texto_alt","id_original"]
 df = pd.DataFrame(preguntas, columns=cols)
 
+os.makedirs(OUT, exist_ok=True)
 df.to_csv(os.path.join(OUT,"tabla_pregunta.csv"), index=False, encoding="utf-8-sig")
 df[["id_original","pregunta_id"]].to_csv(os.path.join(OUT,"mapeo_id_pregunta.csv"), index=False, encoding="utf-8-sig")
 

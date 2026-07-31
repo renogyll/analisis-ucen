@@ -10,7 +10,7 @@ with engine.connect() as conn:
         SELECT n.rut_docente, n.cod_asignatura, n.nombre_asignatura,
                n.facultad, n.periodo,
                AVG(n.nota) AS nota_avg, COUNT(*) AS n_alumnos
-        FROM intel.notas_docente n
+        FROM intel.rendimiento_academico_alumnos n
         WHERE n.nota IS NOT NULL
         GROUP BY n.rut_docente, n.cod_asignatura, n.nombre_asignatura,
                  n.facultad, n.periodo

@@ -19,7 +19,7 @@ import pathlib
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
 BASE    = os.path.dirname(os.path.abspath(__file__))
-REPO    = str(pathlib.Path(BASE).parents[1])
+REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 COMP    = os.path.join(CASCADE, "complementarios")
 
@@ -28,8 +28,7 @@ P3EV_CSV   = os.path.join(CASCADE, "04_formados_p3", "p3_918.csv")
 DOC918_CSV = os.path.join(CASCADE, "03_jerarquizados", "docente_918.csv")
 BASE_CSV   = os.path.join(CASCADE, "00_base", "nomina_x_dotacion.csv")
 EDD_CSV    = os.path.join(COMP, "evaluacion_jefes.csv")
-FONDOTIPO  = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO"
-              r"\Downloads\Analisis_UCEN_v2\Fondotipop.pptx")
+FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 OUT_PPTX   = os.path.join(REPO, "outputs", "pptx", "DIAPO_poblaciones_b4.pptx")
 OUT_DIR    = os.path.join(BASE, "dark_slides_v3")
 SCRATCH    = os.path.join(REPO, "outputs", "scratch")
@@ -173,11 +172,9 @@ p3ev = pd.read_csv(P3EV_CSV, encoding="utf-8-sig")
 p3ev["rut_key"] = p3ev["rut_key"].astype(str).str.strip()
 ruts_todos_form = set(p3ev["rut_key"])
 
-doc918 = pd.read_csv(DOC918_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
-ruts_917 = set(doc918["rut_key"].str.strip())
-
 base_df = pd.read_csv(BASE_CSV, encoding="utf-8-sig")
 base_df["rut_key"] = base_df["rut_key"].astype(str).str.strip()
+ruts_universo_base = set(base_df["rut_key"])
 
 edd_df = pd.read_csv(EDD_CSV, dtype={"rut_key": str}, encoding="utf-8-sig")
 edd_df["rut_key"]   = edd_df["rut_key"].str.strip()
@@ -189,7 +186,7 @@ edd_form = (edd_df[edd_df["rut_key"].isin(ruts_aptos)
                    & edd_df["edd_total"].notna()
                    & edd_df["anio_eval"].notna()]
             .drop_duplicates(subset=["rut_key", "anio_eval"]))
-edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_917)
+edd_ctrl = (edd_df[edd_df["rut_key"].isin(ruts_universo_base)
                    & ~edd_df["rut_key"].isin(ruts_todos_form)
                    & edd_df["edd_total"].notna()
                    & edd_df["anio_eval"].notna()]

@@ -8,9 +8,8 @@ import sys; sys.stdout.reconfigure(encoding="utf-8")
 import os, pathlib, re
 import pandas as pd
 
-BASE_RAW = (r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads"
-            r"\Analisis_UCEN_v2\CONSOLIDADO EVALUACION ESTUDIANTES UCEN 3-5-2026")
-REPO     = str(pathlib.Path(__file__).parents[2])
+REPO     = str(pathlib.Path(__file__).parents[4])
+BASE_RAW = os.path.join(REPO, "data", "raw", "consolidado_evaluacion_estudiantes")
 OUT_CSV  = os.path.join(REPO, "data", "cascade", "complementarios",
                         "bin_recomendacion_completo.csv")
 

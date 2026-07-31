@@ -4,9 +4,14 @@ Catalogo de codigos de calificacion usados en calificacion_alumno.
 Fuente: DOCUMENTO EXPLICATIVO DE CATEGORIA VARIAS 9-05-2026.docx + inspeccion datos
 """
 
-import pandas as pd, os
+import sys, os
+from pathlib import Path
+import pandas as pd
 
-OUT = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\Analisis_UCEN_v2\PROCESADO"
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from config import DATA_STAGING
+
+OUT = DATA_STAGING
 
 # Descripciones oficiales segun DOCUMENTO EXPLICATIVO DE CATEGORIA VARIAS 9-05-2026.docx
 # aprueba: True=aprueba, False=reprueba, None=indeterminado/administrativo
@@ -54,6 +59,7 @@ catalogos = [
 ]
 
 df = pd.DataFrame(catalogos, columns=["codigo","descripcion","descripcion_oficial","aprueba","tiene_nota"])
+os.makedirs(OUT, exist_ok=True)
 df.to_csv(os.path.join(OUT, "catalogo_calificacion.csv"), index=False, encoding="utf-8-sig")
 
 print("catalogo_calificacion.csv generada")
