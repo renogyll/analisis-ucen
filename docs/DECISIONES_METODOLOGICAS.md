@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-07-11  
+**Última actualización:** 2026-07-31  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -34,6 +34,7 @@
 | 22 | Brecha de dotación en Jornada/Planta (60 sin dotación) | ✅ Caracterizado | 917 |
 | 23 | Sub-cascadas de calidad de datos — Jornada con dotación | ✅ Resuelto | 917 |
 | 24 | P2 desagregado para Jornada/Planta | ✅ Resuelto | 917 |
+| 25 | Normalización de `jerarquia` — universo actual (1.144) | ✅ Resuelto | 1.144 (`universo_base`) |
 
 ---
 
@@ -462,6 +463,55 @@ Todas las hojas provienen del archivo `CONSOLIDADO DOCENTES 3-05-2026.xlsx`.
 
 ---
 
+## 25. Normalización de `jerarquia` — universo actual (`analisis.universo_base`, N=1.144)
+
+**Contexto:** Este universo (1.144, vigente desde la migración P1–P4) reemplaza a los universos 492/917 documentados en D3. La columna `jerarquia` se arma en `shared/etl/00_base/etl_universo_base.py` a partir de 4 fuentes: NOMINA, DOTACION, `CERTIFICACION OFERTA FORMATIVA 2025.xlsx` (Talleres) y `CONSOLIDADO DOCENTES...PROYECTOS DE INVESTIGACION.csv`. Las 2 últimas (origen `SOLO_FORMACION`, 160 docentes que no están ni en NOMINA ni en DOTACION) traían el texto de "Jerarquía" escrito con un formato distinto al de NOMINA/DOTACION — mayúscula/minúscula libre, formas cortas ("Instructor/a") en vez del texto canónico ("INSTRUCTOR DOCENTE"), tildes inconsistentes — lo que producía 17 valores distintos en la columna en vez de 8 + "sin jerarquía".
+
+**Decisión:** Normalizar en el ETL fuente (no en cada script consumidor) mapeando toda variante corta/desacentuada a su forma canónica, y asumir **DOCENTE** (no REGULAR) para las formas cortas ambiguas (`"Asistente"`, `"Instructor/a"`, `"Asociado/a"`, `"Titular"`, `"Asistente Docente"`) — decisión explícita del usuario vía consulta directa, ya que esas 4 fuentes de Talleres/Proyectos no traen el dato de escalafón (Docente vs. Regular) que sí distingue NOMINA/DOTACION.
+
+**Mapeo completo (17 valores originales → 9 categorías + NULL real):**
+
+| Valor original | N | → | Categoría final |
+|---|---:|---|---|
+| `INSTRUCTOR DOCENTE` | 343 | → | INSTRUCTOR DOCENTE *(ya venía bien, NOMINA/DOTACION)* |
+| `Instructor/a` | 7 | → | INSTRUCTOR DOCENTE *(forma corta, SOLO_FORMACION → asumido Docente)* |
+| `INSTRUCTOR REGULAR` | 14 | → | INSTRUCTOR REGULAR *(ya venía bien)* |
+| `ASISTENTE DOCENTE` | 262 | → | ASISTENTE DOCENTE *(ya venía bien)* |
+| `Asistente` | 10 | → | ASISTENTE DOCENTE *(forma corta, SOLO_FORMACION → asumido Docente)* |
+| `Asistente Docente` | 1 | → | ASISTENTE DOCENTE *(mismo dato, solo mayúscula distinta)* |
+| `ASISTENTE REGULAR` | 38 | → | ASISTENTE REGULAR *(ya venía bien)* |
+| `ASOCIADO DOCENTE` | 143 | → | ASOCIADO DOCENTE *(ya venía bien)* |
+| `Asociado/a` | 4 | → | ASOCIADO DOCENTE *(forma corta, SOLO_FORMACION → asumido Docente)* |
+| `ASOCIADO REGULAR` | 39 | → | ASOCIADO REGULAR *(ya venía bien)* |
+| `TITULAR DOCENTE` | 56 | → | TITULAR DOCENTE *(ya venía bien)* |
+| `Titular` | 2 | → | TITULAR DOCENTE *(forma corta, SOLO_FORMACION → asumido Docente)* |
+| `TITULAR REGULAR` | 21 | → | TITULAR REGULAR *(ya venía bien)* |
+| `Sin Jerarquía` | 133 | → | SIN JERARQUÍA *(mayúscula distinta)* |
+| `SIN JERARQUÍA` | 41 | → | SIN JERARQUÍA *(ya venía bien)* |
+| `Sin jerarquía` | 3 | → | SIN JERARQUÍA *(mayúscula distinta)* |
+| *(vacío real / NULL)* | 27 | → | *(vacío real, sin tocar)* |
+
+**Resultado verificado (9 categorías finales + NULL, suma exacta a 1.144):**
+
+| Categoría final | N |
+|---|---:|
+| INSTRUCTOR DOCENTE | 350 |
+| ASISTENTE DOCENTE | 273 |
+| SIN JERARQUÍA | 177 |
+| ASOCIADO DOCENTE | 147 |
+| TITULAR DOCENTE | 58 |
+| ASOCIADO REGULAR | 39 |
+| ASISTENTE REGULAR | 38 |
+| *(NULL real)* | 27 |
+| TITULAR REGULAR | 21 |
+| INSTRUCTOR REGULAR | 14 |
+
+**Implementación:** función `normalizar_jerarquia()` en `shared/etl/00_base/etl_universo_base.py` — usa `unicodedata.normalize("NFKD", ...)` para comparar sin depender de la codificación de tildes, un diccionario `_JERARQUIA_CORTAS` para las 5 formas cortas, y detecta "sin jerarquía" en cualquier variante de mayúscula/tilde. Se aplica una sola vez, en el punto de entrada de los datos — todos los scripts derivados (`etl_jornada.py`, `etl_honorario.py`, `etl_jerarquizados.py`, y los CSV de `data/cascade/`) heredan el valor ya limpio, sin normalizar cada uno por su cuenta.
+
+**Nota para D4 (jerarquía válida — criterio de inclusión, universos legacy 492/917):** el criterio de exclusión de esa decisión sigue vigente conceptualmente para el universo 1.144 — `SIN JERARQUÍA` (177 aquí) y NULL (27) se tratan como "sin jerarquía válida" en cualquier análisis que la use como variable de agrupación (ej. `edad_jerarquia`).
+
+---
+
 ## Registro de cambios
 
 | Fecha | Cambio |
@@ -469,3 +519,4 @@ Todas las hojas provienen del archivo `CONSOLIDADO DOCENTES 3-05-2026.xlsx`.
 | 2026-05-09 | Versión inicial (decisiones 1–13, varios pendientes) |
 | 2026-05-21 | Actualización completa: resolución CM-1 y CM-2, universo 917, duplicados resueltos, z-score, apto_p3, múltiples instancias |
 | 2026-07-11 | Agregadas D20–D24: sub-universo Jornada/Planta, tratamiento "NO INFORMA", brecha de dotación, sub-cascadas calidad datos, P2 desagregado. Actualizado D3 con tercer universo. |
+| 2026-07-31 | Agregada D25: normalización de `jerarquia` (17→9 categorías) en el universo actual (`analisis.universo_base`, N=1.144), con mapeo completo valor-a-valor y decisión de asumir "Docente" para formas cortas de origen `SOLO_FORMACION`. |
