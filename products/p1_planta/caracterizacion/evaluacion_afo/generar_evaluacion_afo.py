@@ -110,14 +110,21 @@ def hacer_grafico(preguntas):
             for b in bars:
                 hgt = b.get_height()
                 if pd.notna(hgt):
-                    ax.text(b.get_x() + b.get_width()/2, hgt + 1.5, f"{hgt:.0f}",
+                    ax.text(b.get_x() + b.get_width()/2, hgt + 1.3, f"{hgt:.0f}%",
                             ha="center", va="bottom", fontsize=6.8, fontweight="bold",
                             color=color, path_effects=stroke, zorder=6)
+        # N° una sola vez por semestre (Acuerdo y Desacuerdo comparten el mismo N —
+        # son las mismas evaluaciones), centrado sobre el par de barras.
+        for xi, acu, n in zip(x, d["pct_acuerdo"], d["n_alumnos"]):
+            if pd.notna(n):
+                ax.text(xi, acu + 6.5, f"N°={n/1000:.0f}k", ha="center", va="bottom",
+                        fontsize=5.0, color="#8A97A3", path_effects=stroke, zorder=6)
 
         ax.set_title(PREGUNTA_LABEL[preg], fontsize=8.5, color="white", pad=10, wrap=True)
         ax.set_xticks(x)
         ax.set_xticklabels([PERIODO_LABEL[p] for p in PERIODOS], fontsize=6.8, color="#AAAAAA")
-        ax.set_ylim(0, 100)
+        ax.set_ylim(0, 112)
+        ax.set_yticks([0, 20, 40, 60, 80, 100])
         ax.tick_params(axis="x", length=0, pad=5)
         ax.tick_params(axis="y", colors="#AAAAAA", labelsize=7)
         for sp in ax.spines.values():
@@ -134,13 +141,11 @@ def hacer_grafico(preguntas):
     return kit, fig
 
 
-# ── Un pptx separado por grupo ────────────────────────────────────────────────
-for nombre, preguntas, out_name in GRUPOS:
+def agregar_diapositiva(prs, nombre, preguntas):
+    """Agrega a `prs` la diapositiva de un grupo de 3 preguntas."""
     kit, fig = hacer_grafico(preguntas)
     chart_path = kit.save_chart(fig, f"{nombre}_chart.png")
 
-    prs = Presentation()
-    prs.slide_width, prs.slide_height = Emu(kit.SW_EMU), Emu(kit.SH_EMU)
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
@@ -159,7 +164,22 @@ for nombre, preguntas, out_name in GRUPOS:
         f"Preguntas incluidas en esta diapositiva: "
         f"{', '.join(p.split('_')[1] for p in preguntas)} de la dimensión Aspectos Formales.",
     ])
+    return sl
 
-    out_path = OUT_DIR / out_name
-    prs.save(out_path)
-    print(f"✓ Guardado: {out_path}")
+
+def agregar_todas(prs):
+    """Agrega las 3 diapositivas de AFO a `prs` (usado por el ensamblador
+    products/p1_planta/generar_presentacion.py)."""
+    for nombre, preguntas, _ in GRUPOS:
+        agregar_diapositiva(prs, nombre, preguntas)
+
+
+if __name__ == "__main__":
+    # ── Un pptx separado por grupo (comportamiento standalone, sin cambios) ────
+    for nombre, preguntas, out_name in GRUPOS:
+        prs = Presentation()
+        prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
+        agregar_diapositiva(prs, nombre, preguntas)
+        out_path = OUT_DIR / out_name
+        prs.save(out_path)
+        print(f"✓ Guardado: {out_path}")

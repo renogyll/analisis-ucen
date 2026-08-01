@@ -90,71 +90,82 @@ des_ult = raw.loc[raw["periodo"] == ult, "pct_desacuerdo"].mean()
 n_prim = int(raw.loc[raw["periodo"] == prim, "n_alumnos"].iloc[0])
 n_ult = int(raw.loc[raw["periodo"] == ult, "n_alumnos"].iloc[0])
 
-# ── Gráfico: 1 figura, 3 subplots (uno por pregunta) ──────────────────────────
-kit = UcenSlideKit(out_dir=HERE)
-kit.ensure_bg()
+def agregar(prs):
+    """Construye el gráfico (3 subplots) y agrega la diapositiva de este sub-tema a `prs`
+    (usado tanto en modo standalone como por el ensamblador products/p1_planta/generar_presentacion.py)."""
+    kit = UcenSlideKit(out_dir=HERE)
+    kit.ensure_bg()
 
-fig = kit.new_chart_fig()
-axs = fig.subplots(1, 3, gridspec_kw={"wspace": 0.32})
-fig.subplots_adjust(left=0.045, right=0.985, top=0.72, bottom=0.20)
+    fig = kit.new_chart_fig()
+    axs = fig.subplots(1, 3, gridspec_kw={"wspace": 0.32})
+    fig.subplots_adjust(left=0.045, right=0.985, top=0.72, bottom=0.20)
 
-x = np.arange(len(PERIODOS))
-w = 0.38
-stroke = [pe.withStroke(linewidth=1.8, foreground="#0A0F18")]
+    x = np.arange(len(PERIODOS))
+    w = 0.38
+    stroke = [pe.withStroke(linewidth=1.8, foreground="#0A0F18")]
 
-for ax, preg in zip(axs, PREGUNTAS):
-    d = raw[raw["pregunta_id"] == preg].set_index("periodo").reindex(PERIODOS)
+    for ax, preg in zip(axs, PREGUNTAS):
+        d = raw[raw["pregunta_id"] == preg].set_index("periodo").reindex(PERIODOS)
 
-    bars_a = ax.bar(x - w/2, d["pct_acuerdo"], width=w, color=COL_ACUERDO, alpha=0.92,
-                     edgecolor="none", label="% Acuerdo")
-    bars_d = ax.bar(x + w/2, d["pct_desacuerdo"], width=w, color=COL_DESACUERDO, alpha=0.92,
-                     edgecolor="none", label="% Desacuerdo")
+        bars_a = ax.bar(x - w/2, d["pct_acuerdo"], width=w, color=COL_ACUERDO, alpha=0.92,
+                         edgecolor="none", label="% Acuerdo")
+        bars_d = ax.bar(x + w/2, d["pct_desacuerdo"], width=w, color=COL_DESACUERDO, alpha=0.92,
+                         edgecolor="none", label="% Desacuerdo")
 
-    for bars, color in [(bars_a, COL_ACUERDO), (bars_d, COL_DESACUERDO)]:
-        for b in bars:
-            hgt = b.get_height()
-            if pd.notna(hgt):
-                ax.text(b.get_x() + b.get_width()/2, hgt + 1.5, f"{hgt:.0f}",
-                        ha="center", va="bottom", fontsize=6.8, fontweight="bold",
-                        color=color, path_effects=stroke, zorder=6)
+        for bars, color in [(bars_a, COL_ACUERDO), (bars_d, COL_DESACUERDO)]:
+            for b in bars:
+                hgt = b.get_height()
+                if pd.notna(hgt):
+                    ax.text(b.get_x() + b.get_width()/2, hgt + 1.3, f"{hgt:.0f}%",
+                            ha="center", va="bottom", fontsize=6.8, fontweight="bold",
+                            color=color, path_effects=stroke, zorder=6)
+        # N° una sola vez por semestre (Acuerdo y Desacuerdo comparten el mismo N —
+        # son las mismas evaluaciones), centrado sobre el par de barras.
+        for xi, acu, n in zip(x, d["pct_acuerdo"], d["n_alumnos"]):
+            if pd.notna(n):
+                ax.text(xi, acu + 6.5, f"N°={n/1000:.0f}k", ha="center", va="bottom",
+                        fontsize=5.0, color="#8A97A3", path_effects=stroke, zorder=6)
 
-    ax.set_title(PREGUNTA_LABEL[preg], fontsize=8.5, color="white", pad=10, wrap=True)
-    ax.set_xticks(x)
-    ax.set_xticklabels([PERIODO_LABEL[p] for p in PERIODOS], fontsize=6.8, color="#AAAAAA",
-                        rotation=0)
-    ax.set_ylim(0, 100)
-    ax.tick_params(axis="x", length=0, pad=5)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=7)
-    for sp in ax.spines.values():
-        sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
+        ax.set_title(PREGUNTA_LABEL[preg], fontsize=8.5, color="white", pad=10, wrap=True)
+        ax.set_xticks(x)
+        ax.set_xticklabels([PERIODO_LABEL[p] for p in PERIODOS], fontsize=6.8, color="#AAAAAA",
+                            rotation=0)
+        ax.set_ylim(0, 112)
+        ax.set_yticks([0, 20, 40, 60, 80, 100])
+        ax.tick_params(axis="x", length=0, pad=5)
+        ax.tick_params(axis="y", colors="#AAAAAA", labelsize=7)
+        for sp in ax.spines.values():
+            sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+        ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
+        ax.set_axisbelow(True)
 
-axs[0].set_ylabel("% de respuestas", color="#AAAAAA", fontsize=7.5)
-handles, labels = axs[0].get_legend_handles_labels()
-fig.legend(handles, labels, fontsize=8.5, framealpha=0.22, labelcolor="white",
-           facecolor="#101820", edgecolor="#444", loc="upper center",
-           bbox_to_anchor=(0.5, 0.99), ncol=2)
+    axs[0].set_ylabel("% de respuestas", color="#AAAAAA", fontsize=7.5)
+    handles, labels = axs[0].get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=8.5, framealpha=0.22, labelcolor="white",
+               facecolor="#101820", edgecolor="#444", loc="upper center",
+               bbox_to_anchor=(0.5, 0.99), ncol=2)
 
-chart_path = kit.save_chart(fig, "evaluacion_apr_chart.png")
+    chart_path = kit.save_chart(fig, "evaluacion_apr_chart.png")
 
-# ── Diapositiva ────────────────────────────────────────────────────────────────
-prs = Presentation()
-prs.slide_width, prs.slide_height = Emu(kit.SW_EMU), Emu(kit.SH_EMU)
+    sl = kit.new_slide(prs)
+    kit.pic(sl, prs, kit.SHARED_BG)
+    kit.pic_chart(sl, prs, chart_path)
+    kit.title(sl, "Evaluación Estudiantil — Dimensión Aprendizajes (APR) — Docentes de Planta (Jornada)")
+    kit.subtitulo(sl,
+        f"Universo: {N_DOCENTES} docentes Jornada  ·  6 semestres (2023-01 a 2025-02)  ·  "
+        f"secciones con cobertura ≥ {COBERTURA_MIN}%  ·  % ponderado por alumnos evaluadores")
+    kit.punteo_numerado(sl, [
+        f"El % de acuerdo se mantiene estable y alto en las 3 preguntas: {acu_prim:.0f}% en "
+        f"{prim} → {acu_ult:.0f}% en {ult}.",
+        f"El % de desacuerdo bajó de {des_prim:.1f}% ({prim}, N°={n_prim:,} alumnos evaluadores) a "
+        f"{des_ult:.1f}% ({ult}, N°={n_ult:,}) — señal de mejora sostenida en esta dimensión.",
+    ])
+    return sl
 
-sl = kit.new_slide(prs)
-kit.pic(sl, prs, kit.SHARED_BG)
-kit.pic_chart(sl, prs, chart_path)
-kit.title(sl, "Evaluación Estudiantil — Dimensión Aprendizajes (APR) — Docentes de Planta (Jornada)")
-kit.subtitulo(sl,
-    f"Universo: {N_DOCENTES} docentes Jornada  ·  6 semestres (2023-01 a 2025-02)  ·  "
-    f"secciones con cobertura ≥ {COBERTURA_MIN}%  ·  % ponderado por alumnos evaluadores")
-kit.punteo_numerado(sl, [
-    f"El % de acuerdo se mantiene estable y alto en las 3 preguntas: {acu_prim:.0f}% en "
-    f"{prim} → {acu_ult:.0f}% en {ult}.",
-    f"El % de desacuerdo bajó de {des_prim:.1f}% ({prim}, N°={n_prim:,} alumnos evaluadores) a "
-    f"{des_ult:.1f}% ({ult}, N°={n_ult:,}) — señal de mejora sostenida en esta dimensión.",
-])
 
-prs.save(OUT_PPTX)
-print(f"\n✓ Guardado: {OUT_PPTX}")
+if __name__ == "__main__":
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
+    agregar(prs)
+    prs.save(OUT_PPTX)
+    print(f"\n✓ Guardado: {OUT_PPTX}")

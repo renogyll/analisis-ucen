@@ -62,71 +62,75 @@ cat_mayor_edad = tab["edad_prom"].idxmax()
 edad_mayor = tab["edad_prom"].max()
 cats_muestra_chica = tab.index[tab["n"] < N_MIN_CONFIABLE].tolist()
 
-# ── Gráfico ───────────────────────────────────────────────────────────────────
-kit = UcenSlideKit(out_dir=HERE)
-kit.ensure_bg()
+def agregar(prs):
+    """Construye el gráfico y agrega la diapositiva de este sub-tema a `prs`
+    (usado tanto en modo standalone como por el ensamblador products/p1_planta/generar_presentacion.py)."""
+    kit = UcenSlideKit(out_dir=HERE)
+    kit.ensure_bg()
 
-fig = kit.new_chart_fig()
-ax = kit.chart_axes(fig, left=0.22)   # más margen izq. para las etiquetas de 2 palabras
+    fig = kit.new_chart_fig()
+    ax = kit.chart_axes(fig, left=0.22)   # más margen izq. para las etiquetas de 2 palabras
 
-y = np.arange(len(CAT_DISPLAY))
-colors = [CAT_COLORS[c] for c in CAT_DISPLAY]
-# El N pesa visualmente: muestras chicas se ven más tenues y con textura, para no leerse
-# con la misma fuerza que una categoría con 10x más casos.
-n_vals = tab["n"].values
-alphas = np.clip(0.35 + 0.65 * np.sqrt(n_vals) / np.sqrt(n_vals.max()), 0.35, 0.97)
-hatches = ["///" if n < N_MIN_CONFIABLE else None for n in n_vals]
+    y = np.arange(len(CAT_DISPLAY))
+    colors = [CAT_COLORS[c] for c in CAT_DISPLAY]
+    # El N pesa visualmente: muestras chicas se ven más tenues y con textura, para no leerse
+    # con la misma fuerza que una categoría con 10x más casos.
+    n_vals = tab["n"].values
+    alphas = np.clip(0.35 + 0.65 * np.sqrt(n_vals) / np.sqrt(n_vals.max()), 0.35, 0.97)
+    hatches = ["///" if n < N_MIN_CONFIABLE else None for n in n_vals]
 
-for i, (edad, n, color, alpha, hatch) in enumerate(
-        zip(tab["edad_prom"], n_vals, colors, alphas, hatches)):
-    ax.barh(i, edad, height=0.62, color=color, alpha=alpha, edgecolor="none",
-            hatch=hatch, zorder=3)
+    for i, (edad, n, color, alpha, hatch) in enumerate(
+            zip(tab["edad_prom"], n_vals, colors, alphas, hatches)):
+        ax.barh(i, edad, height=0.62, color=color, alpha=alpha, edgecolor="none",
+                hatch=hatch, zorder=3)
 
-stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
-for i, (edad, n) in enumerate(zip(tab["edad_prom"], n_vals)):
-    marca = " ⚠" if n < N_MIN_CONFIABLE else ""
-    ax.text(edad + 0.8, i, f"{edad:.1f} años   (N°={int(n)}{marca})",
-            ha="left", va="center", fontsize=9.5, fontweight="bold",
-            color=colors[i], path_effects=stroke, zorder=6)
+    stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
+    for i, (edad, n) in enumerate(zip(tab["edad_prom"], n_vals)):
+        marca = " ⚠" if n < N_MIN_CONFIABLE else ""
+        ax.text(edad + 0.8, i, f"{edad:.1f} años   (N°={int(n)}{marca})",
+                ha="left", va="center", fontsize=9.5, fontweight="bold",
+                color=colors[i], path_effects=stroke, zorder=6)
 
-ax.set_yticks(y)
-ax.set_yticklabels([CAT_LABEL[c] for c in CAT_DISPLAY], fontsize=10, color="white")
-ax.invert_yaxis()   # mayor edad promedio arriba, menor abajo
-ax.set_xlabel("Edad promedio (años)", color="#AAAAAA", fontsize=9)
-ax.set_xlim(0, tab["edad_prom"].max() * 1.30)
-ax.tick_params(axis="y", length=0, pad=8)
-ax.tick_params(axis="x", colors="#AAAAAA", labelsize=8.5)
-for sp in ax.spines.values():
-    sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-ax.xaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-ax.set_axisbelow(True)
+    ax.set_yticks(y)
+    ax.set_yticklabels([CAT_LABEL[c] for c in CAT_DISPLAY], fontsize=10, color="white")
+    ax.invert_yaxis()   # mayor edad promedio arriba, menor abajo
+    ax.set_xlabel("Edad promedio (años)", color="#AAAAAA", fontsize=9)
+    ax.set_xlim(0, tab["edad_prom"].max() * 1.30)
+    ax.tick_params(axis="y", length=0, pad=8)
+    ax.tick_params(axis="x", colors="#AAAAAA", labelsize=8.5)
+    for sp in ax.spines.values():
+        sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
+    ax.xaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
+    ax.set_axisbelow(True)
 
-chart_path = kit.save_chart(fig, "edad_jerarquia_chart.png")
+    chart_path = kit.save_chart(fig, "edad_jerarquia_chart.png")
 
-# ── Diapositiva ────────────────────────────────────────────────────────────────
-prs = Presentation()
-prs.slide_width, prs.slide_height = Emu(kit.SW_EMU), Emu(kit.SH_EMU)
+    sl = kit.new_slide(prs)
+    kit.pic(sl, prs, kit.SHARED_BG)
+    kit.pic_chart(sl, prs, chart_path)
+    kit.title(sl, "Edad Promedio por Jerarquía — Docentes de Planta (Jornada)")
+    kit.subtitulo(sl,
+        f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con jerarquía y edad disponibles "
+        f"({N_SIN_DATOS} sin dato)")
+    bullets = [
+        f"{CAT_LABEL[cat_mas_grande]} concentra la mayor cantidad de docentes "
+        f"(N°={n_mas_grande} de {N_CON_DATOS}, {100*n_mas_grande/N_CON_DATOS:.0f}%).",
+        f"{CAT_LABEL[cat_mayor_edad]} tiene la edad promedio más alta de las 8 categorías "
+        f"({edad_mayor:.1f} años, N°={int(tab.loc[cat_mayor_edad, 'n'])}).",
+    ]
+    if cats_muestra_chica:
+        nombres = ", ".join(CAT_LABEL[c] for c in cats_muestra_chica)
+        bullets.append(
+            f"⚠ {nombres} tiene{'n' if len(cats_muestra_chica) > 1 else ''} menos de "
+            f"{N_MIN_CONFIABLE} casos — su promedio no es representativo, se marca con textura en el gráfico."
+        )
+    kit.punteo_numerado(sl, bullets)
+    return sl
 
-sl = kit.new_slide(prs)
-kit.pic(sl, prs, kit.SHARED_BG)
-kit.pic_chart(sl, prs, chart_path)
-kit.title(sl, "Edad Promedio por Jerarquía — Docentes de Planta (Jornada)")
-kit.subtitulo(sl,
-    f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con jerarquía y edad disponibles "
-    f"({N_SIN_DATOS} sin dato)")
-bullets = [
-    f"{CAT_LABEL[cat_mas_grande]} concentra la mayor cantidad de docentes "
-    f"(N°={n_mas_grande} de {N_CON_DATOS}, {100*n_mas_grande/N_CON_DATOS:.0f}%).",
-    f"{CAT_LABEL[cat_mayor_edad]} tiene la edad promedio más alta de las 8 categorías "
-    f"({edad_mayor:.1f} años, N°={int(tab.loc[cat_mayor_edad, 'n'])}).",
-]
-if cats_muestra_chica:
-    nombres = ", ".join(CAT_LABEL[c] for c in cats_muestra_chica)
-    bullets.append(
-        f"⚠ {nombres} tiene{'n' if len(cats_muestra_chica) > 1 else ''} menos de "
-        f"{N_MIN_CONFIABLE} casos — su promedio no es representativo, se marca con textura en el gráfico."
-    )
-kit.punteo_numerado(sl, bullets)
 
-prs.save(OUT_PPTX)
-print(f"\n✓ Guardado: {OUT_PPTX}")
+if __name__ == "__main__":
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
+    agregar(prs)
+    prs.save(OUT_PPTX)
+    print(f"\n✓ Guardado: {OUT_PPTX}")
