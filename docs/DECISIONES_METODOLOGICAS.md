@@ -62,6 +62,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 25 | Normalización de `jerarquia` — universo actual (1.144) | ✅ Resuelto | 1.144 (`universo_base`) | ✅ Vigente |
 | 26 | Aprobación/reprobación de alumnos — tags + universo Jornada | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
 | 27 | Grupo de dificultad de asignaturas (terciles de % aprobación histórico) | ✅ Resuelto | 624 (Jornada), cortes sobre universo completo | ✅ Vigente |
+| 28 | `intel.evaluacion_jefes` — tags de perfil docente (EDD) | ✅ Resuelto | 1.646 filas, 604 docentes | ✅ Vigente |
 
 ---
 
@@ -749,6 +750,42 @@ edad/antigüedad/sexo, que si la alcanzan.
 
 ---
 
+## 28. `intel.evaluacion_jefes` — tags de perfil docente (EDD)
+
+**Contexto:** Arranca el trabajo sobre Evaluación de Desempeño Docente (EDD) — la
+evaluación que hace la jefatura/director, no la evaluación estudiantil. La tabla
+fuente es `consolidados.evaluacion_jefes` (1.646 filas, 604 docentes únicos,
+granularidad 1 fila por docente × año de evaluación, años 2022-2025).
+
+**Decisión — mismo patrón que D26 (`intel.rendimiento_academico_alumnos`):**
+`shared/etl/complementarios/etl_intel_evaluacion_jefes.py` copia la fuente y la
+enriquece vía `LEFT JOIN` contra `analisis.universo_base` por `rut_key`, agregando
+`tipo_contrato_tag`, `sexo` y `jerarquia`. Resultado cargado en `intel.evaluacion_jefes`.
+
+**Hallazgo importante — la facultad YA estaba, no hizo falta agregarla:**
+`consolidados.evaluacion_jefes` ya trae `facultad_jefe` con **100% de cobertura**
+(6 códigos: FAMEDSA, FINARQ, FED, FEGOC, FACDEH, VRIIP) — mejor cobertura que la
+que hubiera dado el join contra `universo_base.unidad_facultad` (83.5%). Se usa esa
+columna directo. Mismo patrón que ya pasó dos veces antes (D26: `rut_docente` y
+`facultad` de `calificacion_alumno` ya estaban, no hacía falta agregarlos) —
+conviene revisar qué trae la tabla fuente antes de asumir que falta un dato.
+
+**Cobertura de los tags nuevos** (sobre 1.646 filas — el resto son docentes que no
+están en el `universo_base` actual, ej. retirados): `tipo_contrato_tag` 1.456
+(88.5%, de los cuales 1.430 Jornada / 26 Honorario — la EDD es abrumadoramente un
+proceso de planta), `sexo` 1.446 (87.8%), `jerarquia` 1.449 (88.0%).
+
+**Limpieza adicional:** `edd_total`, `edd_director`, `edd_docente`,
+`cumplimiento_cd` y `porcentaje_concepto` vienen como texto en la fuente — se
+castean a numérico (`errors="coerce"`) en el mismo script, mismo criterio que
+`nota` en `etl_intel_rendimiento_academico_alumnos.py`.
+
+**Pendiente:** aún no se construyó ninguna visualización sobre esta tabla — este
+commit es solo la capa de datos. Ver `docs/HANDOFF_P1_SLIDES.md` para el estado de
+sesión y qué sigue.
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
@@ -804,3 +841,4 @@ valor a una sola muestra.
 | 2026-08-03 (2) | Agregadas 2 visualizaciones al catálogo (`dificultad_composicion/`, `antiguedad_dificultad/`) y documentado en D27 el criterio de "grupo predominante" para pruebas t sobre atributos fijos del docente (antigüedad) — no se promedia por docente×grupo como con `aprueba`, se asigna cada docente a un solo grupo para no romper la independencia del t-test. Resultado: antigüedad significativamente mayor en docentes de asignaturas de Baja aprobación histórica (7.0 vs 5.8 años, p=0.0375). |
 | 2026-08-03 (3) | Agregadas 3 visualizaciones más al catálogo (`edad_dificultad/`, `sexo_dificultad/`, `jerarquia_dificultad/`), mismo criterio de "grupo predominante" aplicado a edad (continua) y a sexo/escalafón (binarias, codificadas 0/1). Resultados: edad significativa (p=0.0387, 49.0 vs 46.8 años), sexo muy significativa (p=0.0001, 43.8% vs 61.3% mujeres — hombres sobrerrepresentados en asignaturas difíciles), escalafón no significativa (p=0.0716, 18.9% vs 12.8% Regular). |
 | 2026-08-04 | Gráficos descriptivos de `sexo_dificultad/` y `jerarquia_dificultad/` convertidos a barra 100% apilada (Hombre/Mujer, Docente/Regular) para mostrar la composición completa por grupo, no solo un lado del binario. `jerarquia_dificultad/` excluida del consolidado `P1_presentacion.pptx` (queda en BLOQUE_III de `generar_presentacion.py` comentada) por no ser significativa (p=0.0716) — sigue existiendo como script y pptx suelto, con el hallazgo documentado arriba. |
+| 2026-08-04 (2) | Agregada D28: arranca el trabajo de EDD (evaluación de jefatura, no estudiantil) — `intel.evaluacion_jefes` creada con el mismo patrón de D26 (tags `tipo_contrato_tag`/`sexo`/`jerarquia` vía join con `universo_base`). Confirmado que `facultad_jefe` ya venía en la fuente con 100% de cobertura, no hizo falta agregarla. Aún sin visualizaciones sobre esta tabla. |

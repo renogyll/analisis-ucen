@@ -117,9 +117,31 @@ Para gráficos de P1 que no dependen de calificaciones (edad, sexo, grado acadé
 completo), la fuente es `data/cascade/01_jornada/docentes_jornada.csv` — no consultar la DB en
 vivo para eso, ya está materializado ahí.
 
+**`intel.evaluacion_jefes`** (agregada 2026-08-04, D28) — evaluación de desempeño docente (EDD)
+hecha por la jefatura/director, NO es la evaluación estudiantil (esa es
+`intel.rendimiento_academico_alumnos`, no confundirlas). Nace de
+`consolidados.evaluacion_jefes` (1.646 filas, 604 docentes, 1 fila por docente × año 2022-2025)
+vía `shared/etl/complementarios/etl_intel_evaluacion_jefes.py`, enriquecida igual que la otra
+tabla: `tipo_contrato_tag`/`sexo`/`jerarquia` por LEFT JOIN contra `universo_base`. Ojo:
+`facultad_jefe` **ya venía en la fuente** con 100% de cobertura (códigos FAMEDSA/FINARQ/FED/
+FEGOC/FACDEH/VRIIP) — no la agregues de nuevo, y en general antes de unir un campo desde
+`universo_base` revisar primero si la tabla fuente ya lo trae (pasó 2 veces con
+`rendimiento_academico_alumnos` también: `rut_docente` y `facultad` ya estaban).
+Columnas de interés ya numéricas (`errors="coerce"` aplicado en el ETL): `edd_total`,
+`edd_director`, `edd_docente`, `cumplimiento_cd`, `porcentaje_concepto`.
+
 ## Qué falta / posibles próximos pasos
 
-No hay una lista de pendientes explícita del usuario al cierre de esta sesión — el último pedido
-fue justamente cerrar y consolidar. Si el usuario pide seguir, preguntarle directamente qué
-sigue en vez de asumir. Bloque II y Bloque IV siguen vacíos por decisión explícita (sin avance
-real todavía, no inventar contenido para llenarlos).
+**EDD (`intel.evaluacion_jefes`) — arrancando, sin visualizaciones todavía.** El usuario pidió
+"ahondar en las evaluaciones de las jefaturas EDD" y hasta ahora solo se hizo la capa de datos
+(la tabla enriquecida, D28). Falta: decidir qué cortes/gráficos armar (candidatos obvios,
+mismo patrón que el resto de P1: EDD promedio por sexo, por jerarquía, por tipo de contrato,
+evolución 2022-2025 — nota: `edd_total_avg` bajó de ~0.85-0.88 en 2022-2023 a ~0.67-0.68 en
+2024-2025, vale la pena mirar por qué antes de asumir que es un hallazgo real y no un cambio de
+metodología de medición entre años). Seguir el mismo flujo: preguntar al usuario qué corte
+quiere antes de construir, no asumir.
+
+Fuera de eso, no hay una lista de pendientes explícita del usuario — Bloque II y Bloque IV de
+`P1_presentacion.pptx` siguen vacíos por decisión explícita (sin avance real todavía, no
+inventar contenido para llenarlos). Si el usuario pide seguir, preguntarle directamente qué
+sigue en vez de asumir.
