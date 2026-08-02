@@ -1,40 +1,66 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-07-31  
+**Última actualización:** 2026-08-02  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
+
+---
+
+## Vigencia de universos — leer antes que el índice
+
+El proyecto pasó por 3 universos de análisis en momentos distintos. Las decisiones
+1–24 se escribieron durante los primeros dos; **desde 2026-07-30 el universo vigente
+es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)**.
+
+| Universo | N | Vigencia | Período en que fue "el" universo |
+|---|---:|---|---|
+| 492 (`Analisis_UCEN_v2/`) | 492 | 🕰️ Histórico | Hasta ~2026-05 |
+| 917 (`UNIVERSO_918/`) | 917 | 🕰️ Histórico | ~2026-05 a 2026-07-29 |
+| **`analisis.universo_base`** | **1.144** | ✅ **Vigente** | Desde 2026-07-30 (ver D25) |
+| **Jornada/Planta (sub-filtro de universo_base)** | **624** | ✅ **Vigente**, es el universo de P1 | Desde 2026-07-30 |
+
+**Qué significa esto para las decisiones 1–24:**
+- Las **reglas metodológicas** (cómo tratar `NO INFORMA`, el umbral de cobertura CM-1,
+  la ponderación CM-2, el formato de RUT, las reglas de período baseline/resultado, etc.)
+  **siguen vigentes** — son criterios de calidad de datos independientes del universo.
+- Los **N y conteos específicos** atados a 492/917/545 (D3, D5, D17, D19, D20, D22–D24)
+  son **históricos** — quedan como registro de cómo se llegó hasta acá, pero **no se
+  deben citar como si fueran el estado actual**. Cada una de esas decisiones tiene ahora
+  una nota "⚠️ HISTÓRICO" señalando su equivalente vigente cuando existe.
+- D25 y D26 en adelante ya documentan el universo vigente (1.144 / Jornada 624).
 
 ---
 
 ## Índice de decisiones
 
-| # | Tema | Estado | Universo |
-|---|------|--------|----------|
-| 1 | Identificador único (RUT) | ✅ Resuelto | Ambos |
-| 2 | Duplicados en NOMINA | ✅ Resuelto | Ambos |
-| 3 | Universos de análisis (492 y 917) | ✅ Resuelto | — |
-| 4 | Jerarquía válida — criterio de inclusión | ✅ Resuelto | Ambos |
-| 5 | `tiene_perfil_completo` | ✅ Resuelto | 917 |
-| 6 | Formato `fecha_retiro` en DOTACION | ✅ Resuelto | Ambos |
-| 7 | IDs canónicos de preguntas | ✅ Resuelto | Ambos |
-| 8 | Cambio de texto MET_04 (2023-01) | ✅ Resuelto | Ambos |
-| 9 | Estructura de encabezados eval. estudiantil | ✅ Resuelto | Ambos |
-| 10 | Umbral de cobertura evaluaciones SAT (CM-1) | ✅ Resuelto | Ambos |
-| 11 | Promedio SAT ponderado por alumnos (CM-2) | ✅ Resuelto | Ambos |
-| 12 | Reglas de período baseline / resultado (P3) | ✅ Resuelto | Ambos |
-| 13 | Granularidad de `periodo_evento` | ✅ Resuelto | Ambos |
-| 14 | Criterio `apto_p3` | ✅ Resuelto | Ambos |
-| 15 | Docentes con múltiples instancias de formación | ✅ Resuelto | Ambos |
-| 16 | Z-score SAT: metodología de estandarización | ✅ Resuelto | Ambos |
-| 17 | Grupo de control | ✅ Resuelto | 492 |
-| 18 | Columnas restituidas de evaluación de jefes | ✅ Resuelto | 492 |
-| 19 | Agregación SAT universo 917 para docentes solo-nómina | ⚠️ Pendiente revisión | 917 |
-| 20 | Sub-universo Jornada/Planta (N=545) | ✅ Resuelto | 917 |
-| 21 | "NO INFORMA" como dato faltante en variables categóricas | ✅ Resuelto | Ambos |
-| 22 | Brecha de dotación en Jornada/Planta (60 sin dotación) | ✅ Caracterizado | 917 |
-| 23 | Sub-cascadas de calidad de datos — Jornada con dotación | ✅ Resuelto | 917 |
-| 24 | P2 desagregado para Jornada/Planta | ✅ Resuelto | 917 |
-| 25 | Normalización de `jerarquia` — universo actual (1.144) | ✅ Resuelto | 1.144 (`universo_base`) |
+| # | Tema | Estado | Universo | Vigencia |
+|---|------|--------|----------|----------|
+| 1 | Identificador único (RUT) | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 2 | Duplicados en NOMINA | ✅ Resuelto | Ambos | 🕰️ Histórico (casos puntuales de 492/917) |
+| 3 | Universos de análisis (492 y 917) | ✅ Resuelto | — | 🕰️ Histórico — ver tabla de vigencia arriba |
+| 4 | Jerarquía válida — criterio de inclusión | ✅ Resuelto | Ambos | ✅ Regla vigente (ver nota en D25) |
+| 5 | `tiene_perfil_completo` | ✅ Resuelto | 917 | 🕰️ Histórico |
+| 6 | Formato `fecha_retiro` en DOTACION | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 7 | IDs canónicos de preguntas | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 8 | Cambio de texto MET_04 (2023-01) | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 9 | Estructura de encabezados eval. estudiantil | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 10 | Umbral de cobertura evaluaciones SAT (CM-1) | ✅ Resuelto | Ambos | ✅ Regla vigente (usada en P1 evaluación e instrumento) |
+| 11 | Promedio SAT ponderado por alumnos (CM-2) | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 12 | Reglas de período baseline / resultado (P3) | ✅ Resuelto | Ambos | ✅ Regla vigente (P3) |
+| 13 | Granularidad de `periodo_evento` | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 14 | Criterio `apto_p3` | ✅ Resuelto | Ambos | 🕰️ N histórico (197/357), regla vigente |
+| 15 | Docentes con múltiples instancias de formación | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 16 | Z-score SAT: metodología de estandarización | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 17 | Grupo de control | ✅ Resuelto | 492 | 🕰️ Histórico |
+| 18 | Columnas restituidas de evaluación de jefes | ✅ Resuelto | 492 | ✅ Regla vigente (columnas siguen existiendo) |
+| 19 | Agregación SAT universo 917 para docentes solo-nómina | ⚠️ Pendiente revisión | 917 | 🕰️ Histórico |
+| 20 | Sub-universo Jornada/Planta (N=545) | ✅ Resuelto | 917 | 🕰️ Histórico — hoy Jornada = 624 (ver D25/D26) |
+| 21 | "NO INFORMA" como dato faltante en variables categóricas | ✅ Resuelto | Ambos | ✅ Regla vigente |
+| 22 | Brecha de dotación en Jornada/Planta (60 sin dotación) | ✅ Caracterizado | 917 | 🕰️ Histórico — ver D26 para cobertura actual (624) |
+| 23 | Sub-cascadas de calidad de datos — Jornada con dotación | ✅ Resuelto | 917 | 🕰️ Histórico |
+| 24 | P2 desagregado para Jornada/Planta | ✅ Resuelto | 917 | 🕰️ Histórico — pendiente recalcular sobre 624 |
+| 25 | Normalización de `jerarquia` — universo actual (1.144) | ✅ Resuelto | 1.144 (`universo_base`) | ✅ Vigente |
+| 26 | Aprobación/reprobación de alumnos — tags + universo Jornada | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
 
 ---
 
@@ -69,6 +95,10 @@
 
 ## 3. Universos de análisis paralelos
 
+> ⚠️ **HISTÓRICO.** Los universos 492/917/545 descritos acá fueron reemplazados desde
+> 2026-07-30 por `analisis.universo_base` (1.144) y su sub-universo Jornada (624).
+> Ver "Vigencia de universos" al inicio del documento y D25/D26.
+
 El análisis opera con **tres universos** que se mantienen en carpetas separadas o como sub-filtros:
 
 | Universo | N docentes | Carpeta/Filtro | Descripción |
@@ -99,6 +129,10 @@ Para ser incluido en el universo de análisis, un docente debe tener jerarquía 
 ---
 
 ## 5. `tiene_perfil_completo`
+
+> ⚠️ **HISTÓRICO.** Columna del universo 917 (`docente_918.csv`). En `universo_base`
+> (1.144) el equivalente conceptual es el campo `origen` (AMBOS/SOLO_NOMINA/
+> SOLO_DOTACION/SOLO_FORMACION) — ver D25.
 
 Columna booleana en `docente_918.csv` que indica si el docente tiene datos de dotación disponibles.
 
@@ -238,6 +272,8 @@ apto_p3 = tiene_sat_baseline AND tiene_sat_resultado
 Donde `tiene_sat_X` = el docente tiene al menos una sección con SAT válido (CM-1: cobertura ≥ 40%) en el período baseline o resultado correspondiente.
 
 **Resultado universo 917:** 197 RUTs únicos aptos de 357 con formación registrada (55%).
+🕰️ *N histórico — sobre `universo_base` el número vigente es 316 aptos P3 (ver
+`etl_formados_p3.py`, deck P3 actual). La regla de la fórmula sigue siendo la misma.*
 
 **Razón de excluir sin baseline o sin resultado:** Sin ambos puntos de medición no hay diseño pre/post. Incluirlos sin SAT haría imposible calcular el cambio.
 
@@ -288,6 +324,9 @@ z_docente_período = (SAT_docente_período − μ_facultad_período) / σ_facult
 
 ## 17. Grupo de control (universo 492)
 
+> ⚠️ **HISTÓRICO.** Ver `analisis.p3_grupo_tratamiento`/`etl_formados_p3.py` para el
+> grupo de control vigente sobre `universo_base`, ya usado en el deck P3 actual.
+
 **Definición:** Docentes del grupo AMBOS (492 con perfil completo) que:
 1. No participaron en ningún diplomado, taller ni proyecto en 2022–2025
 2. Tienen evaluación estudiantil en al menos un período
@@ -313,6 +352,10 @@ Las siguientes columnas fueron inicialmente descartadas y luego restituidas por 
 
 ## 19. SAT de docentes solo-nómina (universo 917) — PENDIENTE REVISIÓN
 
+> ⚠️ **HISTÓRICO.** Quedó sin resolver en el universo 917 y no se retomó tras la
+> migración a `universo_base` — la pregunta sigue siendo válida (docentes `SOLO_NOMINA`
+> sin `unidad_facultad` para el z-score) pero no se ha revisado sobre el universo actual.
+
 **Contexto:** 424 docentes del universo 917 no tienen datos de dotación (`tiene_perfil_completo = False`). Sin embargo, 382 de ellos (90%) tienen SAT válido.
 
 **Pregunta abierta:** ¿Son comparables los SAT de docentes solo-nómina con los de perfil completo para el análisis de impacto? Los primeros no tienen dato de `unidad_facultad`, lo que afecta el z-score (se les asigna "Otras" como facultad de referencia).
@@ -324,6 +367,11 @@ Las siguientes columnas fueron inicialmente descartadas y luego restituidas por 
 ---
 
 ## 20. Sub-universo Jornada/Planta (N=545)
+
+> ⚠️ **HISTÓRICO.** El sub-universo Jornada vigente hoy es 624 (filtro
+> `tipo_contrato_tag='JORNADA'` sobre `universo_base`) — es el universo que usa todo
+> el bloque de gráficos de P1 (`caracterizacion/`, `aprobacion_reprobacion*`). El
+> razonamiento de por qué aislar Jornada sigue siendo el mismo, solo cambió el N.
 
 **Decisión:** Crear un sub-universo de análisis restringido a los docentes del universo 917 con contrato de Jornada (planta), excluyendo Honorarios.
 
@@ -374,6 +422,10 @@ ser.notna() & ~ser.isin({"NO INFORMA", "NO INFORMA "})
 
 ## 22. Brecha de dotación en Jornada/Planta
 
+> ⚠️ **HISTÓRICO** (N=545). Sobre el Jornada vigente (624), la brecha equivalente y
+> la cobertura por variable están cuantificadas en D26 (tabla de cobertura por sexo/
+> jerarquía/edad) y en cada script de `caracterizacion/` (`N_SIN_DATOS` en el subtítulo).
+
 **Contexto:** 60 de los 545 docentes Jornada aparecen en NOMINA pero no tienen registro en DOTACION.
 
 **Variables ausentes para estos 60:**
@@ -404,6 +456,10 @@ ser.notna() & ~ser.isin({"NO INFORMA", "NO INFORMA "})
 
 ## 23. Sub-cascadas de calidad de datos — Jornada con dotación
 
+> ⚠️ **HISTÓRICO** (base 545/485). No se ha rehecho esta cascada completa sobre el
+> Jornada vigente (624) — lo más cercano hoy es la cobertura por variable documentada
+> en D26 y en los subtítulos de cada gráfico de `caracterizacion/`.
+
 **Contexto:** Dentro de los 485 Jornada con dotación, no todos tienen cada variable completa. La cascada de calidad muestra las pérdidas sucesivas al aplicar cada filtro de completitud.
 
 **Cascada:**
@@ -432,6 +488,9 @@ ser.notna() & ~ser.isin({"NO INFORMA", "NO INFORMA "})
 ---
 
 ## 24. P2 desagregado para Jornada/Planta
+
+> ⚠️ **HISTÓRICO** (base 545). Pendiente recalcular sobre el Jornada vigente (624)
+> cuando se retome P2 — ver `products/p2_formacion/`.
 
 **Decisión:** El análisis de participación en perfeccionamiento (Producto 2) se replica para el sub-universo Jornada, con los mismos criterios de fuente y conteo que el universo 917, pero filtrado a los 545 docentes de planta.
 
@@ -512,6 +571,123 @@ Todas las hojas provienen del archivo `CONSOLIDADO DOCENTES 3-05-2026.xlsx`.
 
 ---
 
+## 26. Aprobación/reprobación de alumnos — tags de perfil docente + universo Jornada
+
+**Contexto:** La contraparte pidió reportar % de aprobación/reprobación de alumnos. La
+tabla fuente (`consolidados.calificacion_alumno`, 333.067 filas) trae `rut_docente`
+directo (contrario a lo que parecía en una vista recortada de DBeaver) pero la columna
+`calificacion` es un código categórico (B, SU, MB, SO, I, MM, M, A, NP, R, P, SC, SD),
+no un booleano aprobado/reprobado.
+
+**Decisión 1 — usar `consolidados.catalogo_calificacion` como fuente de verdad del
+mapeo aprobado/reprobado**, en vez de hardcodear la lista de códigos en cada script:
+
+| Aprueba | Códigos |
+|---|---|
+| `True` | SO, MB, B, SU, A |
+| `False` | I, MM, M, R |
+| `NULL` (no evaluable, estado administrativo) | NP, P, SC, SD |
+
+**Decisión 2 — enriquecer `intel.rendimiento_academico_alumnos` con tags de perfil
+docente en vez de generar un CSV aparte.** Se extendió el `LEFT JOIN` contra
+`analisis.universo_base` que ya traía `tipo_contrato_tag` (pendiente de ejecutar desde
+Fase 1) para sumar `sexo`, `tramo_edad`, `edad_anios`, `jerarquia`, más un segundo
+`LEFT JOIN` contra `catalogo_calificacion` para `aprueba`. Permite filtrar/agrupar
+directo en SQL (`WHERE tipo_contrato_tag='JORNADA'`, `GROUP BY sexo`, etc.) sin repetir
+el join a mano. **Se descartó la alternativa de un CSV "más adaptado"**: mismo patrón
+de riesgo que `ped-001 jerarquizados.csv` / `intel.pre_post_sat` / `p3_grupo_tratamiento`
+— snapshots congelados que se desalinean de la fuente viva sin que nadie lo note.
+Ejecutado 2026-08-01: se recreó la tabla (330.578 filas, 1.810 docentes) y se borró la
+tabla huérfana `intel.notas_docente` (nombre anterior, sin estos tags).
+
+**Decisión 3 — acotar todo el análisis de aprobación/reprobación a Jornada (624)**,
+igual que el resto de P1. Motivo: `tramo_edad`/`edad_anios` dependen de DOTACION, y la
+brecha de cobertura es mucho mayor en Honorario que en Jornada (mismo patrón que D22),
+además de ser el universo que ya usan el resto de los gráficos de este bloque.
+
+**Cobertura verificada (Jornada, N=624 — cuántos tienen al menos una calificación
+registrada en `intel.rendimiento_academico_alumnos`, no filas sino docentes únicos):**
+
+| Total Jornada | Con calificaciones | Cobertura |
+|---:|---:|---:|
+| 624 | 515 | 82.5% |
+
+Desglose por sexo, jerarquía y tramo de edad — usar estos N° en los subtítulos de los
+gráficos de aprobación/reprobación (evitar volver a calcularlo a mano cada vez):
+
+| Sexo | N° Jornada | N° con calificaciones | Cobertura |
+|---|---:|---:|---:|
+| MUJER | 332 | 274 | 82.5% |
+| HOMBRE | 271 | 235 | 86.7% |
+| *(sin dato)* | 21 | 6 | 28.6% |
+
+| Jerarquía | N° Jornada | N° con calificaciones | Cobertura |
+|---|---:|---:|---:|
+| INSTRUCTOR DOCENTE | 168 | 145 | 86.3% |
+| ASISTENTE DOCENTE | 150 | 137 | 91.3% |
+| ASOCIADO DOCENTE | 113 | 105 | 92.9% |
+| SIN JERARQUÍA | 45 | 16 | 35.6% |
+| TITULAR DOCENTE | 37 | 30 | 81.1% |
+| ASOCIADO REGULAR | 35 | 32 | 91.4% |
+| ASISTENTE REGULAR | 27 | 24 | 88.9% |
+| *(sin dato)* | 21 | 6 | 28.6% |
+| TITULAR REGULAR | 21 | 16 | 76.2% |
+| INSTRUCTOR REGULAR | 7 | 4 | 57.1% |
+
+| Tramo de edad | N° Jornada | N° con calificaciones | Cobertura |
+|---|---:|---:|---:|
+| 40-44 | 105 | 91 | 86.7% |
+| *(sin dato)* | 90 | 55 | 61.1% |
+| 45-49 | 87 | 76 | 87.4% |
+| 35-39 | 85 | 75 | 88.2% |
+| 50-54 | 69 | 59 | 85.5% |
+| 55-59 | 47 | 43 | 91.5% |
+| 30-34 | 44 | 38 | 86.4% |
+| 60-64 | 33 | 31 | 93.9% |
+| 70+ | 30 | 19 | 63.3% |
+| 65-69 | 21 | 18 | 85.7% |
+| <30 | 13 | 10 | 76.9% |
+
+**% de aprobación de referencia** (sobre filas evaluables, no sobre docentes —
+ver Decisión 1 para qué cuenta como evaluable): Jornada 88.5% vs Honorario 87.4%;
+Mujeres 90.4% vs Hombres 85.7% (calculado sobre el universo completo antes del recorte
+a Jornada de la Decisión 3; recalcular acotado a Jornada al construir cada gráfico).
+
+---
+
+## Catálogo de visualizaciones P1 confirmadas
+
+De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
+commitee** se registra acá con su fuente y filtros — para no tener que releer el
+script cada vez que alguien pregunte "¿de dónde sale este número?". Todas comparten
+el universo Jornada (624, `tipo_contrato_tag='JORNADA'` sobre `universo_base`) salvo
+que se indique lo contrario.
+
+| # | Carpeta (`products/p1_planta/caracterizacion/`) | Fuente | Filtros aplicados | Estado |
+|---|---|---|---|---|
+| 1 | `edad_sexo/` | `data/cascade/01_jornada/docentes_jornada.csv` | `sexo`+`tramo_edad` no nulos (N=513/624); tramos 65-69 y 70+ fusionados en "65+" | ✅ Aprobado |
+| 2 | `edad_jerarquia/` | mismo CSV | `jerarquia`+`edad_anios` no nulos (N=485/624); excluye SIN JERARQUÍA/NULL; 8 categorías D25, ordenadas por edad desc., N<15 marcado con textura | ✅ Aprobado |
+| 3 | `grado_academico_sexo/` | mismo CSV | `nivel_formacion`+`sexo` no nulos (N=478/624); excluye "NO INFORMA" (D21); Técnico fusionado con Profesional (N°=2) | ✅ Aprobado |
+| 4 | `evaluacion_apr/` | `consolidados.evaluacion_respuesta` JOIN `evaluacion_periodo` | CM-1 (`cobertura_pct≥40`, D10) + CM-2 (ponderado por `n_alumnos_evaluaron`, D11); `rut_docente` en Jornada; descarta "indiferente"; APR_01-03 × 6 semestres 2023-01→2025-02 | ✅ Aprobado |
+| 5 | `evaluacion_met/` | mismo JOIN | Igual que APR; MET_01-05, repartidas 2+3 en 2 diapositivas/pptx | ✅ Aprobado |
+| 6 | `evaluacion_afo/` | mismo JOIN | Igual que APR; AFO_01-09, repartidas 3+3+3 en 3 diapositivas/pptx | ✅ Aprobado |
+| 7 | `aprobacion_reprobacion/` | `intel.rendimiento_academico_alumnos` (D26) | `tipo_contrato_tag='JORNADA'` AND `aprueba IS NOT NULL`; N°=134.640 calificaciones, 515 docentes (82.5% cobertura) | ✅ Aprobado |
+| 8 | `aprobacion_reprobacion_sexo/` | misma tabla | Igual + `GROUP BY sexo`. Prueba t de Welch por docente (Mujer 91.1% vs Hombre 87.7%): t=3.18, **p=0.0016 — significativa** | ✅ Aprobado (con prueba t) |
+| 9 | `aprobacion_reprobacion_jerarquia/` | misma tabla | Igual + escalafón **Docente vs Regular** (colapsado desde las 8 categorías D25, no el cruce completo). Prueba t de Welch por docente (Docente 90.5% vs Regular 84.3%): t=3.47, **p=0.0008 — significativa** | ✅ Aprobado (con prueba t) |
+| 10 | `aprobacion_reprobacion_antiguedad_4tramos/` | misma tabla + `tramo_antiguedad` (D26, agregado 2026-08-02) | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10-14 / 15+; excluye sin dato (55/624). Prueba t probada (15+ vs resto, por docente): p=0.157 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
+| 11 | `aprobacion_reprobacion_antiguedad_3tramos/` | misma tabla | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10+. Prueba t probada (10+ vs resto, por docente): p=0.552 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
+| 12 | `evolucion_aprobacion_sexo/` | misma tabla | `GROUP BY LEFT(periodo,4)` (año) × `sexo`; 2 barras (Hombre/Mujer) × 3 años (2023-2025), sin split aprobación/reprobación (solo tasa de aprobación) | ⏳ Generado, pendiente confirmación |
+
+**Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
+= % de aprobación promedio *por docente* (no por calificación individual), para
+evitar pseudo-repetición — un docente con 500 notas no debe pesar 500 veces más que
+uno con 5. Siempre Welch (`equal_var=False`), sin asumir varianzas iguales entre
+grupos. Diapositivas de prueba t no significativa (p≥0.05) se descartan a pedido de
+la contraparte — el criterio y los N° quedan igual documentados acá aunque la
+diapositiva no exista en el pptx final.
+
+---
+
 ## Registro de cambios
 
 | Fecha | Cambio |
@@ -520,3 +696,4 @@ Todas las hojas provienen del archivo `CONSOLIDADO DOCENTES 3-05-2026.xlsx`.
 | 2026-05-21 | Actualización completa: resolución CM-1 y CM-2, universo 917, duplicados resueltos, z-score, apto_p3, múltiples instancias |
 | 2026-07-11 | Agregadas D20–D24: sub-universo Jornada/Planta, tratamiento "NO INFORMA", brecha de dotación, sub-cascadas calidad datos, P2 desagregado. Actualizado D3 con tercer universo. |
 | 2026-07-31 | Agregada D25: normalización de `jerarquia` (17→9 categorías) en el universo actual (`analisis.universo_base`, N=1.144), con mapeo completo valor-a-valor y decisión de asumir "Docente" para formas cortas de origen `SOLO_FORMACION`. |
+| 2026-08-01 | Agregada D26: aprobación/reprobación de alumnos — mapeo `aprueba` vía `catalogo_calificacion`, enriquecimiento de `intel.rendimiento_academico_alumnos` con tags de perfil docente (sexo/tramo_edad/jerarquia/tipo_contrato_tag), decisión de acotar a Jornada, y snapshot de cobertura por tipología para reusar en subtítulos. |
