@@ -15,6 +15,11 @@ todos los productos:
     fuente (ej. nada de "Fuente: docentes_jornada.csv") — es un detalle interno
     de la generación, no aporta nada para la contraparte. Sí describir el
     universo/población en palabras (ej. "Universo: 624 docentes Jornada").
+  - (2026-08-02) La bajada se corta después del N°/cifra principal — el detalle
+    de por qué falta un dato ("...principalmente sin dotación") y la mención de
+    la fuente van en `kit.notas(sl, texto)` (notas del orador), no en pantalla.
+    Ej.: bajada = "...(111 sin dato)"; notas = "111 sin dato de sexo/edad,
+    principalmente por falta de registro en DOTACION. Fuente: archivo.csv."
 
 Uso típico (un script por sub-tema en products/<producto>/<carpeta>/<subtema>/):
 
@@ -57,6 +62,7 @@ from PIL import Image as PILImage
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
 
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent
@@ -275,3 +281,76 @@ class UcenSlideKit:
             run.font.size = Pt(fs)
             run.font.name = "Calibri"
             run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+    def notas(self, sl, text):
+        """Notas del orador (no se ven en la diapositiva, solo en modo presentador/al exportar).
+        Uso: mover ahí detalle secundario que sobra en la bajada visible (ej. la explicación
+        larga de por qué falta un dato, dejando en pantalla solo el N°)."""
+        sl.notes_slide.notes_text_frame.text = text
+
+    # ── Layouts estructurales (portada, grillas de bloque, universo/índice/hallazgos) ──
+    def portada(self, sl, titulo, subtitulo1, footer_lines, subtitulo2=None):
+        """Diapositiva de portada: título + bajada(s) + pie de 1 o más líneas, centrados.
+        El caller ya debe haber puesto el fondo (`kit.pic(sl, prs, kit.SHARED_BG)`)."""
+        self.txt(sl, titulo, self.CONTENT_L, int(2.35 * self._IN), self.CONTENT_W, int(0.65 * self._IN),
+                  fs=30, bold=True, color="#FFFFFF", align=PP_ALIGN.CENTER)
+        self.txt(sl, subtitulo1, self.CONTENT_L, int(3.20 * self._IN), self.CONTENT_W, int(0.45 * self._IN),
+                  fs=17, color="#C8DCF0", align=PP_ALIGN.CENTER)
+        if subtitulo2:
+            self.txt(sl, subtitulo2, self.CONTENT_L, int(3.72 * self._IN), self.CONTENT_W, int(0.40 * self._IN),
+                      fs=12, italic=True, color="#C8DCF0", align=PP_ALIGN.CENTER)
+        self.txt(sl, "\n".join(footer_lines), self.CONTENT_L, int(5.55 * self._IN),
+                  self.CONTENT_W, int(1.1 * self._IN), fs=13, bold=True, color="#FFFFFF",
+                  align=PP_ALIGN.CENTER, lspc=4)
+
+    def _caja_navy(self, sl, l, t, w, h, header, body, fs_header=11, fs_body=9):
+        sh = sl.shapes.add_shape(MSO_SHAPE.RECTANGLE, Emu(l), Emu(t), Emu(w), Emu(h))
+        sh.fill.solid(); sh.fill.fore_color.rgb = RGBColor(0, 33, 71)
+        sh.line.fill.background()
+        self.txt(sl, header, l + 40000, t + 38000, w - 80000, 300000,
+                  fs=fs_header, bold=True, color="#90ABC4")
+        self.txt(sl, body, l + 40000, t + 360000, w - 80000, h - 420000,
+                  fs=fs_body, color="#FFFFFF", lspc=3)
+
+    def caja_grid_2x2(self, sl, cajas):
+        """4 cajas navy en grilla 2×2, ocupando toda la franja de contenido (bajo el título/bajada).
+        `cajas` = lista de hasta 4 tuplas (header, body)."""
+        box_t = self.CHART_T
+        box_b = self.BUL_T + self.BUL_H
+        pad_x, gap_x, gap_y, pad_t, pad_b = 100000, 80000, 50000, 20000, 20000
+        bw = (self.CONTENT_W - 2 * pad_x - gap_x) // 2
+        bh = (box_b - box_t - pad_t - gap_y - pad_b) // 2
+        pos = [(self.CONTENT_L + pad_x, box_t + pad_t),
+               (self.CONTENT_L + pad_x + bw + gap_x, box_t + pad_t),
+               (self.CONTENT_L + pad_x, box_t + pad_t + bh + gap_y),
+               (self.CONTENT_L + pad_x + bw + gap_x, box_t + pad_t + bh + gap_y)]
+        for (bx, by), (hdr, body) in zip(pos, cajas):
+            self._caja_navy(sl, bx, by, bw, bh, hdr, body)
+
+    def caja_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items):
+        """1 caja navy de ancho completo, 3 columnas: Universo (párrafo) | Índice (lista) | Hallazgos (lista)."""
+        box_l, box_t = self.CONTENT_L, self.CHART_T
+        box_w = self.CONTENT_W
+        box_h = (self.BUL_T + self.BUL_H) - box_t
+        sh = sl.shapes.add_shape(MSO_SHAPE.RECTANGLE, Emu(box_l), Emu(box_t), Emu(box_w), Emu(box_h))
+        sh.fill.solid(); sh.fill.fore_color.rgb = RGBColor(0, 33, 71)
+        sh.line.fill.background()
+
+        col_w = box_w // 3
+        for i, h in enumerate(["Universo", "Índice", "Hallazgos"]):
+            cx = box_l + i * col_w
+            self.txt(sl, h, cx + 50000, box_t + 45000, col_w - 100000, 260000,
+                      fs=13, bold=True, color="#FFFFFF", align=PP_ALIGN.CENTER)
+            div = sl.shapes.add_shape(MSO_SHAPE.RECTANGLE, Emu(cx + 50000), Emu(box_t + 330000),
+                                       Emu(col_w - 100000), Emu(9000))
+            div.fill.solid(); div.fill.fore_color.rgb = RGBColor(90, 140, 190)
+            div.line.fill.background()
+
+        self.txt(sl, universo_txt, box_l + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+                  fs=10, color="#FFFFFF", lspc=4)
+        idx_txt = "\n".join(f"{i + 1}. {it}" for i, it in enumerate(indice_items))
+        self.txt(sl, idx_txt, box_l + col_w + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+                  fs=9.5, color="#FFFFFF", lspc=5)
+        hal_txt = "\n".join(f"{i + 1}. {it}" for i, it in enumerate(hallazgos_items))
+        self.txt(sl, hal_txt, box_l + 2 * col_w + 50000, box_t + 410000, col_w - 100000, box_h - 470000,
+                  fs=9.5, color="#FFFFFF", lspc=5)

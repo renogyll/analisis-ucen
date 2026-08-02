@@ -109,7 +109,11 @@ def agregar(prs):
     kit.title(sl, "Distribución por Sexo y Tramo de Edad — Docentes de Planta (Jornada)")
     kit.subtitulo(sl,
         f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con sexo y edad disponibles "
-        f"({N_SIN_DATOS} sin dato, principalmente sin dotación)  ·  Fuente: docentes_jornada.csv")
+        f"({N_SIN_DATOS} sin dato)")
+    kit.notas(sl,
+        f"{N_SIN_DATOS} sin dato de sexo/edad, principalmente por falta de registro en DOTACION "
+        f"(brecha NOMINA→DOTACION, ver docs/DECISIONES_METODOLOGICAS.md D22/D23). "
+        f"Fuente: docentes_jornada.csv (data/cascade/01_jornada/).")
     kit.punteo_numerado(sl, [
         f"El tramo {tramo_top} concentra la mayor cantidad de docentes ({n_top} de {N_CON_DATOS}, "
         f"{100*n_top/N_CON_DATOS:.0f}%).",

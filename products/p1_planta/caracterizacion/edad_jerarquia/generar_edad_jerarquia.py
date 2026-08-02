@@ -34,6 +34,9 @@ CAT_LABEL = {c: c.title() for c in CAT_ORD}   # "INSTRUCTOR DOCENTE" → "Instru
 # Ramp secuencial azul claro→oscuro por nivel; Docente y Regular del mismo nivel comparten color
 NIVEL_COLORS = ["#AFCBE8", "#7FADD9", "#4E8FC9", "#1F5C99"]
 CAT_COLORS = {cat: NIVEL_COLORS[i // 2] for i, cat in enumerate(CAT_ORD)}
+# Pedido de la contraparte (2026-08-03): distinguir Titular Regular de Titular Docente —
+# mismo tono azul (misma familia/lectura ordinal) pero un matiz distinto, no idéntico.
+CAT_COLORS["TITULAR REGULAR"] = "#5C8CB3"
 N_MIN_CONFIABLE = 15   # bajo este umbral el promedio no es representativo (ver punteo)
 
 # ── Datos ───────────────────────────────────────────────────────────────────
