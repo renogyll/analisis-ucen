@@ -96,7 +96,9 @@ def grid_b3(prs):
          "2. Según sexo del docente + prueba t\n"
          "3. Según escalafón (Docente/Regular) + prueba t\n"
          "4. Según antigüedad (2 variantes: 4 y 3 tramos)\n"
-         "5. Evolución de la tasa de aprobación por sexo (2023-2025)"),
+         "5. Evolución de la tasa de aprobación por sexo (2023-2025)\n"
+         "6. Grupos de dificultad de asignaturas: composición, y antigüedad/edad/"
+         "sexo según grupo, cada uno con su prueba t"),
         ("Qué vas a ver en Bloque IV",
          "Pendiente."),
     ]
@@ -175,6 +177,10 @@ def uih_b3(prs):
             "% de Aprobación y Reprobación según Antigüedad — variante 4 tramos",
             "% de Aprobación y Reprobación según Antigüedad — variante 3 tramos",
             "Evolución de la Tasa de Aprobación por Sexo del Docente (2023-2025)",
+            "Composición de los Grupos de Dificultad de Asignaturas",
+            "Antigüedad según Grupo de Dificultad + prueba t",
+            "Edad según Grupo de Dificultad + prueba t",
+            "Sexo según Grupo de Dificultad + prueba t",
         ],
         hallazgos_items=[
             "El 88.5% de las calificaciones de alumnos de docentes Jornada "
@@ -183,7 +189,14 @@ def uih_b3(prs):
             "(91.1% vs 87.7%) — diferencia estadísticamente significativa "
             "(prueba t de Welch, p=0.0016).",
             "Los docentes de escalafón Docente aprueban más que los de "
-            "escalafón Regular (90.5% vs 84.3%, p=0.0008); en cambio, ni la "
-            "edad ni la antigüedad mostraron diferencias significativas.",
+            "escalafón Regular (90.5% vs 84.3%, p=0.0008); según tramo de edad "
+            "o de antigüedad (frente a % de aprobación directo) no hubo "
+            "diferencias significativas.",
+            "Controlando por dificultad de la asignatura (D27): los docentes "
+            "de asignaturas de baja aprobación histórica son más frecuentemente "
+            "hombres (56% vs 39% en el resto, p=0.0001), y en promedio mayores "
+            "y con más antigüedad. El escalafón no mostró diferencia "
+            "significativa por dificultad (p=0.0716) — se probó pero no se "
+            "incluyó como diapositiva, ver D27.",
         ])
     return sl

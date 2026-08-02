@@ -327,6 +327,19 @@ class UcenSlideKit:
         for (bx, by), (hdr, body) in zip(pos, cajas):
             self._caja_navy(sl, bx, by, bw, bh, hdr, body)
 
+    def caja_grid_1x3(self, sl, cajas):
+        """3 cajas navy en una sola fila, ocupando toda la franja de contenido — para
+        comparar 3 grupos/categorías lado a lado (ej. 3 tercios de dificultad).
+        `cajas` = lista de hasta 3 tuplas (header, body)."""
+        box_t = self.CHART_T
+        box_b = self.BUL_T + self.BUL_H
+        pad_x, gap_x, pad_t, pad_b = 100000, 60000, 20000, 20000
+        bw = (self.CONTENT_W - 2 * pad_x - 2 * gap_x) // 3
+        bh = box_b - box_t - pad_t - pad_b
+        pos = [(self.CONTENT_L + pad_x + i * (bw + gap_x), box_t + pad_t) for i in range(3)]
+        for (bx, by), (hdr, body) in zip(pos, cajas):
+            self._caja_navy(sl, bx, by, bw, bh, hdr, body, fs_header=12, fs_body=10)
+
     def caja_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items):
         """1 caja navy de ancho completo, 3 columnas: Universo (párrafo) | Índice (lista) | Hallazgos (lista)."""
         box_l, box_t = self.CONTENT_L, self.CHART_T

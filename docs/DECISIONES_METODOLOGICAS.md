@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-08-02  
+**Última actualización:** 2026-08-03  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -61,6 +61,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 24 | P2 desagregado para Jornada/Planta | ✅ Resuelto | 917 | 🕰️ Histórico — pendiente recalcular sobre 624 |
 | 25 | Normalización de `jerarquia` — universo actual (1.144) | ✅ Resuelto | 1.144 (`universo_base`) | ✅ Vigente |
 | 26 | Aprobación/reprobación de alumnos — tags + universo Jornada | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
+| 27 | Grupo de dificultad de asignaturas (terciles de % aprobación histórico) | ✅ Resuelto | 624 (Jornada), cortes sobre universo completo | ✅ Vigente |
 
 ---
 
@@ -655,6 +656,99 @@ a Jornada de la Decisión 3; recalcular acotado a Jornada al construir cada grá
 
 ---
 
+## 27. Grupo de dificultad de asignaturas (terciles de % aprobación histórico)
+
+**Contexto:** La contraparte pidió una forma de aislar el efecto de la dificultad de
+la asignatura sobre el % de aprobación, para no leer "este docente reprueba mucho"
+cuando en realidad dicta un curso intrínsecamente más exigente para todo el mundo.
+Se descartó por arbitraria una clasificación cualitativa/manual de dificultad.
+
+**Decisión — dificultad empírica por tercil de aprobación histórica, no z-score:**
+Para cada `cod_asignatura` se calcula su % de aprobación agregado histórico
+(**todas** las calificaciones de esa asignatura, todos los docentes — Jornada y
+Honorario — y todos los períodos 2023-2025 juntos), y se ordenan las asignaturas en
+3 grupos de igual tamaño (terciles):
+
+| Grupo | Rango de % aprobación institucional | N° asignaturas | % aprobación medio del grupo |
+|---|---|---:|---:|
+| Baja | 0.0% – 90.9% | 858 | 79.2% |
+| Media | 91.0% – 97.8% | 836 | 94.9% |
+| Alta | 97.8% – 100.0% | 842 | 99.6% |
+
+Se evaluó usar un z-score por asignatura (mismo espíritu que el z-score SAT de P3,
+D16: comparar a cada docente contra el promedio de quienes dictan lo mismo) pero se
+descartó: **957 de 1.709 asignaturas (56%) las dicta un solo docente** — un z-score
+necesita pares de comparación y no los hay para más de la mitad de los casos. Los
+terciles sí funcionan con un solo docente por asignatura porque solo requieren
+volumen de calificaciones históricas (mediana 58 calificaciones/asignatura), no
+múltiples docentes.
+
+**Limitación reconocida:** para esas 957 asignaturas de un solo docente, el "% histórico
+de la asignatura" es literalmente el % de ese mismo docente — el tercil no es una
+medida externa/independiente en esos casos, es circular. Se documenta pero no se
+corrige (no hay con qué comparar); al interpretar resultados por grupo, tener
+presente que ~56% de las asignaturas no tienen esa validación cruzada.
+
+**Implementación:** el % histórico se calcula sobre `intel.rendimiento_academico_alumnos`
+completo (no solo Jornada — la dificultad es propiedad del curso, no del tipo de
+contrato de quien lo dicta), vía `pd.qcut(..., 3, labels=["Baja","Media","Alta"])`
+en `etl_intel_rendimiento_academico_alumnos.py`. El resultado (`grupo_dificultad`,
+más `pct_aprob_asignatura` de respaldo) se agrega como columna nueva a la tabla —
+cada fila queda tageada con el grupo de su propia asignatura — para poder filtrar/
+agrupar por dificultad igual que por sexo/jerarquía/antigüedad, sin recalcular a mano.
+
+**Cobertura y resultado sobre Jornada (624), una vez tageada la tabla completa:**
+
+| Grupo | N° asignaturas (Jornada) | N° calificaciones | N° docentes | % aprobación (Jornada) |
+|---|---:|---:|---:|---:|
+| Baja | 596 | 53.666 | 335 | 76.5% |
+| Media | 589 | 52.010 | 401 | 94.9% |
+| Alta | 524 | 28.964 | 352 | 99.1% |
+
+La brecha de % aprobación entre grupos (76.5% → 99.1%) confirma que la dificultad de
+la asignatura explica una parte real y grande de la variación — controlar por esto
+antes de comparar docentes entre sí es metodológicamente necesario, no cosmético.
+
+**Prueba t sobre un atributo fijo del docente (ej. antigüedad) — "grupo predominante":**
+la convención general de este documento para pruebas t es 1 valor *por docente*, para
+evitar pseudo-repetición (ver "Convención de las pruebas t" más abajo). Esa convención
+asume que la métrica varía por instancia (ej. `aprueba`, que cambia calificación a
+calificación) y por eso se promedia por docente. La antigüedad **no** varía por
+instancia — es un atributo fijo de la persona — así que promediarla por docente y
+grupo no tiene sentido (un docente que dicta en 2 grupos tendría el mismo valor en
+ambos, inflando artificialmente ambas muestras con el mismo dato). Para este caso se
+usa en cambio el **grupo de dificultad predominante**: el grupo (Baja/Media/Alta)
+donde el docente tiene más instancias docente×asignatura×período. Cada docente aporta
+así un solo valor a una sola muestra, preservando la independencia que el t-test
+necesita.
+
+Resultado (Jornada, `caracterizacion/antiguedad_dificultad/`, prueba t Baja
+predominante vs Media+Alta predominante): Baja N°=196 docentes, media 7.0 años;
+Media+Alta N°=264 docentes, media 5.8 años; t=2.09, **p=0.0375 — significativa al 5%**.
+Con el criterio de instancia-ponderada del gráfico descriptivo (sin esta corrección)
+los promedios habían dado 8.2 vs 6.9 años — la corrección de unidad de análisis achica
+la brecha pero la significancia se mantiene.
+
+**Mismo criterio aplicado a edad, sexo y jerarquía (2026-08-03):** para variables
+categóricas binarias (sexo, escalafón) se codifica 0/1 y se aplica el mismo t-test
+de Welch sobre "grupo predominante" por docente — matemáticamente equivalente a una
+prueba de diferencia de proporciones, pero reusa el mismo código y la misma
+convención que el resto del documento.
+
+| Variable | Carpeta | Baja (predominante) | Media+Alta (predominante) | t | p | Resultado |
+|---|---|---|---|---:|---:|---|
+| Edad | `edad_dificultad/` | 49.0 años (N°=196) | 46.8 años (N°=264) | 2.07 | 0.0387 | Significativa |
+| Sexo (% Mujer) | `sexo_dificultad/` | 43.8% (N°=217) | 61.3% (N°=292) | -3.96 | 0.0001 | Muy significativa |
+| Escalafón (% Regular) | `jerarquia_dificultad/` | 18.9% (N°=212) | 12.8% (N°=281) | 1.81 | 0.0716 | No significativa |
+
+El hallazgo de sexo es el más fuerte de las 4 variables probadas contra dificultad
+(antigüedad, edad, sexo, escalafón): los hombres están claramente sobrerrepresentados
+en las asignaturas de baja aprobación histórica. Jerarquía/escalafón es la única de
+las 4 que no alcanza significancia al 5% (p=0.0716, borderline) — a diferencia de
+edad/antigüedad/sexo, que si la alcanzan.
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
@@ -677,6 +771,11 @@ que se indique lo contrario.
 | 10 | `aprobacion_reprobacion_antiguedad_4tramos/` | misma tabla + `tramo_antiguedad` (D26, agregado 2026-08-02) | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10-14 / 15+; excluye sin dato (55/624). Prueba t probada (15+ vs resto, por docente): p=0.157 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
 | 11 | `aprobacion_reprobacion_antiguedad_3tramos/` | misma tabla | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10+. Prueba t probada (10+ vs resto, por docente): p=0.552 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
 | 12 | `evolucion_aprobacion_sexo/` | misma tabla | `GROUP BY LEFT(periodo,4)` (año) × `sexo`; 2 barras (Hombre/Mujer) × 3 años (2023-2025), sin split aprobación/reprobación (solo tasa de aprobación) | ⏳ Generado, pendiente confirmación |
+| 13 | `dificultad_composicion/` | misma tabla + `grupo_dificultad` (D27, agregado 2026-08-03) | Sin gráfico — 3 cajas de texto (Baja/Media/Alta): rango institucional + N° asignaturas/calificaciones/docentes/% aprobación en Jornada por grupo | ✅ Aprobado |
+| 14 | `antiguedad_dificultad/` | misma tabla | Antigüedad promedio por `grupo_dificultad` (ponderado por instancia). Prueba t con "grupo predominante" por docente (Baja 7.0 años vs Media+Alta 5.8 años): t=2.09, **p=0.0375 — significativa** | ✅ Aprobado (con prueba t) |
+| 15 | `edad_dificultad/` | misma tabla | Igual patrón que antiguedad_dificultad. Edad promedio por `grupo_dificultad`. Prueba t "grupo predominante" (Baja 49.0 años vs Media+Alta 46.8 años): t=2.07, **p=0.0387 — significativa** | ⏳ Generado, pendiente confirmación |
+| 16 | `sexo_dificultad/` | misma tabla | % de docentes mujeres por `grupo_dificultad`. Prueba t "grupo predominante", sexo codificado Mujer=1/Hombre=0 (Baja 43.8% vs Media+Alta 61.3%): t=-3.96, **p=0.0001 — muy significativa** | ⏳ Generado, pendiente confirmación |
+| 17 | `jerarquia_dificultad/` | misma tabla | % de docentes escalafón Regular por `grupo_dificultad` (colapso Docente/Regular, no las 8 categorías D25 — mismo criterio que aprobacion_reprobacion_jerarquia/). Prueba t "grupo predominante" (Baja 18.9% vs Media+Alta 12.8%): t=1.81, **p=0.0716 — no significativa** | ❌ Descartada del consolidado (no significativa) — pptx suelto y script siguen existiendo |
 
 **Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
 = % de aprobación promedio *por docente* (no por calificación individual), para
@@ -684,7 +783,10 @@ evitar pseudo-repetición — un docente con 500 notas no debe pesar 500 veces m
 uno con 5. Siempre Welch (`equal_var=False`), sin asumir varianzas iguales entre
 grupos. Diapositivas de prueba t no significativa (p≥0.05) se descartan a pedido de
 la contraparte — el criterio y los N° quedan igual documentados acá aunque la
-diapositiva no exista en el pptx final.
+diapositiva no exista en el pptx final. **Excepción — atributos fijos del docente**
+(ej. antigüedad, edad): no se promedia por docente×grupo, se usa el "grupo
+predominante" del docente (ver detalle en D27) para que cada docente aporte un solo
+valor a una sola muestra.
 
 ---
 
@@ -698,3 +800,7 @@ diapositiva no exista en el pptx final.
 | 2026-07-31 | Agregada D25: normalización de `jerarquia` (17→9 categorías) en el universo actual (`analisis.universo_base`, N=1.144), con mapeo completo valor-a-valor y decisión de asumir "Docente" para formas cortas de origen `SOLO_FORMACION`. |
 | 2026-08-01 | Agregada D26: aprobación/reprobación de alumnos — mapeo `aprueba` vía `catalogo_calificacion`, enriquecimiento de `intel.rendimiento_academico_alumnos` con tags de perfil docente (sexo/tramo_edad/jerarquia/tipo_contrato_tag), decisión de acotar a Jornada, y snapshot de cobertura por tipología para reusar en subtítulos. |
 | 2026-08-02 | Reordenamiento general: agregada sección "Vigencia de universos" al inicio, columna "Vigencia" en el índice, y notas ⚠️ HISTÓRICO en D3/D5/D14/D17/D19/D20/D22/D23/D24 marcando qué sigue siendo regla vigente vs. qué son conteos obsoletos de los universos 492/917/545. Agregado el "Catálogo de visualizaciones P1 confirmadas" (12 gráficos) con fuente y filtros de cada uno, como práctica a mantener hacia adelante para cada visualización que se apruebe. `tramo_antiguedad`/`antiguedad_anios` agregados a `intel.rendimiento_academico_alumnos` (D26). |
+| 2026-08-03 | Agregada D27: grupo de dificultad de asignaturas por terciles de % de aprobación histórico (Baja/Media/Alta), calculado sobre el universo completo y tageado en `intel.rendimiento_academico_alumnos`. Se descartó un z-score por asignatura por falta de pares de comparación (56% de asignaturas con un solo docente). Confirmada la facultad/plan/código de plan del alumno ya presentes en `intel.rendimiento_academico_alumnos` (heredados de `consolidados.calificacion_alumno`), sin necesidad de agregarlos. |
+| 2026-08-03 (2) | Agregadas 2 visualizaciones al catálogo (`dificultad_composicion/`, `antiguedad_dificultad/`) y documentado en D27 el criterio de "grupo predominante" para pruebas t sobre atributos fijos del docente (antigüedad) — no se promedia por docente×grupo como con `aprueba`, se asigna cada docente a un solo grupo para no romper la independencia del t-test. Resultado: antigüedad significativamente mayor en docentes de asignaturas de Baja aprobación histórica (7.0 vs 5.8 años, p=0.0375). |
+| 2026-08-03 (3) | Agregadas 3 visualizaciones más al catálogo (`edad_dificultad/`, `sexo_dificultad/`, `jerarquia_dificultad/`), mismo criterio de "grupo predominante" aplicado a edad (continua) y a sexo/escalafón (binarias, codificadas 0/1). Resultados: edad significativa (p=0.0387, 49.0 vs 46.8 años), sexo muy significativa (p=0.0001, 43.8% vs 61.3% mujeres — hombres sobrerrepresentados en asignaturas difíciles), escalafón no significativa (p=0.0716, 18.9% vs 12.8% Regular). |
+| 2026-08-04 | Gráficos descriptivos de `sexo_dificultad/` y `jerarquia_dificultad/` convertidos a barra 100% apilada (Hombre/Mujer, Docente/Regular) para mostrar la composición completa por grupo, no solo un lado del binario. `jerarquia_dificultad/` excluida del consolidado `P1_presentacion.pptx` (queda en BLOQUE_III de `generar_presentacion.py` comentada) por no ser significativa (p=0.0716) — sigue existiendo como script y pptx suelto, con el hallazgo documentado arriba. |

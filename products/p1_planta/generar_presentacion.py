@@ -17,7 +17,7 @@ Para agregar un nuevo sub-tema al consolidado: asegurarse de que su script expon
 BLOQUE_I/II/III más abajo (o crear un BLOQUE_IV cuando arranque).
 
 SALIDA: P1_presentacion.pptx
-Estructura (23 diapositivas):
+Estructura (30 diapositivas):
   1     Portada
   2     Grilla de apertura — Bloque I + II
   3     Grilla de apertura — Bloque III + IV
@@ -27,8 +27,12 @@ Estructura (23 diapositivas):
   9-14  Bloque II (evaluación estudiantil): evaluacion_apr, evaluacion_met x2, evaluacion_afo x3
         — reclasificado 2026-08-03, antes vivía dentro de Bloque I (ver slides_estructura.py)
   15    Bloque III — Universo/Índice/Hallazgos
-  16-23 Bloque III: aprobacion_reprobacion, +sexo (+prueba t), +jerarquia (+prueba t),
-        +antiguedad_4tramos, +antiguedad_3tramos, evolucion_aprobacion_sexo
+  16-23 Bloque III (aprobación/reprobación directa): aprobacion_reprobacion, +sexo (+prueba t),
+        +jerarquia (+prueba t), +antiguedad_4tramos, +antiguedad_3tramos, evolucion_aprobacion_sexo
+  24-30 Bloque III (grupos de dificultad, D27, agregado 2026-08-03): dificultad_composicion,
+        +antiguedad_dificultad (+prueba t), +edad_dificultad (+prueba t), +sexo_dificultad (+prueba t)
+        — jerarquia_dificultad NO se incluye: prueba t no significativa (p=0.0716), descartada
+        del consolidado a pedido de la contraparte (queda documentada en D27 y como pptx suelto)
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import importlib.util
@@ -73,6 +77,15 @@ BLOQUE_III = [
     ("aprobacion_reprobacion_antiguedad_3tramos",
      "generar_aprobacion_reprobacion_antiguedad_3tramos.py", ["agregar"]),
     ("evolucion_aprobacion_sexo", "generar_evolucion_aprobacion_sexo.py", ["agregar"]),
+    # Grupos de dificultad de asignaturas (D27, agregado 2026-08-03) — concatenados al
+    # final del Bloque III, después de lo que ya había.
+    ("dificultad_composicion", "generar_dificultad_composicion.py", ["agregar"]),
+    ("antiguedad_dificultad", "generar_antiguedad_dificultad.py", ["agregar", "agregar_ttest"]),
+    ("edad_dificultad", "generar_edad_dificultad.py", ["agregar", "agregar_ttest"]),
+    ("sexo_dificultad", "generar_sexo_dificultad.py", ["agregar", "agregar_ttest"]),
+    # jerarquia_dificultad NO se incluye: prueba t no significativa (p=0.0716) — descartada
+    # del consolidado a pedido de la contraparte. El script y su pptx suelto siguen existiendo,
+    # el hallazgo queda documentado en D27, solo se excluyó de este ensamblado.
 ]
 
 

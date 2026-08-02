@@ -27,6 +27,14 @@ contra universo_base). tramo_antiguedad viene en la granularidad fina de la fuen
 (0-4, 5-9, 10-14, 15-19, 20-24, 25-29, 30+) — el regrupamiento a variantes de
 reporte (ej. "15+" o "10+") se hace en cada script de gráfico, no acá, mismo
 criterio que tramo_edad.
+
+Enriquecida 2026-08-03 con grupo_dificultad (Baja/Media/Alta, terciles de % de
+aprobación histórico por cod_asignatura — ver docs/DECISIONES_METODOLOGICAS.md D27).
+A diferencia de los demás tags, esta NO viene de universo_base — se calcula acá
+mismo, agregando por cod_asignatura sobre la tabla completa (todo tipo de contrato,
+la dificultad es propiedad del curso) y cortando en terciles con pd.qcut. Se
+descartó un z-score por asignatura: 56% de las asignaturas las dicta un solo
+docente, sin par de comparación posible.
 """
 
 import sys, os
@@ -66,6 +74,16 @@ print(f"  Excluidas (rut placeholder): {mask_invalido.sum()} filas")
 ca = ca[~mask_invalido].copy()
 print(f"  Válidas:                     {len(ca)} filas | {ca['rut_docente'].nunique()} docentes")
 
+# ── Grupo de dificultad de asignatura (D27) — terciles de % aprobación histórico,
+#    calculado sobre TODA la tabla (no solo Jornada: la dificultad es propiedad
+#    del curso, no del tipo de contrato de quien lo dicta) ─────────────────────
+dific = (ca[ca["aprueba"].notna()]
+         .groupby("cod_asignatura")["aprueba"].mean()
+         .mul(100).rename("pct_aprob_asignatura").reset_index())
+dific["grupo_dificultad"] = pd.qcut(dific["pct_aprob_asignatura"], 3,
+                                     labels=["Baja", "Media", "Alta"])
+ca = ca.merge(dific, on="cod_asignatura", how="left")
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 ca["nota"] = pd.to_numeric(ca["nota"], errors="coerce")
 
@@ -78,6 +96,8 @@ print(f"  tipo_contrato_tag nulos: {ca['tipo_contrato_tag'].isna().sum()}")
 print(f"  sexo/tramo_edad/jerarquia nulos: {ca['sexo'].isna().sum()}/"
       f"{ca['tramo_edad'].isna().sum()}/{ca['jerarquia'].isna().sum()}")
 print(f"  tramo_antiguedad nulos: {ca['tramo_antiguedad'].isna().sum()}")
+print(f"  grupo_dificultad nulos: {ca['grupo_dificultad'].isna().sum()}")
+print(f"  Distribución grupo_dificultad:\n{ca['grupo_dificultad'].value_counts(dropna=False)}")
 print(f"  aprueba nulos (NP/P/SC/SD, no evaluable): {ca['aprueba'].isna().sum()}")
 n_evaluable = ca["aprueba"].notna().sum()
 pct_aprob = 100 * ca["aprueba"].sum() / n_evaluable
