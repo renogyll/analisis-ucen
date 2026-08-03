@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-08-03  
+**Última actualización:** 2026-08-04  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -63,6 +63,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 26 | Aprobación/reprobación de alumnos — tags + universo Jornada | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
 | 27 | Grupo de dificultad de asignaturas (terciles de % aprobación histórico) | ✅ Resuelto | 624 (Jornada), cortes sobre universo completo | ✅ Vigente |
 | 28 | `intel.evaluacion_jefes` — tags de perfil docente (EDD) | ✅ Resuelto | 1.646 filas, 604 docentes | ✅ Vigente |
+| 29 | EDD por sexo/jerarquía/facultad — "facultad predominante" + t-test multi-grupo | ✅ Resuelto | 491 docentes Jornada con EDD | ✅ Vigente |
 
 ---
 
@@ -786,6 +787,63 @@ sesión y qué sigue.
 
 ---
 
+## D29 — Primeras 3 visualizaciones de EDD: sexo, jerarquía, facultad (Jornada)
+
+Primeras visualizaciones construidas sobre `intel.evaluacion_jefes` (D28):
+`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`. Métrica: `edd_total` (escala 0-1).
+Unidad de análisis = 1 valor por docente Jornada: **promedio de `edd_total` entre
+los años con evaluación registrada** (2022-2025) — mismo criterio "promedio por
+docente" que D26 usa para `aprueba`, porque `edd_total` varía por instancia
+(año), a diferencia de sexo/jerarquía/facultad que son atributos de perfil.
+
+**Sexo y jerarquía — atributos verdaderamente fijos:** se confirmó con datos
+(`groupby(rut_key)[col].nunique()`) que ningún docente Jornada tiene más de un
+valor distinto de `sexo` o `jerarquia` entre sus años evaluados (0/491 casos) —
+a diferencia de la antigüedad/edad en D27, acá no hace falta "grupo
+predominante", el valor es directo y único por docente.
+
+- `edd_sexo/`: 2 barras (Hombre/Mujer), prueba t de Welch directa. Resultado:
+  **significativa** (p=0.0183) — Hombres 0.72 vs Mujeres 0.66. Nota: dirección
+  opuesta a la evaluación estudiantil (donde las mujeres puntúan más alto), son
+  instrumentos distintos evaluados por audiencias distintas (jefatura vs. alumnos).
+- `edd_jerarquia/`: descriptivo con las 8 categorías completas de jerarquía (D25),
+  mismo estilo que `edad_jerarquia/` (barra horizontal ordenada por magnitud
+  descendente, textura para N<15). La prueba t usa escalafón binario
+  Docente/Regular (mismo colapso que D26/D27 en `aprobacion_reprobacion_jerarquia/`
+  y `jerarquia_dificultad/*`, porque jerarquía no es continua). Resultado:
+  **significativa** (p=0.0011) — Docente 0.71 vs Regular 0.59.
+
+**Facultad — atributo que SÍ puede variar entre años, extensión del criterio
+"grupo predominante" (D27):** a diferencia de sexo/jerarquía, `facultad_jefe` no
+es un atributo fijo del docente en este dataset — es la facultad de la jefatura
+que evaluó ese año. Confirmado con datos: 46/491 docentes Jornada (9.4%) tienen
+más de un valor distinto de `facultad_jefe` entre 2022-2025 (cambio de unidad, o
+evaluado por distintas jefaturas). Se usa la **facultad predominante** (la más
+frecuente entre los años evaluados del docente) para asignar 1 facultad por
+docente — mismo principio que D27 aplica a `grupo_dificultad`, extendido acá a
+un atributo de perfil en vez de a una variable de asignatura.
+
+**Facultad tiene 6 categorías — no admite un único t-test binario.** A
+diferencia de sexo/escalafón, no hay una partición natural de 2 grupos. Se
+decidió (a pedido de la contraparte, ver conversación) hacer **6 pruebas t de
+Welch independientes, cada facultad vs. el resto combinado** — mismo criterio
+"grupo vs. resto" que D27 usa para Baja vs. Media+Alta en `sexo_dificultad/` y
+`jerarquia_dificultad/`, extendido de 3 a 6 categorías. El gráfico de prueba t
+muestra la diferencia (facultad − resto) por barra, coloreada en dorado si
+p<0.05 y en azul si no. Resultado: **4 de 6 facultades significativas**
+(FACDEH +0.13 p<0.001, FINARQ +0.10 p<0.001, FAMEDSA −0.06 p=0.024, VRIIP −0.23
+p<0.001; FEGOC y FED no significativas).
+
+**Limitación a documentar:** con 6 comparaciones "vs. resto" simultáneas sobre
+los mismos datos, el umbral de 5% no se corrigió por comparaciones múltiples
+(ej. Bonferroni) — con 6 pruebas independientes, la probabilidad de al menos un
+falso positivo al 5% nominal sube a ~26%. Se decidió no aplicar corrección por
+ahora (mismo nivel de rigor que el resto de P1, que tampoco corrige por el
+número total de pruebas t hechas en todo el producto) — si esto se vuelve un
+punto de discusión con la contraparte, revisar.
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
@@ -813,6 +871,9 @@ que se indique lo contrario.
 | 15 | `edad_dificultad/` | misma tabla | Igual patrón que antiguedad_dificultad. Edad promedio por `grupo_dificultad`. Prueba t "grupo predominante" (Baja 49.0 años vs Media+Alta 46.8 años): t=2.07, **p=0.0387 — significativa** | ⏳ Generado, pendiente confirmación |
 | 16 | `sexo_dificultad/` | misma tabla | % de docentes mujeres por `grupo_dificultad`. Prueba t "grupo predominante", sexo codificado Mujer=1/Hombre=0 (Baja 43.8% vs Media+Alta 61.3%): t=-3.96, **p=0.0001 — muy significativa** | ⏳ Generado, pendiente confirmación |
 | 17 | `jerarquia_dificultad/` | misma tabla | % de docentes escalafón Regular por `grupo_dificultad` (colapso Docente/Regular, no las 8 categorías D25 — mismo criterio que aprobacion_reprobacion_jerarquia/). Prueba t "grupo predominante" (Baja 18.9% vs Media+Alta 12.8%): t=1.81, **p=0.0716 — no significativa** | ❌ Descartada del consolidado (no significativa) — pptx suelto y script siguen existiendo |
+| 18 | `edd_sexo/` | `intel.evaluacion_jefes` (D28) | `tipo_contrato_tag='JORNADA'`, promedio de `edd_total` por docente (N°=487/491). Prueba t de Welch (Hombre 0.72 vs Mujer 0.66): t=-2.37, **p=0.0183 — significativa** | ⏳ Generado, pendiente confirmación |
+| 19 | `edd_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo) / escalafón Docente vs Regular (prueba t, mismo colapso que #9/#17). Prueba t "por docente" (Docente 0.71 vs Regular 0.59): t=-3.36, **p=0.0011 — significativa** | ⏳ Generado, pendiente confirmación |
+| 20 | `edd_facultad/` | misma tabla | Facultad **predominante** por docente (D29 — `facultad_jefe` puede variar entre años, 46/491 casos). 6 pruebas t de Welch, cada facultad vs. el resto: FACDEH p<0.001 (+0.13), FINARQ p<0.001 (+0.10), FAMEDSA p=0.024 (-0.06), VRIIP p<0.001 (-0.23) **significativas**; FEGOC p=0.069, FED p=0.873 **no significativas**. Sin corrección por comparaciones múltiples (ver D29) | ⏳ Generado, pendiente confirmación |
 
 **Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
 = % de aprobación promedio *por docente* (no por calificación individual), para
@@ -842,3 +903,4 @@ valor a una sola muestra.
 | 2026-08-03 (3) | Agregadas 3 visualizaciones más al catálogo (`edad_dificultad/`, `sexo_dificultad/`, `jerarquia_dificultad/`), mismo criterio de "grupo predominante" aplicado a edad (continua) y a sexo/escalafón (binarias, codificadas 0/1). Resultados: edad significativa (p=0.0387, 49.0 vs 46.8 años), sexo muy significativa (p=0.0001, 43.8% vs 61.3% mujeres — hombres sobrerrepresentados en asignaturas difíciles), escalafón no significativa (p=0.0716, 18.9% vs 12.8% Regular). |
 | 2026-08-04 | Gráficos descriptivos de `sexo_dificultad/` y `jerarquia_dificultad/` convertidos a barra 100% apilada (Hombre/Mujer, Docente/Regular) para mostrar la composición completa por grupo, no solo un lado del binario. `jerarquia_dificultad/` excluida del consolidado `P1_presentacion.pptx` (queda en BLOQUE_III de `generar_presentacion.py` comentada) por no ser significativa (p=0.0716) — sigue existiendo como script y pptx suelto, con el hallazgo documentado arriba. |
 | 2026-08-04 (2) | Agregada D28: arranca el trabajo de EDD (evaluación de jefatura, no estudiantil) — `intel.evaluacion_jefes` creada con el mismo patrón de D26 (tags `tipo_contrato_tag`/`sexo`/`jerarquia` vía join con `universo_base`). Confirmado que `facultad_jefe` ya venía en la fuente con 100% de cobertura, no hizo falta agregarla. Aún sin visualizaciones sobre esta tabla. |
+| 2026-08-04 (3) | Agregada D29 y 3 primeras visualizaciones de EDD al catálogo (`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`). Confirmado que sexo/jerarquía son atributos verdaderamente fijos por docente (0 casos con más de un valor entre años), pero `facultad_jefe` no (46/491 docentes cambiaron de facultad entre 2022-2025) — se introduce "facultad predominante" como extensión del criterio "grupo predominante" de D27. Facultad tiene 6 categorías, no binaria: se resolvió con 6 pruebas t de Welch independientes (cada facultad vs. el resto), sin corrección por comparaciones múltiples (limitación documentada). Resultados: sexo significativo (p=0.0183, Hombres 0.72 vs Mujeres 0.66 — dirección opuesta a la evaluación estudiantil), jerarquía/escalafón significativo (p=0.0011, Docente 0.71 vs Regular 0.59), facultad con 4 de 6 significativas (FACDEH/FINARQ más altas, FAMEDSA/VRIIP más bajas). |

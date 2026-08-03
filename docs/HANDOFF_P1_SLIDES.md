@@ -132,14 +132,24 @@ Columnas de interés ya numéricas (`errors="coerce"` aplicado en el ETL): `edd_
 
 ## Qué falta / posibles próximos pasos
 
-**EDD (`intel.evaluacion_jefes`) — arrancando, sin visualizaciones todavía.** El usuario pidió
-"ahondar en las evaluaciones de las jefaturas EDD" y hasta ahora solo se hizo la capa de datos
-(la tabla enriquecida, D28). Falta: decidir qué cortes/gráficos armar (candidatos obvios,
-mismo patrón que el resto de P1: EDD promedio por sexo, por jerarquía, por tipo de contrato,
-evolución 2022-2025 — nota: `edd_total_avg` bajó de ~0.85-0.88 en 2022-2023 a ~0.67-0.68 en
-2024-2025, vale la pena mirar por qué antes de asumir que es un hallazgo real y no un cambio de
-metodología de medición entre años). Seguir el mismo flujo: preguntar al usuario qué corte
-quiere antes de construir, no asumir.
+**EDD (`intel.evaluacion_jefes`) — 3 visualizaciones construidas y verificadas (2026-08-04),
+ver D29.** `edd_sexo/`, `edd_jerarquia/`, `edd_facultad/` (cada una con descriptivo + prueba t,
+mismo patrón `agregar`/`agregar_ttest` que el resto de P1). Resultados: sexo significativo
+(p=0.0183, Hombres 0.72 vs Mujeres 0.66 — ojo, dirección OPUESTA a la evaluación estudiantil),
+escalafón significativo (p=0.0011, Docente 0.71 vs Regular 0.59), facultad con 4/6 significativas
+vs. el resto (FACDEH/FINARQ más altas, FAMEDSA/VRIIP más bajas — sin corrección por
+comparaciones múltiples, ver limitación en D29). Hallazgo metodológico nuevo: a diferencia de
+sexo/jerarquía (atributos fijos, 0 casos con >1 valor entre años), `facultad_jefe` SÍ puede
+cambiar entre años para un mismo docente (46/491 casos) — se resolvió con "facultad
+predominante", extensión del criterio D27.
+
+**Aún sin generar**: EDD por tipo de contrato (Jornada vs Honorario), evolución 2022-2025 —
+nota: `edd_total_avg` bajó de ~0.85-0.88 en 2022-2023 a ~0.67-0.68 en 2024-2025, vale la pena
+mirar por qué antes de asumir que es un hallazgo real y no un cambio de metodología de medición
+entre años. **Tampoco se decidió todavía** si estas 3 (o las futuras) se suman al consolidado
+`generar_presentacion.py` como Bloque IV (hoy placeholder "sin avance aún" en
+`slides_estructura.py`) — no asumir, preguntar al usuario cuándo corresponda. Seguir el mismo
+flujo: preguntar al usuario qué corte quiere antes de construir, no asumir.
 
 Fuera de eso, no hay una lista de pendientes explícita del usuario — Bloque II y Bloque IV de
 `P1_presentacion.pptx` siguen vacíos por decisión explícita (sin avance real todavía, no
