@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-08-04  
+**Última actualización:** 2026-08-04 (2)  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -64,6 +64,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 27 | Grupo de dificultad de asignaturas (terciles de % aprobación histórico) | ✅ Resuelto | 624 (Jornada), cortes sobre universo completo | ✅ Vigente |
 | 28 | `intel.evaluacion_jefes` — tags de perfil docente (EDD) | ✅ Resuelto | 1.646 filas, 604 docentes | ✅ Vigente |
 | 29 | EDD por sexo/jerarquía/facultad — "facultad predominante" + t-test multi-grupo | ✅ Resuelto | 491 docentes Jornada con EDD | ✅ Vigente |
+| 30 | Distribución de la Jornada (`jornada_dot`) — Completa/Parcial/Sin dato | ✅ Resuelto | 624 (Jornada), 531 con horas válidas | ✅ Vigente |
 
 ---
 
@@ -844,6 +845,54 @@ punto de discusión con la contraparte, revisar.
 
 ---
 
+## D30 — Distribución de la Jornada (`jornada_dot`), Jornada
+
+Pedido de la contraparte: profundizar en `jornada_dot` (`consolidados.docente` /
+`analisis.universo_base`) — horas semanales de dotación. No confundir con
+`tipo_contrato_tag` (Jornada/Honorario): esto es una dimensión *dentro* del
+universo Jornada (624), no otro universo. Fuente:
+`data/cascade/01_jornada/docentes_jornada.csv` (en vivo).
+
+**Categorización** (parseo de horas desde el texto libre `"NN Horas Semanales"`
+vía regex): **Completa** = 44h exactas (418, 67.0%) — la moda absoluta. **Parcial**
+= cualquier valor <44h (113, 18.1%): 22h (57), 33h (28), 11h (15), 39h (8), 40h
+(2), 36h (1), 32h (1), 6h (1). **Sin dato / variable** (93, 14.9%) = 90 sin
+registro en DOTACION + 3 con el valor literal "Jornada indefinida Variable"
+(sin horas fijas). Los 90 sin dato **no son un hallazgo nuevo** — coinciden
+100% con `clasificacion` nula, es la misma brecha NOMINA→DOTACION ya
+documentada en D22/D23.
+
+**3 diapositivas** (`distribucion_horas/`, `agregar_todas(prs)`): intro
+(sin gráfico), dona de composición general con un callout de "jornada parcial"
+detallado (flecha desde el sector Parcial hacia un mini gráfico de puntos —
+tamaño del punto ∝ N° de docentes en esa cantidad de horas), y comparación por
+sexo/escalafón (2 paneles, barra 100% apilada). El panel de escalafón usa el
+colapso binario Docente/Regular (mismo criterio D25/D27, no las 8 categorías
+completas) para tener el mismo formato visual que el panel de sexo.
+
+**Sin prueba t en esta entrega** — a diferencia del resto de P1, la contraparte
+pidió específicamente estas 3 diapositivas descriptivas, sin pedir
+significancia estadística. Si más adelante se quiere probar si jornada
+completa/parcial se asocia a algún outcome (aprobación, EDD, evaluación
+estudiantil), es una extensión natural pero no se construyó en esta pasada —
+no asumir, preguntar primero.
+
+**Nota de paleta:** el violeta usado para "Sin dato / variable" (`#9085E9`) se
+validó con `validate_palette.js` junto a los colores ya establecidos de P1
+(`#5C9BD6`/`#FFB74D`) — pasa CVD/contraste/chroma; igual que el par base de
+P1, no pasa el chequeo de "lightness band" (ese par ya se usa en decenas de
+diapositivas del proyecto sin objeción, así que no se lo tomó como bloqueante
+para uno nuevo).
+
+**Hallazgos:** las mujeres tienen jornada parcial con más frecuencia que los
+hombres (24.9% vs 17.6%, sobre N°=531 con horas válidas). El escalafón Docente
+tiene jornada parcial con más frecuencia que el escalafón Regular (24.2% vs
+9.5%, sobre N°=484 con jerarquía válida) — el patrón inverso al de EDD (D29),
+donde Regular puntuaba más bajo pero acá es Docente quien tiene más jornada
+parcial.
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
@@ -874,6 +923,7 @@ que se indique lo contrario.
 | 18 | `edd_sexo/` | `intel.evaluacion_jefes` (D28) | `tipo_contrato_tag='JORNADA'`, promedio de `edd_total` por docente (N°=487/491). Prueba t de Welch (Hombre 0.72 vs Mujer 0.66): t=-2.37, **p=0.0183 — significativa** | ⏳ Generado, pendiente confirmación |
 | 19 | `edd_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo) / escalafón Docente vs Regular (prueba t, mismo colapso que #9/#17). Prueba t "por docente" (Docente 0.71 vs Regular 0.59): t=-3.36, **p=0.0011 — significativa** | ⏳ Generado, pendiente confirmación |
 | 20 | `edd_facultad/` | misma tabla | Facultad **predominante** por docente (D29 — `facultad_jefe` puede variar entre años, 46/491 casos). 6 pruebas t de Welch, cada facultad vs. el resto: FACDEH p<0.001 (+0.13), FINARQ p<0.001 (+0.10), FAMEDSA p=0.024 (-0.06), VRIIP p<0.001 (-0.23) **significativas**; FEGOC p=0.069, FED p=0.873 **no significativas**. Sin corrección por comparaciones múltiples (ver D29) | ⏳ Generado, pendiente confirmación |
+| 21 | `distribucion_horas/` | `data/cascade/01_jornada/docentes_jornada.csv` | `jornada_dot` parseado a horas (D30); Completa=44h (418), Parcial<44h (113), Sin dato/variable (93 — misma brecha D22/D23). 3 diapositivas: intro, dona+detalle parcial, sexo/escalafón (100% apilada). Sin prueba t (no pedida) | ⏳ Generado, pendiente confirmación |
 
 **Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
 = % de aprobación promedio *por docente* (no por calificación individual), para
@@ -904,3 +954,4 @@ valor a una sola muestra.
 | 2026-08-04 | Gráficos descriptivos de `sexo_dificultad/` y `jerarquia_dificultad/` convertidos a barra 100% apilada (Hombre/Mujer, Docente/Regular) para mostrar la composición completa por grupo, no solo un lado del binario. `jerarquia_dificultad/` excluida del consolidado `P1_presentacion.pptx` (queda en BLOQUE_III de `generar_presentacion.py` comentada) por no ser significativa (p=0.0716) — sigue existiendo como script y pptx suelto, con el hallazgo documentado arriba. |
 | 2026-08-04 (2) | Agregada D28: arranca el trabajo de EDD (evaluación de jefatura, no estudiantil) — `intel.evaluacion_jefes` creada con el mismo patrón de D26 (tags `tipo_contrato_tag`/`sexo`/`jerarquia` vía join con `universo_base`). Confirmado que `facultad_jefe` ya venía en la fuente con 100% de cobertura, no hizo falta agregarla. Aún sin visualizaciones sobre esta tabla. |
 | 2026-08-04 (3) | Agregada D29 y 3 primeras visualizaciones de EDD al catálogo (`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`). Confirmado que sexo/jerarquía son atributos verdaderamente fijos por docente (0 casos con más de un valor entre años), pero `facultad_jefe` no (46/491 docentes cambiaron de facultad entre 2022-2025) — se introduce "facultad predominante" como extensión del criterio "grupo predominante" de D27. Facultad tiene 6 categorías, no binaria: se resolvió con 6 pruebas t de Welch independientes (cada facultad vs. el resto), sin corrección por comparaciones múltiples (limitación documentada). Resultados: sexo significativo (p=0.0183, Hombres 0.72 vs Mujeres 0.66 — dirección opuesta a la evaluación estudiantil), jerarquía/escalafón significativo (p=0.0011, Docente 0.71 vs Regular 0.59), facultad con 4 de 6 significativas (FACDEH/FINARQ más altas, FAMEDSA/VRIIP más bajas). |
+| 2026-08-04 (4) | Agregada D30 y `distribucion_horas/` al catálogo (3 diapositivas: intro, dona de composición con detalle de jornada parcial en callout con flecha, comparación por sexo/escalafón). Nueva dimensión pedida por la contraparte: `jornada_dot` (horas semanales de dotación), dentro del universo Jornada ya trabajado — Completa (44h, 67.0%) vs Parcial (<44h, 18.1%) vs Sin dato/variable (14.9%, misma brecha D22/D23). Sin prueba t en esta entrega (no pedida). Confirmado que mujeres y escalafón Docente tienen jornada parcial con más frecuencia (24.9%/24.2%) que hombres y escalafón Regular (17.6%/9.5%). |

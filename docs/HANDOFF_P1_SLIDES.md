@@ -143,6 +143,16 @@ sexo/jerarquía (atributos fijos, 0 casos con >1 valor entre años), `facultad_j
 cambiar entre años para un mismo docente (46/491 casos) — se resolvió con "facultad
 predominante", extensión del criterio D27.
 
+**Distribución de la Jornada (`jornada_dot`) — 3 diapositivas construidas y verificadas
+(2026-08-04), ver D30.** Otra dimensión nueva pedida por la contraparte, dentro del universo
+Jornada (no otro universo): horas semanales de dotación. `distribucion_horas/` (`agregar_todas`,
+3 slides): intro sin gráfico, dona de composición (Completa 44h 67.0% / Parcial <44h 18.1% /
+Sin dato-variable 14.9%) con un callout de detalle de jornada parcial (flecha + mini scatter de
+puntos, tamaño ∝ N°), y comparación por sexo/escalafón (2 paneles, barra 100% apilada, mismo
+colapso Docente/Regular del resto de P1). Sin prueba t — no fue pedida esta vez, a diferencia
+del resto de P1. Hallazgo: mujeres y escalafón Docente tienen jornada parcial con más
+frecuencia (24.9%/24.2%) que hombres y escalafón Regular (17.6%/9.5%).
+
 **Aún sin generar**: EDD por tipo de contrato (Jornada vs Honorario), evolución 2022-2025 —
 nota: `edd_total_avg` bajó de ~0.85-0.88 en 2022-2023 a ~0.67-0.68 en 2024-2025, vale la pena
 mirar por qué antes de asumir que es un hallazgo real y no un cambio de metodología de medición
