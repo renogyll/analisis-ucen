@@ -22,23 +22,28 @@ tenía el patrón visual que reutilicé).
 `analisis.universo_base` (1.144 docentes totales, Postgres local `ucen` — ver credenciales en
 cualquier script, `postgresql://ucen_user:ucen2026@localhost:5432/ucen`).
 
-## Estado actual (commit `54faf24`, 2026-08-04)
+## Estado actual (2026-08-04, después de compilar participación formativa en Bloque IV)
 
 `products/p1_planta/generar_presentacion.py` genera el consolidado `P1_presentacion.pptx`
 (en `outputs/pptx/`, carpeta gitignoreada — hay que correr el script para regenerarlo, no está
-versionado). **30 diapositivas**, estructura:
+versionado). **44 diapositivas**, estructura:
 
 - **1-4**: Portada + 2 grillas de apertura (resumen Bloque I+II, resumen Bloque III+IV) + Bloque I Universo/Índice/Hallazgos
 - **5-7 (Bloque I — caracterización demográfica)**: sexo/edad, edad por jerarquía, grado académico por sexo
 - **8-14 (Bloque II — evaluación estudiantil)**: dimensiones APR/MET/AFO del instrumento de evaluación estudiantil
-- **15-23 (Bloque III, parte 1 — aprobación/reprobación directa)**: global, por sexo (+prueba t), por escalafón (+prueba t), por antigüedad (2 variantes), evolución por sexo
-- **24-30 (Bloque III, parte 2 — grupos de dificultad de asignaturas, D27)**: composición, antigüedad/edad/sexo según grupo de dificultad (cada uno con su prueba t)
+- **15-16 (Bloque II, cont. — distribución de jornada, D30)**: dona de composición (Completa/Parcial/Sin dato) + comparación por sexo/escalafón. No es evaluación estudiantil en sentido estricto — se integró acá a pedido explícito de la contraparte, a continuación de lo anterior. La intro de `distribucion_horas/` se excluyó del ensamblado (queda redundante con el título de cada diapositiva; el script standalone la sigue teniendo definida, sin usar).
+- **17-25 (Bloque III, parte 1 — aprobación/reprobación directa)**: global, por sexo (+prueba t), por escalafón (+prueba t), por antigüedad (2 variantes), evolución por sexo
+- **26-32 (Bloque III, parte 2 — grupos de dificultad de asignaturas, D27)**: composición, antigüedad/edad/sexo según grupo de dificultad (cada uno con su prueba t)
+- **33 (Bloque IV — Universo/Índice/Hallazgos)**: EDD + participación formativa
+- **34-39 (Bloque IV, parte 1 — Evaluación de Desempeño Docente, D28/D29)**: EDD según sexo (+prueba t), jerarquía/escalafón (+prueba t), facultad (+6 pruebas t, cada facultad vs. el resto)
+- **40-44 (Bloque IV, parte 2 — participación en instancias formativas, D31)**: según sexo (+prueba t), jerarquía/escalafón (+prueba t), tramo de edad (sin prueba t — no significativa, p=0.0724, mismo criterio que aprobacion_reprobacion_antiguedad). No es EDD en sentido estricto, se integró acá a pedido explícito de la contraparte, a continuación de lo anterior.
 
-**Bloque II vacío** (sin avance) y **Bloque IV** (sin definir) quedan como placeholders
-honestos ("sin avance aún") en las diapositivas estructurales — no se inventó contenido.
+Bloque IV ya no es placeholder — tiene contenido real (EDD + participación formativa). Si se
+agregan más cortes de cualquiera de los dos temas, van a continuación de lo último en
+`BLOQUE_IV` de `generar_presentacion.py`.
 
-Todo el trabajo de hoy está **commiteado**. `git log --oneline -3` para confirmar el estado real
-antes de asumir nada (esto puede quedar desactualizado si el usuario sigue trabajando).
+Todo el trabajo hasta acá está **commiteado** (confirmar con `git status`/`git log --oneline -3`
+antes de asumir el estado real si esto se retoma más adelante).
 
 ## Patrón para agregar un gráfico nuevo (seguir esto, no inventar otro)
 
@@ -152,6 +157,18 @@ puntos, tamaño ∝ N°), y comparación por sexo/escalafón (2 paneles, barra 1
 colapso Docente/Regular del resto de P1). Sin prueba t — no fue pedida esta vez, a diferencia
 del resto de P1. Hallazgo: mujeres y escalafón Docente tienen jornada parcial con más
 frecuencia (24.9%/24.2%) que hombres y escalafón Regular (17.6%/9.5%).
+
+**Participación en instancias formativas (sexo/jerarquía/edad) — 3 temas construidos,
+verificados y ya compilados al consolidado (2026-08-04), ver D31, Bloque IV parte 2.**
+Fuente: `analisis.universo_formados_p3` — confirmado que, pese al nombre, no está filtrada a
+`apto_p3` (trae TODA la participación del universo Jornada en Taller/Diplomado/Proyecto).
+`participacion_formacion_sexo/`, `participacion_formacion_jerarquia/`,
+`participacion_formacion_edad/` — mismo patrón `agregar`/`agregar_ttest`. Resultados: sexo
+significativo (p=0.0016, Mujeres 74.4% vs Hombres 62.4%), escalafón muy significativo
+(p<0.0001, Docente 76.5% vs Regular 48.9%), **edad NO significativa** (p=0.0724, 47.4 vs 49.4
+años) — la diapositiva de prueba t de edad se excluyó del consolidado (mismo criterio que
+aprobacion_reprobacion_antiguedad_4tramos/3tramos), pero el descriptivo por tramo de edad sí
+se incluyó.
 
 **Aún sin generar**: EDD por tipo de contrato (Jornada vs Honorario), evolución 2022-2025 —
 nota: `edd_total_avg` bajó de ~0.85-0.88 en 2022-2023 a ~0.67-0.68 en 2024-2025, vale la pena

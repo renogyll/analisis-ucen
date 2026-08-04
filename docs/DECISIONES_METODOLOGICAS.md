@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-08-04 (2)  
+**Última actualización:** 2026-08-04 (5)  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -65,6 +65,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 28 | `intel.evaluacion_jefes` — tags de perfil docente (EDD) | ✅ Resuelto | 1.646 filas, 604 docentes | ✅ Vigente |
 | 29 | EDD por sexo/jerarquía/facultad — "facultad predominante" + t-test multi-grupo | ✅ Resuelto | 491 docentes Jornada con EDD | ✅ Vigente |
 | 30 | Distribución de la Jornada (`jornada_dot`) — Completa/Parcial/Sin dato | ✅ Resuelto | 624 (Jornada), 531 con horas válidas | ✅ Vigente |
+| 31 | Participación en instancias formativas según sexo/jerarquía/edad | ✅ Resuelto | 624 (Jornada), 534-603 con dato válido | ✅ Vigente |
 
 ---
 
@@ -893,7 +894,47 @@ parcial.
 
 ---
 
-## Catálogo de visualizaciones P1 confirmadas
+## D31 — Participación en Instancias Formativas según sexo/jerarquía/edad (Jornada)
+
+Pedido de la contraparte: caracterizar la participación en instancias
+formativas (Taller/Diplomado/Proyecto) del universo Jornada. Métrica: **tasa**
+de docentes con al menos 1 instancia formativa registrada 2022-2025 — no el
+conteo de instancias, para que un docente con 10 instancias no pese más que
+uno con 1 (mismo criterio "1 valor por docente" del resto de P1).
+
+**Tabla fuente:** `analisis.universo_formados_p3` (2.190 filas, 1 fila por
+docente×instancia formativa). A pesar del nombre, **no está filtrada a
+"aptos P3"** — nace de `products/p3_perfeccionamiento/etl/04_formados_p3/etl_formados_p3.py`,
+que toma TODA la participación de `consolidados.participacion_formacion`
+(2.436 filas crudas) restringida a `universo_base`, y le pega el perfil
+completo del docente (sexo/edad/jerarquía/`tipo_contrato_tag`). La columna
+`apto_p3` es un flag por fila (¿tiene SAT baseline y resultado?), no un
+filtro aplicado a la tabla — se puede usar la tabla completa sin tocar esa
+columna. Participación = `rut_key` presente en esta tabla (con
+`tipo_contrato_tag='JORNADA'`), sin distinguir tipo de formación.
+
+**3 sub-temas**, mismo patrón `agregar`/`agregar_ttest` que el resto de P1:
+- `participacion_formacion_sexo/`: 2 barras (Hombre/Mujer) + prueba t Welch
+  sobre el indicador binario participó=1/no=0. **Significativa** (p=0.0016):
+  Mujeres 74.4% vs Hombres 62.4% (N°=603 con sexo registrado, 21 excluidos).
+- `participacion_formacion_jerarquia/`: descriptivo con las 8 categorías
+  completas de jerarquía (D25, ordenadas por tasa descendente, textura N<15) +
+  prueba t con escalafón binario Docente/Regular (mismo colapso que el resto
+  de P1). **Muy significativa** (p<0.0001): Docente 76.5% vs Regular 48.9%
+  (N°=558 con jerarquía válida, 66 excluidos).
+- `participacion_formacion_edad/`: descriptivo por tramo de edad (10 tramos,
+  barras verticales, sin patrón lineal claro) + prueba t sobre `edad_anios`
+  continua entre 2 grupos naturales — Participó vs No participó (roles
+  invertidos respecto a las pruebas t de dificultad: acá el grupo es la
+  participación y la variable comparada es la edad). **No significativa**
+  (p=0.0724): Participó 47.4 años vs No participó 49.4 años (N°=534 con
+  edad_anios registrada).
+
+**Nota:** las 3 pruebas t usan directamente el atributo del docente (sexo,
+escalafón, edad) sin necesitar "grupo predominante" (D27) — a diferencia de
+EDD/dificultad, acá cada docente aporta exactamente 1 fila desde
+`universo_base` (no hay repetición por instancia formativa en la base de la
+prueba), así que no hay riesgo de pseudo-repetición.
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
 commitee** se registra acá con su fuente y filtros — para no tener que releer el
@@ -920,10 +961,13 @@ que se indique lo contrario.
 | 15 | `edad_dificultad/` | misma tabla | Igual patrón que antiguedad_dificultad. Edad promedio por `grupo_dificultad`. Prueba t "grupo predominante" (Baja 49.0 años vs Media+Alta 46.8 años): t=2.07, **p=0.0387 — significativa** | ⏳ Generado, pendiente confirmación |
 | 16 | `sexo_dificultad/` | misma tabla | % de docentes mujeres por `grupo_dificultad`. Prueba t "grupo predominante", sexo codificado Mujer=1/Hombre=0 (Baja 43.8% vs Media+Alta 61.3%): t=-3.96, **p=0.0001 — muy significativa** | ⏳ Generado, pendiente confirmación |
 | 17 | `jerarquia_dificultad/` | misma tabla | % de docentes escalafón Regular por `grupo_dificultad` (colapso Docente/Regular, no las 8 categorías D25 — mismo criterio que aprobacion_reprobacion_jerarquia/). Prueba t "grupo predominante" (Baja 18.9% vs Media+Alta 12.8%): t=1.81, **p=0.0716 — no significativa** | ❌ Descartada del consolidado (no significativa) — pptx suelto y script siguen existiendo |
-| 18 | `edd_sexo/` | `intel.evaluacion_jefes` (D28) | `tipo_contrato_tag='JORNADA'`, promedio de `edd_total` por docente (N°=487/491). Prueba t de Welch (Hombre 0.72 vs Mujer 0.66): t=-2.37, **p=0.0183 — significativa** | ⏳ Generado, pendiente confirmación |
-| 19 | `edd_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo) / escalafón Docente vs Regular (prueba t, mismo colapso que #9/#17). Prueba t "por docente" (Docente 0.71 vs Regular 0.59): t=-3.36, **p=0.0011 — significativa** | ⏳ Generado, pendiente confirmación |
-| 20 | `edd_facultad/` | misma tabla | Facultad **predominante** por docente (D29 — `facultad_jefe` puede variar entre años, 46/491 casos). 6 pruebas t de Welch, cada facultad vs. el resto: FACDEH p<0.001 (+0.13), FINARQ p<0.001 (+0.10), FAMEDSA p=0.024 (-0.06), VRIIP p<0.001 (-0.23) **significativas**; FEGOC p=0.069, FED p=0.873 **no significativas**. Sin corrección por comparaciones múltiples (ver D29) | ⏳ Generado, pendiente confirmación |
-| 21 | `distribucion_horas/` | `data/cascade/01_jornada/docentes_jornada.csv` | `jornada_dot` parseado a horas (D30); Completa=44h (418), Parcial<44h (113), Sin dato/variable (93 — misma brecha D22/D23). 3 diapositivas: intro, dona+detalle parcial, sexo/escalafón (100% apilada). Sin prueba t (no pedida) | ⏳ Generado, pendiente confirmación |
+| 18 | `edd_sexo/` | `intel.evaluacion_jefes` (D28) | `tipo_contrato_tag='JORNADA'`, promedio de `edd_total` por docente (N°=487/491). Prueba t de Welch (Hombre 0.72 vs Mujer 0.66): t=-2.37, **p=0.0183 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
+| 19 | `edd_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo) / escalafón Docente vs Regular (prueba t, mismo colapso que #9/#17). Prueba t "por docente" (Docente 0.71 vs Regular 0.59): t=-3.36, **p=0.0011 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
+| 20 | `edd_facultad/` | misma tabla | Facultad **predominante** por docente (D29 — `facultad_jefe` puede variar entre años, 46/491 casos). 6 pruebas t de Welch, cada facultad vs. el resto: FACDEH p<0.001 (+0.13), FINARQ p<0.001 (+0.10), FAMEDSA p=0.024 (-0.06), VRIIP p<0.001 (-0.23) **significativas**; FEGOC p=0.069, FED p=0.873 **no significativas**. Sin corrección por comparaciones múltiples (ver D29) | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
+| 21 | `distribucion_horas/` | `data/cascade/01_jornada/docentes_jornada.csv` | `jornada_dot` parseado a horas (D30); Completa=44h (418), Parcial<44h (113), Sin dato/variable (93 — misma brecha D22/D23). 2 diapositivas en el consolidado: dona+detalle parcial, sexo/escalafón (100% apilada) — la intro se excluyó del ensamblado (sigue en el script). Sin prueba t (no pedida) | ✅ Aprobado — en consolidado, Bloque II |
+| 22 | `participacion_formacion_sexo/` | `analisis.universo_formados_p3` (D31) | Tasa de docentes con ≥1 instancia formativa 2022-2025, por sexo (N°=603/624). Prueba t de Welch (Mujer 74.4% vs Hombre 62.4%): t=3.17, **p=0.0016 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
+| 23 | `participacion_formacion_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo, N°=558/624) / escalafón Docente vs Regular (prueba t). Prueba t (Docente 76.5% vs Regular 48.9%): t=-4.89, **p<0.0001 — muy significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
+| 24 | `participacion_formacion_edad/` | misma tabla | Descriptivo por tramo de edad (10 tramos, N°=534/624) / prueba t sobre edad_anios continua, Participó vs No participó (N°=534, roles invertidos respecto a D27). Prueba t (47.4 vs 49.4 años): t=-1.80, **p=0.0724 — no significativa** | ✅ Aprobado (sin prueba t) — en consolidado, Bloque IV; diapositiva de prueba t excluida (no significativa) |
 
 **Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
 = % de aprobación promedio *por docente* (no por calificación individual), para
@@ -955,3 +999,6 @@ valor a una sola muestra.
 | 2026-08-04 (2) | Agregada D28: arranca el trabajo de EDD (evaluación de jefatura, no estudiantil) — `intel.evaluacion_jefes` creada con el mismo patrón de D26 (tags `tipo_contrato_tag`/`sexo`/`jerarquia` vía join con `universo_base`). Confirmado que `facultad_jefe` ya venía en la fuente con 100% de cobertura, no hizo falta agregarla. Aún sin visualizaciones sobre esta tabla. |
 | 2026-08-04 (3) | Agregada D29 y 3 primeras visualizaciones de EDD al catálogo (`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`). Confirmado que sexo/jerarquía son atributos verdaderamente fijos por docente (0 casos con más de un valor entre años), pero `facultad_jefe` no (46/491 docentes cambiaron de facultad entre 2022-2025) — se introduce "facultad predominante" como extensión del criterio "grupo predominante" de D27. Facultad tiene 6 categorías, no binaria: se resolvió con 6 pruebas t de Welch independientes (cada facultad vs. el resto), sin corrección por comparaciones múltiples (limitación documentada). Resultados: sexo significativo (p=0.0183, Hombres 0.72 vs Mujeres 0.66 — dirección opuesta a la evaluación estudiantil), jerarquía/escalafón significativo (p=0.0011, Docente 0.71 vs Regular 0.59), facultad con 4 de 6 significativas (FACDEH/FINARQ más altas, FAMEDSA/VRIIP más bajas). |
 | 2026-08-04 (4) | Agregada D30 y `distribucion_horas/` al catálogo (3 diapositivas: intro, dona de composición con detalle de jornada parcial en callout con flecha, comparación por sexo/escalafón). Nueva dimensión pedida por la contraparte: `jornada_dot` (horas semanales de dotación), dentro del universo Jornada ya trabajado — Completa (44h, 67.0%) vs Parcial (<44h, 18.1%) vs Sin dato/variable (14.9%, misma brecha D22/D23). Sin prueba t en esta entrega (no pedida). Confirmado que mujeres y escalafón Docente tienen jornada parcial con más frecuencia (24.9%/24.2%) que hombres y escalafón Regular (17.6%/9.5%). |
+| 2026-08-04 (5) | Compilado el consolidado `P1_presentacion.pptx` a 39 diapositivas: (a) intro de `distribucion_horas/` excluida del ensamblado (redundante con el título de cada diapositiva), sus 2 diapositivas restantes (dona, sexo/escalafón) concatenadas al final de Bloque II a pedido explícito de la contraparte; (b) creado Bloque IV completo (Evaluación de Desempeño Docente, D28/D29) con su diapositiva Universo/Índice/Hallazgos (`uih_b4`) y las 3 visualizaciones EDD (`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`, cada una con prueba t); (c) actualizado `grid_b3` (grilla de apertura Bloque III+IV) para reflejar contenido real de Bloque IV en vez del placeholder "sin avance aún". Estados del catálogo #18-21 pasados a ✅ Aprobado. |
+| 2026-08-04 (6) | Agregada D31 y 3 visualizaciones de participación en instancias formativas al catálogo (`participacion_formacion_sexo/`, `participacion_formacion_jerarquia/`, `participacion_formacion_edad/`), sobre `analisis.universo_formados_p3` (confirmado que, a pesar del nombre, no está filtrada a apto_p3 — trae toda la participación del universo Jornada). Métrica: tasa de docentes con ≥1 instancia formativa, sin necesitar "grupo predominante" porque cada docente aporta 1 sola fila desde universo_base. Resultados: sexo significativo (p=0.0016, Mujeres 74.4% vs Hombres 62.4%), jerarquía/escalafón muy significativo (p<0.0001, Docente 76.5% vs Regular 48.9%), edad no significativa (p=0.0724, 47.4 vs 49.4 años). |
+| 2026-08-04 (7) | Compilados los 3 temas de participación formativa al consolidado `P1_presentacion.pptx`, ahora 44 diapositivas: concatenados a continuación de EDD en Bloque IV, a pedido explícito de la contraparte (no es EDD en sentido estricto). La diapositiva de prueba t de `participacion_formacion_edad/` se excluyó por no ser significativa (p=0.0724) — mismo criterio que `aprobacion_reprobacion_antiguedad_4tramos/3tramos` (se mantiene el descriptivo, se saca solo la prueba t), decidido explícitamente por el usuario entre los 2 precedentes existentes en el proyecto (el otro precedente, usado en `jerarquia_dificultad/`, es sacar el tema completo). Actualizados `grid_b3` y `uih_b4` en `slides_estructura.py` para reflejar que Bloque IV ahora cubre EDD + participación formativa. Estados del catálogo #22-24 pasados a ✅ Aprobado. |

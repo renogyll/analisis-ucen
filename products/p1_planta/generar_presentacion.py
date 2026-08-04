@@ -14,10 +14,10 @@ Las diapositivas estructurales (portada, grillas, universo/índice/hallazgos) vi
 
 Para agregar un nuevo sub-tema al consolidado: asegurarse de que su script exponga
 `agregar(prs)` (1 diapositiva) o `agregar_todas(prs)` (varias), y sumarlo a la lista
-BLOQUE_I/II/III más abajo (o crear un BLOQUE_IV cuando arranque).
+BLOQUE_I/II/III/IV más abajo.
 
 SALIDA: P1_presentacion.pptx
-Estructura (30 diapositivas):
+Estructura (44 diapositivas):
   1     Portada
   2     Grilla de apertura — Bloque I + II
   3     Grilla de apertura — Bloque III + IV
@@ -26,13 +26,24 @@ Estructura (30 diapositivas):
   8     Bloque II — Universo/Índice/Hallazgos
   9-14  Bloque II (evaluación estudiantil): evaluacion_apr, evaluacion_met x2, evaluacion_afo x3
         — reclasificado 2026-08-03, antes vivía dentro de Bloque I (ver slides_estructura.py)
-  15    Bloque III — Universo/Índice/Hallazgos
-  16-23 Bloque III (aprobación/reprobación directa): aprobacion_reprobacion, +sexo (+prueba t),
+  15-16 Bloque II (distribución de jornada, D30, agregado 2026-08-04): distribucion_horas
+        (dona + sexo/escalafón) — no es evaluación estudiantil en sentido estricto, se integró
+        acá a continuación de lo anterior a pedido explícito de la contraparte. La intro de
+        distribucion_horas/ se excluyó (queda redundante con el título de cada diapositiva).
+  17    Bloque III — Universo/Índice/Hallazgos
+  18-25 Bloque III (aprobación/reprobación directa): aprobacion_reprobacion, +sexo (+prueba t),
         +jerarquia (+prueba t), +antiguedad_4tramos, +antiguedad_3tramos, evolucion_aprobacion_sexo
-  24-30 Bloque III (grupos de dificultad, D27, agregado 2026-08-03): dificultad_composicion,
+  26-32 Bloque III (grupos de dificultad, D27, agregado 2026-08-03): dificultad_composicion,
         +antiguedad_dificultad (+prueba t), +edad_dificultad (+prueba t), +sexo_dificultad (+prueba t)
         — jerarquia_dificultad NO se incluye: prueba t no significativa (p=0.0716), descartada
         del consolidado a pedido de la contraparte (queda documentada en D27 y como pptx suelto)
+  33    Bloque IV — Universo/Índice/Hallazgos
+  34-39 Bloque IV (EDD, D28/D29, agregado 2026-08-04): edd_sexo (+prueba t), edd_jerarquia
+        (+prueba t), edd_facultad (+6 pruebas t, cada facultad vs. el resto)
+  40-44 Bloque IV (participación en instancias formativas, D31, agregado 2026-08-04):
+        participacion_formacion_sexo (+prueba t), +jerarquia (+prueba t), +edad (sin prueba t
+        — no significativa, p=0.0724, mismo criterio que aprobacion_reprobacion_antiguedad).
+        No es EDD en sentido estricto, se integró acá a pedido explícito de la contraparte.
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
 import importlib.util
@@ -64,6 +75,10 @@ BLOQUE_II = [
     ("evaluacion_apr", "generar_evaluacion_apr.py", ["agregar"]),
     ("evaluacion_met", "generar_evaluacion_met.py", ["agregar_todas"]),
     ("evaluacion_afo", "generar_evaluacion_afo.py", ["agregar_todas"]),
+    # Distribución de jornada (D30, agregado 2026-08-04) — concatenada a continuación de lo
+    # anterior en Bloque II, a pedido explícito de la contraparte. agregar_intro() de este
+    # script se excluye a propósito (ver docstring de generar_distribucion_horas.py).
+    ("distribucion_horas", "generar_distribucion_horas.py", ["agregar_donut", "agregar_sexo_jerarquia"]),
 ]
 
 BLOQUE_III = [
@@ -86,6 +101,23 @@ BLOQUE_III = [
     # jerarquia_dificultad NO se incluye: prueba t no significativa (p=0.0716) — descartada
     # del consolidado a pedido de la contraparte. El script y su pptx suelto siguen existiendo,
     # el hallazgo queda documentado en D27, solo se excluyó de este ensamblado.
+]
+
+BLOQUE_IV = [
+    ("edd_sexo", "generar_edd_sexo.py", ["agregar", "agregar_ttest"]),
+    ("edd_jerarquia", "generar_edd_jerarquia.py", ["agregar", "agregar_ttest"]),
+    ("edd_facultad", "generar_edd_facultad.py", ["agregar", "agregar_ttest"]),
+    # Participación en instancias formativas (D31, agregado 2026-08-04) — concatenada a
+    # continuación de lo anterior en Bloque IV, a pedido explícito de la contraparte (no es
+    # EDD en sentido estricto, mismo criterio que distribucion_horas/ en Bloque II).
+    ("participacion_formacion_sexo", "generar_participacion_formacion_sexo.py",
+     ["agregar", "agregar_ttest"]),
+    ("participacion_formacion_jerarquia", "generar_participacion_formacion_jerarquia.py",
+     ["agregar", "agregar_ttest"]),
+    # participacion_formacion_edad: solo "agregar" — la prueba t no fue significativa
+    # (p=0.0724), se excluye solo esa diapositiva (mismo criterio que
+    # aprobacion_reprobacion_antiguedad_4tramos/3tramos), el descriptivo se mantiene.
+    ("participacion_formacion_edad", "generar_participacion_formacion_edad.py", ["agregar"]),
 ]
 
 
@@ -123,6 +155,10 @@ agregar_bloque(prs, BLOQUE_II, "Bloque II")
 estructura.uih_b3(prs)
 
 agregar_bloque(prs, BLOQUE_III, "Bloque III")
+
+estructura.uih_b4(prs)
+
+agregar_bloque(prs, BLOQUE_IV, "Bloque IV")
 
 prs.save(OUT_PPTX)
 print(f"\n✓ Guardado: {OUT_PPTX}  ({len(prs.slides)} diapositivas)")

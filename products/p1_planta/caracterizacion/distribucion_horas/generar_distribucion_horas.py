@@ -6,15 +6,21 @@ Pedido de la contraparte: profundizar en `jornada_dot` (consolidados.docente /
 analisis.universo_base) — horas semanales contratadas según DOTACION. No
 confundir con `tipo_contrato_tag` (Jornada/Honorario, ya usado en todo P1):
 acá se trabaja DENTRO del universo Jornada, viendo cuántas horas trabaja cada
-docente. 3 diapositivas: intro, dona (composición general + detalle de jornada
-parcial) y comparación por sexo/jerarquía.
+docente. 2 diapositivas en el ensamblado: dona (composición general + detalle
+de jornada parcial) y comparación por sexo/jerarquía.
+
+La intro (`agregar_intro`) se construyó pero se excluyó del ensamblado
+(2026-08-04): al integrarse a continuación de Bloque II del consolidado
+`P1_presentacion.pptx`, una intro propia quedaba redundante — el contexto ya
+lo da el título de cada diapositiva. La función sigue definida (no se borró
+el código) por si se necesita para otra entrega standalone.
 
 Categorías: Completa (44h, la moda absoluta) / Parcial (<44h) / Sin dato-variable
 (sin registro en DOTACION, o "Jornada indefinida Variable" sin horas fijas —
 mismo patrón de brecha NOMINA→DOTACION que D22/D23, no es un hallazgo nuevo).
 
 FUENTE: data/cascade/01_jornada/docentes_jornada.csv (en vivo, sin copiar)
-SALIDA: P1_distribucion_horas.pptx (3 diapositivas) + distribucion_horas_donut_chart.png
+SALIDA: P1_distribucion_horas.pptx (2 diapositivas) + distribucion_horas_donut_chart.png
         + distribucion_horas_sexo_jerarquia_chart.png
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
@@ -122,15 +128,17 @@ def agregar_intro(prs):
         "DOTACION), una dimensión dentro del universo Jornada ya trabajado en el resto "
         "de P1 — no confundir con tipo_contrato_tag (Jornada/Honorario). "
         "Fuente: data/cascade/01_jornada/docentes_jornada.csv.")
-    kit.punteo_numerado(sl, [
-        "¿Qué es? Las horas semanales con las que cada docente Jornada está "
-        "contratado según DOTACION — 44 horas es jornada completa, cualquier valor "
-        "menor es jornada parcial.",
-        "Composición general: qué proporción del universo tiene jornada completa vs. "
-        "parcial, y el detalle de en qué horas se reparte la jornada parcial.",
-        "¿La jornada completa se distribuye igual entre hombres y mujeres, y entre "
-        "escalafón Docente y Regular? Comparación con prueba de composición en la "
-        "última diapositiva.",
+    kit.caja_grid_1x3(sl, [
+        ("¿Qué es?",
+         "Las horas semanales con las que cada docente Jornada está contratado según "
+         "DOTACION. 44 horas es jornada completa; cualquier valor menor es jornada "
+         "parcial."),
+        ("Composición general",
+         "Qué proporción del universo tiene jornada completa vs. parcial, y en qué "
+         "horas se reparte la jornada parcial (11 a 40 horas)."),
+        ("Por sexo y escalafón",
+         "¿La jornada completa se distribuye igual entre hombres y mujeres, y entre "
+         "escalafón Docente y Regular? Comparación en la última diapositiva."),
     ])
     return sl
 
@@ -318,7 +326,7 @@ def agregar_sexo_jerarquia(prs):
 
 
 def agregar_todas(prs):
-    agregar_intro(prs)
+    # agregar_intro() excluida a propósito — ver docstring del módulo.
     agregar_donut(prs)
     agregar_sexo_jerarquia(prs)
 

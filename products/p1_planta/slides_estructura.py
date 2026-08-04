@@ -13,9 +13,16 @@ Bloque I = caracterización demográfica del docente (sexo/edad, jerarquía, gra
 académico). Bloque II = evaluación estudiantil por dimensión (APR/MET/AFO) —
 reclasificado 2026-08-03: originalmente vivía dentro de Bloque I, se separó a
 pedido de la contraparte porque conceptualmente es otro tema (cómo evalúan los
-alumnos la docencia, no quién es el docente). Bloque IV todavía no tiene
-contenido — sus cajas quedan con texto placeholder ("sin avance aún"), no se
-inventan datos.
+alumnos la docencia, no quién es el docente); desde 2026-08-04 también cierra
+con `distribucion_horas/` (jornada completa/parcial, D30) — no es evaluación
+estudiantil en sentido estricto, pero se integró ahí a pedido explícito de la
+contraparte, a continuación de lo que ya había en Bloque II. Bloque III =
+aprobación/reprobación de alumnos. Bloque IV = Evaluación de Desempeño Docente
+(EDD, D28/D29) — agregado 2026-08-04, evaluación hecha por la jefatura/director,
+distinta de la de Bloque II; desde el mismo día también cierra con
+`participacion_formacion_*/` (D31, participación en Taller/Diplomado/Proyecto) —
+tampoco es EDD en sentido estricto, mismo criterio de integración que
+`distribucion_horas/` en Bloque II, a pedido explícito de la contraparte.
 
 Llamado por `generar_presentacion.py`, no standalone (no tiene bloque `__main__`
 propio — no hay "un tema" que generar solo, son piezas de armado del consolidado).
@@ -78,10 +85,10 @@ def grid_b1_b2(prs):
 
 
 def grid_b3(prs):
-    """Apertura: resumen Bloque III (con contenido) + Bloque IV (sin definir todavía)."""
+    """Apertura: resumen Bloque III (aprobación/reprobación) + Bloque IV (EDD)."""
     sl = _nueva(prs)
-    kit.title(sl, "Bloque III — Aprobación y Reprobación de Alumnos", fs=17)
-    kit.subtitulo(sl, "Universo: 624 docentes Jornada  ·  515 con calificaciones registradas (82.5%)")
+    kit.title(sl, "Bloques III y IV — Rendimiento Académico y Evaluación de Desempeño Docente", fs=15)
+    kit.subtitulo(sl, "Universo: 624 docentes Jornada")
     cajas = [
         ("Bloque III — Aprobación y Reprobación de Alumnos",
          "• Universo: 624 docentes Jornada, 515 con calificaciones registradas\n"
@@ -89,8 +96,14 @@ def grid_b3(prs):
          "(Docente/Regular) y por antigüedad\n"
          "• Pruebas t de significancia estadística por corte\n"
          "• Evolución de la tasa de aprobación por sexo, 2023-2025"),
-        ("Bloque IV — Pendiente de definir",
-         "Sin avance aún."),
+        ("Bloque IV — EDD y Participación en Instancias Formativas",
+         "• Universo: 624 docentes Jornada, 491 con evaluación EDD 2022-2025 "
+         "(hecha por la jefatura/director — distinta de la evaluación estudiantil "
+         "de Bloque II)\n"
+         "• Calificación EDD promedio según sexo, escalafón y facultad\n"
+         "• Participación en instancias formativas (Taller/Diplomado/Proyecto) "
+         "según sexo, escalafón y edad\n"
+         "• Pruebas t de Welch por corte"),
         ("Qué vas a ver en Bloque III",
          "1. % Aprobación/Reprobación — global\n"
          "2. Según sexo del docente + prueba t\n"
@@ -100,7 +113,13 @@ def grid_b3(prs):
          "6. Grupos de dificultad de asignaturas: composición, y antigüedad/edad/"
          "sexo según grupo, cada uno con su prueba t"),
         ("Qué vas a ver en Bloque IV",
-         "Pendiente."),
+         "1. Calificación EDD según sexo del docente + prueba t\n"
+         "2. Calificación EDD según escalafón (Docente/Regular) + prueba t\n"
+         "3. Calificación EDD según facultad + 6 pruebas t (cada facultad vs. "
+         "el resto)\n"
+         "4. Participación en instancias formativas según sexo + prueba t\n"
+         "5. Según escalafón (Docente/Regular) + prueba t\n"
+         "6. Según tramo de edad (sin prueba t — no significativa)"),
     ]
     kit.caja_grid_2x2(sl, cajas)
     return sl
@@ -198,5 +217,41 @@ def uih_b3(prs):
             "y con más antigüedad. El escalafón no mostró diferencia "
             "significativa por dificultad (p=0.0716) — se probó pero no se "
             "incluyó como diapositiva, ver D27.",
+        ])
+    return sl
+
+
+def uih_b4(prs):
+    sl = _nueva(prs)
+    kit.title(sl, "Bloque IV — EDD y Participación en Instancias Formativas (N°624)", fs=15)
+    kit.caja_universo_indice_hallazgos(sl,
+        universo_txt=(
+            "624 docentes de Jornada. 491 (78.7%) tienen al menos una evaluación de "
+            "desempeño docente (EDD) registrada entre 2022 y 2025 — la hace la "
+            "jefatura/director, distinta de la evaluación estudiantil de Bloque II "
+            "(D28/D29). 418 (67.0%) participaron en al menos una instancia formativa "
+            "(Taller/Diplomado/Proyecto) — fuente analisis.universo_formados_p3, sin "
+            "filtrar a apto_p3 (D31). Unidad de análisis en ambos casos: 1 valor por "
+            "docente — ver docs/DECISIONES_METODOLOGICAS.md D28/D29/D31."),
+        indice_items=[
+            "Calificación EDD según Sexo del Docente + prueba t",
+            "Calificación EDD según Jerarquía (8 categorías) / Escalafón + prueba t",
+            "Calificación EDD según Facultad + 6 pruebas t (cada facultad vs. el resto)",
+            "Participación en Instancias Formativas según Sexo + prueba t",
+            "Participación en Instancias Formativas según Jerarquía / Escalafón + prueba t",
+            "Participación en Instancias Formativas según Tramo de Edad",
+        ],
+        hallazgos_items=[
+            "Los docentes hombres tienen una calificación EDD promedio más alta que "
+            "las mujeres (0.72 vs 0.66, p=0.0183) — dirección opuesta a la evaluación "
+            "estudiantil de Bloque II, donde las mujeres puntúan más alto.",
+            "El escalafón Docente tiene una calificación EDD promedio más alta que el "
+            "escalafón Regular (0.71 vs 0.59, p=0.0011); por facultad, 4 de 6 muestran "
+            "diferencia significativa frente al resto (FACDEH/FINARQ por encima, "
+            "FAMEDSA/VRIIP por debajo — sin corrección por comparaciones múltiples, D29).",
+            "Las docentes mujeres participan más en instancias formativas que los "
+            "hombres (74.4% vs 62.4%, p=0.0016), y el escalafón Docente mucho más que "
+            "el Regular (76.5% vs 48.9%, p<0.0001) — la edad no mostró diferencia "
+            "significativa (p=0.0724).",
         ])
     return sl
