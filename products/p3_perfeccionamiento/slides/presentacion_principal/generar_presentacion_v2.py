@@ -2527,7 +2527,7 @@ def slide_fac_b2(prs):
     fig = _tr_fig()
     ax = fig.add_axes([CHART_X, CHART_Y, CHART_W, CHART_H], facecolor="none", zorder=5)
     h = 0.30
-    ax.barh(ya + h/2, comp["n_f"], height=h, color="#52C97A", alpha=0.90, label="Aptos P3", edgecolor="none")
+    ax.barh(ya + h/2, comp["n_f"], height=h, color="#52C97A", alpha=0.90, label="Formados", edgecolor="none")
     ax.barh(ya - h/2, comp["n_c"], height=h, color="#FFB74D", alpha=0.90, label="Control", edgecolor="none")
     for i, row in comp.iterrows():
         ax.text(row["n_f"] + 0.3, i + h/2, str(int(row["n_f"])),
@@ -2700,7 +2700,7 @@ def slide_nuevo_02(prs):
     steps = [
         (9.0, 7.2, "1.144", "Universo base  ·  Jornada + Honorario", "#3D6FA4"),
         (7.0, 5.2, f"{N_FORM}",   f"{N_FORM*100//N_UNIV}% de 1.144  ·  ≥1 iniciativa de formación", "#4B9CD3"),
-        (5.2, 3.2, f"{N197}",   f"{N197*100//N_FORM}% de {N_FORM}  ·  Aptos P3 con SAT válido", "#52C97A"),
+        (5.2, 3.2, f"{N197}",   f"{N197*100//N_FORM}% de {N_FORM}  ·  Formados con SAT válido", "#52C97A"),
     ]
     tops = [9.65, 6.80, 3.95]
     hh   = 2.50
@@ -2764,7 +2764,7 @@ def slide_nuevo_02(prs):
         ax_b.set_xlim(-0.5, 1.5)
         ax_b.set_ylim(0, 105)
         ax_b.set_xticks([0, 1])
-        ax_b.set_xticklabels([f"Universo base\n(nº {total_tag:,})", f"Aptos P3\n(nº {N197})"],
+        ax_b.set_xticklabels([f"Universo base\n(nº {total_tag:,})", f"Formados\n(nº {N197})"],
                              color="white", fontsize=10)
         ax_b.tick_params(axis="x", length=0, pad=10)
         ax_b.tick_params(axis="y", left=False, labelleft=False)
@@ -2994,8 +2994,8 @@ def slide_embudo_b2(prs):
     jh_t = _jh_counts(sat); jh_c = _jh_counts(ctrl_b2_doc)
     fig = _tr_fig()
     _deriv_simple(fig, N_B2_FORM, N_B2_CTRL,
-                  "Aptos P3  ·  SAT pre + post disponible",
-                  "Sin formación P3  ·  SAT disponible",
+                  "Formados  ·  SAT pre + post disponible",
+                  "Sin formación  ·  SAT disponible",
                   jh_t, jh_c, col_trat="#52C97A", col_ctrl="#FFB74D")
     _ensure_bg()
     sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "embudo_b2.png"), prs)
@@ -3010,7 +3010,7 @@ def slide_embudo_b3(prs):
     jh_t = _jh_counts(sat); jh_c = _jh_counts(ctrl_b3_doc)
     fig = _tr_fig()
     _deriv_simple(fig, N_B3_FORM, N_B3_CTRL,
-                  "Aptos P3  ·  con datos notas+SAT",
+                  "Formados  ·  con datos notas+SAT",
                   "Sin formación  ·  con datos notas+SAT",
                   jh_t, jh_c, col_trat="#52C97A", col_ctrl="#FFB74D")
     _ensure_bg()
@@ -3031,8 +3031,8 @@ def slide_embudo_b4(prs):
     jh_t = _jh_counts(b4_form_doc); jh_c = _jh_counts(b4_ctrl_doc)
     fig = _tr_fig()
     _deriv_simple(fig, N_B4_FORM, N_B4_CTRL,
-                  "Aptos P3  ·  con EDD disponible",
-                  "Sin actividad P3  ·  con EDD disponible",
+                  "Formados  ·  con EDD disponible",
+                  "Sin actividad  ·  con EDD disponible",
                   jh_t, jh_c, col_trat="#A47BD6", col_ctrl="#FFB74D")
     _ensure_bg()
     sl = _new_sl(prs); _pic(sl, SHARED_BG, prs); _pic(sl, _save_ch(fig, "embudo_b4.png"), prs)
@@ -3344,7 +3344,7 @@ def _spaghetti_traz(ax, pivot_ap, pivot_ct, xs, ylabel, ylim=None):
 
     mean_ap = pivot_ap.mean(skipna=True).values
     ax.plot(x_idx, mean_ap, color="#5C9BD6", lw=2.8, marker="o", markersize=8,
-            label=f"Aptos P3  (nº {len(pivot_ap)})", zorder=5)
+            label=f"Formados  (nº {len(pivot_ap)})", zorder=5)
     for xi, yi in zip(x_idx, mean_ap):
         if not np.isnan(yi):
             ax.text(xi, yi+0.04, f"{yi:.2f}", ha="center", va="bottom", fontsize=8,
@@ -3476,7 +3476,7 @@ def slide_recomendacion(prs):
     fig, ax = _ax()
     xs = np.arange(len(anios)); BW = 0.32
     ax.bar(xs - BW/2, t_pct, width=BW, color="#5C9BD6", alpha=0.90, edgecolor="none",
-           label=f"Formados P3  (nº {n_trat_total})")
+           label=f"Formados  (nº {n_trat_total})")
     ax.bar(xs + BW/2, c_pct, width=BW, color="#FFB74D", alpha=0.90, edgecolor="none",
            label=f"No Formados — Control  (nº {n_ctrl_total})")
     stroke = [pe.withStroke(linewidth=2.5, foreground="#0A0F18")]

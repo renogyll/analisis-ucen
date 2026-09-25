@@ -1,7 +1,7 @@
 # Decisiones Metodológicas — Análisis UCEN
 **Proyecto:** Impacto del perfeccionamiento docente en el aprendizaje estudiantil  
 **Contraparte:** Vicerrectoría Académica / Dirección de Desarrollo Académico  
-**Última actualización:** 2026-08-04 (5)  
+**Última actualización:** 2026-08-12  
 **Estado:** Documento vivo — actualizar al tomar nuevas decisiones
 
 ---
@@ -66,6 +66,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 29 | EDD por sexo/jerarquía/facultad — "facultad predominante" + t-test multi-grupo | ✅ Resuelto | 491 docentes Jornada con EDD | ✅ Vigente |
 | 30 | Distribución de la Jornada (`jornada_dot`) — Completa/Parcial/Sin dato | ✅ Resuelto | 624 (Jornada), 531 con horas válidas | ✅ Vigente |
 | 31 | Participación en instancias formativas según sexo/jerarquía/edad | ✅ Resuelto | 624 (Jornada), 534-603 con dato válido | ✅ Vigente |
+| 32 | Participación en instancias formativas por Facultad (P3, Jornada+Honorario) | ✅ Resuelto | 1.144 (595 en 5 facultades + 549 Otra/Sin facultad) | ✅ Vigente |
 
 ---
 
@@ -936,6 +937,423 @@ EDD/dificultad, acá cada docente aporta exactamente 1 fila desde
 `universo_base` (no hay repetición por instancia formativa en la base de la
 prueba), así que no hay riesgo de pseudo-repetición.
 
+---
+
+## D32 — Participación en Instancias Formativas por Facultad (P3, Jornada y Honorario)
+
+Pedido de la contraparte (2026-08-12): volver sobre **P3** (no P1) para un
+desagregado por facultad de qué docentes toman instancias formativas y cuáles
+no. Vive en `products/p3_perfeccionamiento/slides/presentacion_principal/
+generar_diapo_participacion_facultad.py` (patrón standalone ya usado en P3,
+no el patrón por carpeta de P1 — P3 sigue usando scripts `generar_diapo_*.py`
+autocontenidos, ver `generar_diapo_combinaciones.py` como referencia).
+
+**Universo: TODOS los formados, no solo Aptos P3** — mismo criterio que D31,
+`analisis.universo_formados_p3` sin filtrar por `apto_p3`. A diferencia de P1,
+P3 no se restringe a Jornada: se generan **2 diapositivas separadas** (Jornada
+y Honorario), no una combinada, a pedido explícito de la contraparte.
+
+**"Oferta formativa" = `TALLER`** — no existe una categoría separada con ese
+nombre en esta base; es el mismo relabeling que ya usaba
+`generar_presentacion_v2.py` en la diapositiva de combinaciones
+(`.replace("Taller", "Oferta formativa")`). Las 3 categorías de
+`tipo_formacion` son TALLER/DIPLOMADO/PROYECTO.
+
+**Hallazgo de calidad de datos — `unidad_facultad` sin normalizar:** las 5
+facultades académicas reales están duplicadas en `universo_base` bajo dos
+formatos distintos ("FAC. DE MEDICINA Y CIENCIAS DE LA SALUD" vs "Facultad de
+Medicina y Ciencias de la Salud", etc.) — no es un problema nuevo, ya existía
+una función `_fac()` en `generar_presentacion_v2.py` que normaliza esto mismo
+para las diapositivas `fac_b2/b3/b4`. Se reusó el mismo criterio de matching
+(por substring, insensible a mayúsculas) en este script nuevo.
+
+**6ta categoría "Otra / Sin facultad":** a diferencia de `_fac()` (que
+mantiene cada unidad central como su propia categoría chica), acá se agrupan
+TODOS los que no matchean una de las 5 facultades académicas —437 sin dato +
+112 en unidades centrales (Vicerrectorías, Junta Directiva, Sede La Serena,
+etc.), 549 de 1.144 docentes— en una sola 6ta barra, a pedido explícito de la
+contraparte para no perderlos del todo del gráfico.
+
+**Diseño del gráfico:** por facultad, 4 barras — 3 con la tasa de
+participación en cada tipo específico (Oferta formativa/Diplomado/Proyecto,
+simples, no acumulativas) + una 4ta barra 100% apilada (Participó en
+cualquier tipo / No participó). Consolidado sin distinguir por año/período.
+Paleta: trío Oferta formativa/Diplomado/Proyecto validado con
+`validate_palette.js` (`#199e70`/`#9085e9`/`#c98500` — ALL CHECKS PASS, CVD
+ΔE 8.4, todos los pares); Participó/No participó reutiliza el par
+azul/naranjo (`#5C9BD6`/`#FFB74D`) ya establecido en todo el proyecto para
+binarios genéricos, deliberadamente distinto del trío para no confundir
+significados. Leyenda anclada arriba de las barras (no a un costado) porque
+la 4ta barra siempre llega a 100% en las 6 facultades — cualquier esquina
+choca con alguna; se resolvió extendiendo el `ylim` a 138 (dejando un
+colchón vacío 100-138 solo para la leyenda).
+
+---
+
+## D33 — Tag Elector/Elegible (Asamblea General, tema nuevo)
+
+Pedido nuevo de la contraparte (2026-09-13): tipificar a los 1.144 docentes
+de `analisis.universo_base` según su elegibilidad para votar (**Elector**,
+Art. 2° del reglamento de elección de Asamblea General) y ser candidato
+(**Elegible**, Art. 4°). Tema sin precedente en el repo — no existe carpeta
+`products/pN_*` previa sobre elecciones/asamblea/gobernanza. Vive en
+`products/elecciones_asamblea/etl/generar_tag_electores.py`, salida
+`analisis.universo_electores` (1.144 filas, mismo patrón `to_sql(schema=
+"analisis", if_exists="replace")` que el resto de los ETL del repo).
+
+**Cobertura de datos — la limitación central de este tema:** `fecha_ingreso`
+(insumo para calcular antigüedad) solo existe para 547/1.144 docentes
+(origen `AMBOS` + `SOLO_DOTACION`) — el resto (`SOLO_NOMINA` +
+`SOLO_FORMACION`, 597 docentes) no tiene ni antigüedad ni `jerarquia_dot`.
+Cruzando con `tipo_contrato_tag`: 82% de Jornada (513/624) tiene dato
+completo, pero solo 2.5% de Honorario (13/520). Se decidió (con el usuario)
+**no excluir a Honorario del cálculo** — se calcula sobre los 1.144, pero se
+marca `'Sin dato'` explícitamente donde falta información, en vez de asumir
+`'No'`. Resultado: de 520 Honorario, 507 quedan `'Sin dato'` en `es_elector`.
+
+**Reglas aplicadas (Art. 2° — Elector):**
+- Campo de jerarquía: `jerarquia` (amplio, 27 nulos de 1.144) — no
+  `jerarquia_dot` (597 nulos, coincide exactamente con el subconjunto que ya
+  tiene antigüedad, no suma cobertura nueva).
+- Sin filtro por jerarquía (el artículo dice "cualquier jerarquía
+  académica" — no restringe rango, así que `SIN JERARQUÍA` no se excluye).
+- Se excluye a `funcion_principal = 'ADMINISTRATIVO'` (47 docentes) por no
+  ser académicos — lectura directa de "los académicos... profesor de la
+  Universidad Central". `funcion_principal` nulo (187 casos) se trata como
+  ambiguo, no se excluye solo por eso (default inclusivo, documentado acá
+  para que la contraparte lo pueda corregir si no corresponde).
+- Antigüedad ≥ 3 años ininterrumpidos, recalculada fresca como
+  `(FECHA_REFERENCIA - fecha_ingreso) / 365.25` — no se reusa la columna
+  `antiguedad_anios` ya existente en `universo_base` porque su fecha de
+  corte no está documentada. `FECHA_REFERENCIA` es un placeholder (hoy,
+  configurable al inicio del script) hasta que la contraparte confirme la
+  fecha real de convocatoria.
+- Los permisos con/sin goce de sueldo y las docencias alternadas semestrales
+  que menciona el artículo no interrumpen la elegibilidad — no requiere
+  lógica adicional porque `universo_base` solo trae un `fecha_ingreso` por
+  docente (sin historial de interrupciones que detectar).
+
+**Art. 4° (Elegible) — PENDIENTE, no calculado como Sí/No todavía:** el
+mapeo exacto de "las 2 jerarquías académicas más altas" no está confirmado
+con la contraparte. Hallazgo de apoyo: `products/p1_planta/caracterizacion/
+edd_jerarquia/generar_edd_jerarquia.py` y `.../distribucion_horas/
+generar_distribucion_horas.py` ya usan un orden de 8 categorías (`CAT_ORD`)
+que agrupa por rango primero (Instructor→Asistente→Asociado→Titular) y
+luego por pista Docente/Regular — bajo esa lectura ya establecida en el
+proyecto, "las 2 más altas" serían Titular+Asociado (ambas pistas). Se
+propondrá como default a la contraparte, pero no se aplicó todavía. Por eso
+`es_elegible` queda con un valor placeholder de texto ("Pendiente — falta
+confirmar...") en las 1.144 filas — se dejó calculado y guardado en la
+tabla, sin embargo, el componente de antigüedad (`cumple_antiguedad_8anios`,
+mismo criterio de 3 estados Sí/No/Sin dato, umbral 8 años) como pieza
+reutilizable: cuando se confirme el mapeo de jerarquía, solo hace falta un
+`UPDATE` sobre `analisis.universo_electores`, no un cambio de esquema.
+
+**Fuera de alcance en esta pasada:** Art. 29° (sorteo/chunking de electores
+no adscritos a facultad en bloques de 7) — no pedido todavía. Cualquier
+exportación a Excel/PPTX para la contraparte — el pedido actual era solo
+agregar la tag a la tabla consolidada.
+
+**Actualización 2026-09-13 — revisión de `DOCUMENTO EXPLICATIVO DE CATEGORIA
+VARIAS 9-05-2026.docx`** (dejado por el usuario en la raíz del repo): el
+usuario pidió revisar este documento para ver si aclaraba el mapeo de Art.
+4° pendiente arriba. Confirma que Titular Docente y Titular Regular tienen
+igual rango máximo ("la jerarquía es vertical dentro de cada línea, pero
+horizontal entre ambas") — no resuelve la pregunta completa. El documento
+describe cada línea con **solo 3 niveles, asimétricos**: Regular =
+Asistente→Asociado→Titular (sin Instructor), Docente =
+Instructor→Asistente→Titular (**sin Asociado**) — un modelo que **no calza
+con el dato real**: `analisis.universo_base` trae las 8 combinaciones
+completas, incluyendo 147 `ASOCIADO DOCENTE` y 14 `INSTRUCTOR REGULAR`, que
+el modelo idealizado del documento no contempla. Tampoco es la fuente
+jurídica que cita el propio reglamento (Art. 12° del Estatuto) — es un
+explicativo informal de RR.HH., no el Estatuto.
+
+**Decisión final tomada (usuario, 2026-09-13):** `es_elegible` SÍ se calculó,
+con la lectura más literal del texto — "las 2 **jerarquías**" se interpreta
+como 2 categorías/etiquetas distintas (no 2 niveles de rango), y dado que
+`DOCUMENTO EXPLICATIVO DE CATEGORIA VARIAS` confirma que Titular Docente y
+Titular Regular tienen "igualdad de rango académico" (mismo techo, ambas
+líneas), esas 2 son "las 2 jerarquías académicas más altas":
+
+```
+JERARQUIAS_ELEGIBLE = {"TITULAR DOCENTE", "TITULAR REGULAR"}
+```
+
+Deliberadamente **sin Asociado** (ninguna de las 2 líneas) — evita la
+ambigüedad de si `ASOCIADO DOCENTE` (147 casos, no contemplado en el modelo
+de 3 niveles del documento) cuenta o no. Universo candidato: 79 docentes
+(TITULAR DOCENTE 58 + TITULAR REGULAR 21), antes del filtro de antigüedad.
+Con antigüedad ≥8 años aplicada: **35 `es_elegible='Sí'`** (24 Titular
+Docente + 11 Titular Regular, todos Jornada — 0 en Honorario, esperable
+dado que solo 13/520 Honorario tienen `fecha_ingreso`). 27 quedan
+`'Sin dato'` (jerarquía top pero sin antigüedad verificable), 44 `'No'`
+(jerarquía top pero <8 años).
+
+**Este es un supuesto explícito, no una confirmación de la contraparte** —
+queda documentado acá y en el docstring de `generar_tag_electores.py` para
+que sea fácil de corregir (`JERARQUIAS_ELEGIBLE` es una constante al inicio
+del script) si la contraparte responde con otra lectura del Art. 12° del
+Estatuto. Las 2 lecturas alternativas que se descartaron quedan igual de
+registradas por si hace falta recalcular:
+- **Rango puro** (Titular + Asociado, ambas líneas) = 265 candidatos
+  potenciales (58+21+147+39).
+- **Modelo asimétrico del documento** (Titular ambas líneas + Asociado
+  Regular, sin Asociado Docente) = 118 candidatos potenciales (58+21+39).
+
+**Actualización 2026-09-13 (2) — estimación por `fecha_jerarquizacion`:**
+el usuario notó que `analisis.universo_base` trae `fecha_jerarquizacion`
+(y `anio_jerarquizacion`), con mejor cobertura que `fecha_ingreso`
+(916/1.144 vs 547/1.144) — incluye 424 de los 597 docentes marcados
+`'Sin dato'` por falta de `fecha_ingreso`. Como jerarquizarse ocurre
+después de ingresar (nunca antes), "años desde jerarquización ≥ umbral"
+es una **cota inferior segura** de la antigüedad real: promueve
+`'Sin dato'` → `'Sí (estimado)'` cuando la cota ya cruza el umbral, pero
+**nunca degrada a `'No'`** (jerarquización reciente no descarta antigüedad
+real mayor). Se agregó como tag separado, distinto de `'Sí'` (confirmado
+por `fecha_ingreso`), a pedido explícito del usuario — para mantener
+trazable qué es dato duro vs. estimación.
+
+Impacto en `es_elector` (umbral 3 años): 254 promovidos a `'Sí (estimado)'`
+(232 Honorario + 22 Jornada) — Honorario pasa de 7 confirmados / 507 sin
+dato a 7 confirmados + 232 estimados / 275 sin dato. Impacto en
+`es_elegible` (umbral 8 años, sobre los 27 `'Sin dato'` con jerarquía top):
+20 promovidos a `'Sí (estimado)'` (18 Honorario + 2 Jornada).
+
+**Caveat de calidad de datos:** varias `fecha_jerarquizacion` se repiten
+masivamente (12/2/2024 × 37, 10/26/2016 × 29, 5/16/2024 × 13, etc.) —
+probablemente son fechas de sesión de comisión evaluadora (evento batch),
+no la fecha individual exacta de cada docente. No invalida la lógica de
+cota inferior (si la comisión los jerarquizó ese día, ya estaban
+contratados antes), pero refuerza por qué se mantiene como estimación
+separada y no como dato duro.
+
+---
+
+## D34 — Perfil Demográfico de Electores/Elegibles (7 análisis consolidados)
+
+Pedido de la contraparte (2026-09-14, vía exploración de viabilidad previa):
+6 análisis descriptivos (edad+sexo, jerarquía, antigüedad, SAT, evaluación de
+jefaturas/EDD, facultad) sobre el universo de 1.144 docentes — entendidos
+como caracterización de Electores/Elegibles (D33), no como descriptivos
+aislados. Construido de una vez, en `products/elecciones_asamblea/slides/
+generar_diapo_perfil_electores.py` → `DIAPO_perfil_electores.pptx`
+(8 diapositivas: portada + 7 temas). Cada tema cruza `es_elector`/
+`es_elegible` (de `analisis.universo_electores`, D33) contra la dimensión
+correspondiente — nunca un descriptivo aislado sin relación a la elección.
+
+**Regla de alcance** (confirmada con el usuario): donde el cruce con
+Honorario es viable se hace — Sexo (97%), Jerarquía (97.6%), Antigüedad
+(mecanismo confirmado+estimado de D33), SAT (84.5%, el que mejor representa
+a Honorario) y Facultad (61.8%, con "Otra/Sin facultad" de D32). Donde no es
+viable — **Edad y EDD** (Honorario 2-2.5% de cobertura) — se construye
+**Jornada-only** y se documenta la limitación explícitamente en el subtítulo
+de cada diapositiva, no se fuerza el cruce.
+
+**Fuentes nuevas usadas**: `consolidados.evaluacion_periodo` +
+`evaluacion_respuesta` (`pregunta_id='SAT_NOTA'`, CM-1 `cobertura_pct≥40`,
+D10) para SAT — 967/1.144 con dato, no restringido a P3/Aptos P3 (esa es
+una analítica distinta y más chica, 316 docentes). `intel.evaluacion_jefes`
+(`edd_total`, D28) para EDD — de 604 ruts totales en la tabla, solo 503
+matchean con `analisis.universo_electores` (491 Jornada + 12 Honorario).
+
+**Resultados (Welch t-test, `equal_var=False`, mismo criterio que el resto
+del proyecto):**
+- SAT: Elector vs No elector NO significativa (6.06 vs 6.14, p=0.1125).
+  Elegible vs No elegible SÍ significativa (5.92 vs 6.11, p=0.0154) —
+  contraintuitivo, los Elegibles (más senior) puntúan levemente más bajo.
+- EDD (Jornada): Elector vs No elector MUY significativa (0.733 vs 0.578,
+  p<0.0001) — coherente, antigüedad correlaciona con mejor evaluación de
+  jefatura. Elegible vs No elegible NO significativa (0.671 vs 0.693,
+  p=0.6971).
+- Jerarquía → % Elector: sube monótonamente con el rango (Instructor
+  Docente 45% → Titular Regular 95%). Hallazgo de cobertura, no de regla:
+  `SIN JERARQUÍA` (177 docentes) tiene **0% de Electores confirmados o
+  estimados** — no es una exclusión por Art. 2° (que no filtra por rango),
+  es que ese grupo tampoco tiene `fecha_jerarquizacion` que sirva de cota
+  inferior (D33) — documentado como bullet explícito en la diapositiva para
+  que no se lea como una regla de exclusión.
+- Sexo: Hombres con tasa de Elector algo mayor que Mujeres (58% vs 48%) —
+  no se investigó si es un efecto de composición por jerarquía/antigüedad
+  (variable de confusión posible, queda anotado para revisión futura).
+- Facultad: "Otra / Sin facultad" tiene la mayor tasa de Elector (58%) de
+  las 6 categorías — contraintuitivo dado que agrupa el peor dato de
+  facultad, posiblemente explicado por composición de jerarquía distinta
+  en ese grupo (no investigado en esta pasada).
+- Edad (Jornada): mismo patrón monótono que jerarquía (35% en <35 años →
+  88% en 65+) — coherente con que ambas correlacionan con antigüedad.
+
+**Bug de matplotlib encontrado y corregido (relevante para cualquier script
+futuro que reuse el patrón de fondo compartido):** al construir el fondo
+compartido (`_background.png`) con 3 llamados a `imshow` (foto + gradiente,
+ambos a extent completo `[0,1,0,1]`, y el logo a un extent chico en la
+esquina), sin fijar `ax.set_xlim`/`ax.set_ylim` explícitamente, matplotlib
+reencuadra automáticamente la vista al extent del **último** `imshow` (el
+logo) — el resultado es un logo gigante tapando toda la diapo, con la foto y
+el degradado invisibles (recortados fuera de vista). Se reprodujo el bug de
+forma aislada y se confirmó el fix: agregar `ax_bg.set_xlim(0, 1);
+ax_bg.set_ylim(0, 1)` después de los 3 `imshow` y antes de `axis("off")`.
+Aplicado en `generar_diapo_perfil_electores.py`. **Pendiente**: los scripts
+más viejos (`generar_diapo_participacion_facultad.py` y otros en P1/P3) no
+tienen este fix — no fallan hoy porque su `_background.png` ya está cacheado
+en disco de una corrida previa (el `if not os.path.exists(SHARED_BG)` salta
+la regeneración), pero **fallarían con el mismo bug si alguna vez se borra
+ese archivo y se regenera desde cero** con la versión actual de matplotlib.
+No se tocaron esos scripts en esta pasada (fuera de alcance del pedido).
+
+---
+
+## D35 — Rotación Docente (punto inicial vs. Planeación 2026)
+
+Pedido de la contraparte (vía el usuario, 2026-09-14): entender la rotación
+del universo histórico de docentes — quiénes siguen en la planta y quiénes
+no, comparando dos puntos en el tiempo. Construido en `products/
+rotacion_docente/` — ETL en `etl/generar_tag_rotacion.py` →
+`analisis.universo_rotacion` (1.144 filas), diapositivas en `slides/
+generar_diapo_rotacion.py` → `DIAPO_rotacion_docente.pptx` (7 diapositivas).
+
+**Punto inicial**: `fecha_ingreso` + `fecha_jerarquizacion` de
+`analisis.universo_base` (mismo mecanismo confirmado/estimado de D33).
+**Punto de corte**: `Planeación docente- Docentes planta + honorarios 2026
+(1).xlsx` (dejado por el usuario en la raíz del repo) — 1.393 filas,
+`RUT_PROFESOR`/`NOMBRE COMPLETO`/`NIVEL_PROF`, se entiende como snapshot
+vigente de dotación.
+
+**Universo y supuestos (confirmados con el usuario):**
+- Solo los 1.144 históricos — se **excluyen 539 "altas nuevas"** del
+  archivo 2026 que no están en `universo_base` (sin punto inicial, no se
+  puede medir rotación para ellos — "si tenemos los dos datos entonces no
+  son bajas").
+- Los 290 docentes históricos que NO aparecen en el archivo 2026 se
+  **asumen baja confirmada**, sin filtro adicional (no verificable por otra
+  vía con los datos disponibles).
+- Se descartó `universo_base.fecha_retiro` como señal de baja: **503 de los
+  854 docentes que SÍ siguen en el plan 2026 también tienen esa columna
+  poblada** — refleja fin de un contrato/período puntual (común en
+  Honorario con renovación semestral), no separación real. El archivo 2026
+  es la única fuente confiable para el punto de corte.
+- Se investigó un segundo archivo (`_Historial Jerarquización_2020_2026.xlsx`)
+  como fuente adicional de punto inicial — descartado por el usuario, la
+  ganancia de cobertura era modesta (+14 sobre 290 posibles bajas, +8 sobre
+  854 activos) frente a la complejidad de incorporarlo (RUT con dígito
+  verificador, múltiples eventos por RUT, normalización de texto).
+
+**Criterio de tipo de contrato — `tipo_contrato_rotacion`** (indicación
+explícita del usuario): a quienes siguen activos se los reclasifica por su
+contrato **final** (`NIVEL_PROF` 2026), no el histórico — "entender a los
+que transitan bajo el estado final resultante". A quienes se dan de baja,
+sin estado final conocido, se mantiene el de origen. Esto significa que los
+73 docentes que cambiaron de régimen (59 Jornada→Honorario, 14
+Honorario→Jornada) quedan contados en su categoría NUEVA en el análisis
+general, y además tienen su propia diapositiva de deep-dive aparte.
+
+**Resultados:**
+- Tasa de baja general: 25.3% (290/1.144). Por contrato final: 18% Jornada
+  vs 33% Honorario — casi el doble, coherente con la naturaleza de
+  renovación semestral de Honorario.
+- Por jerarquía: NO monótono con el rango — la línea Regular tiene baja
+  consistentemente baja (8-10%), pero Titular Docente tiene 28% (2da tasa
+  más alta) — hallazgo a conversar con la contraparte, posible señal de
+  jubilación al llegar al rango máximo de esa línea, no distinguible del
+  motivo con los datos disponibles.
+- Por facultad: "Otra / Sin facultad" tiene la tasa más alta (32%, mismo
+  caveat de D32 sobre esta categoría mixta); entre las 5 reales, Educación
+  la más alta (26%) y Economía/Gob./Com. la más baja (14%).
+- Por antigüedad al corte: patrón monótono esperado, 22% (0-4 años) → 14%
+  (20+ años).
+- Transición de régimen: 73 docentes activos cambiaron de contrato sin
+  darse de baja, mayoritariamente Jornada→Honorario (59 vs 14, 4.2x),
+  escalafón mayoritariamente Docente (55/73).
+
+**Diapositiva de metodología** (agregada a pedido explícito de la
+contraparte, para "reforzar las explicaciones" y que se entienda cómo se
+construyó el dato): diagrama de línea de tiempo simple con Punto Inicial
+(círculo) → Punto de Corte 2026 (línea punteada) → 2 rutas divergentes,
+Activo (flecha que continúa) y Baja (línea que se corta con una X) — nombra
+explícitamente ambos archivos fuente. Nota de implementación: el punto
+donde las 2 ramas se separan del corte se deliberadamente alejó
+horizontalmente (`x_kink = x_corte + 0.16`) para que las líneas no crucen
+por encima del texto del corte — con un offset chico se veían pisadas.
+
+**Tarea aparte**: CSV con nombre + RUT (solo esas 2 columnas, sin la
+columna de dirección de transición) de los 73 transicionados, exportado a
+`transiciones_jornada_honorario.csv`.
+
+**Bug encontrado y corregido en esta pasada**: un bullet calculaba
+"11 veces más frecuente" para la razón 59/14 — estaba hardcodeado a mano en
+vez de calculado (59/14≈4.2x). Se corrigió a un cálculo real
+(`n_jh/n_hj`). Sirve de recordatorio: cualquier cifra en un bullet debe
+salir de una variable calculada, nunca escribirse a mano.
+
+**Actualización 2026-09-14 (2) — reordenamiento y deep-dive de
+transicionados**, a pedido explícito del usuario tras revisar el borrador:
+- **Metodología pasa a ser la diapositiva 1** (antes iba después de la
+  portada) — "que entremos explicando cómo armamos el índice de rotación",
+  para que la contraparte entienda el mecanismo antes de ver resultados.
+- El desglose de escalafón (Docente/Regular) de los 73 transicionados,
+  que vivía como 2do panel de la diapositiva de Transición de Régimen, se
+  sacó de ahí y se convirtió en su propia diapositiva (**8, nueva**: Perfil
+  de los Transicionados), junto con sexo y facultad. Se evaluó si convenía
+  desagregar más (las 8 categorías completas de jerarquía, o cruzar por
+  dirección de transición) — **no es viable**: con N°=73 (59/14 por
+  dirección), las 8 categorías completas de jerarquía dejan celdas de 1-14
+  casos, y cualquier cruce con dirección deja celdas de 0-3. Se optó por
+  un **descriptivo puro, sin prueba t** (base insuficiente para
+  significancia), mostrando composición nada más — mismo criterio que el
+  proyecto ya usa para grupos chicos (ej. Instructor Regular, N°=14, en la
+  diapositiva de jerarquía).
+- La diapositiva de Transición de Régimen quedó con un solo panel (conteo
+  por dirección), más grande y centrado, sin el panel de escalafón.
+
+Deck final: **8 diapositivas** (antes 7): Metodología, Portada, Contrato,
+Jerarquía, Facultad, Antigüedad, Transición, Perfil de Transicionados.
+
+**Actualización 2026-09-24 — apuntes de la contraparte por diapositiva.**
+Cambios aplicados:
+- **Universo/Índice/Hallazgos, nueva diapositiva 1**: mismo patrón visual
+  que `uih_bN` de P1 (`products/p1_planta/slides_estructura.py`,
+  `UcenSlideKit.caja_universo_indice_hallazgos`) — reimplementado acá como
+  `_caja_uih()` porque este script usa su propio andamiaje standalone, no
+  `UcenSlideKit`. Columna Universo describe cómo se llega de los 1.144
+  históricos a los 854 activos/290 baja (y a los 73 transicionados);
+  Índice y Hallazgos quedan con placeholder ("Pendiente") a pedido
+  explícito ("no dejemos nada aún").
+- **Tabla de pruebas de significancia, nueva diapositiva 3** (después de
+  Metodología, que pasó a ser la 2): tabla nativa de pptx (no imagen),
+  header (Corte/Variable, N, Estadístico, p-valor, ¿Significativa?) + 4
+  filas vacías con "—", todo placeholder — a pedido explícito, se llena
+  cuando se corran las pruebas t por corte.
+- **Metodología pasa a diapositiva 2** (antes iba después de la portada) —
+  "que entremos explicando cómo armamos el índice de rotación" antes de
+  mostrar resultados.
+- **Tipografía uniforme**: Calibri en todo el deck — 13pt blanco para
+  título de gráfico y punteos, 11pt gris (`#A9B7C6`) para subtítulos, título
+  de diapositiva sin cambios (18-20pt bold blanco). Verificado leyendo las
+  propiedades de cada `run` con python-pptx (no hay LibreOffice disponible
+  en el entorno para renderizar la diapositiva completa a imagen — los
+  gráficos matplotlib sí se pudieron verificar visualmente como siempre,
+  pero el texto nativo de pptx —título, subtítulo, punteos, la tabla y la
+  caja UIH— se verificó por propiedades de fuente, no visualmente).
+- **Punteos reescritos como frases breves** en las 10 diapositivas — antes
+  versaban como párrafos explicativos con matices y advertencias; ahora
+  son frases cortas que señalan el dato ("Honorario: 33% de baja vs 18% en
+  Jornada"), sin la explicación larga — el detalle completo sigue viviendo
+  en esta entrada de D35, no en la diapositiva.
+
+Deck final: **10 diapositivas**: UIH, Metodología, Tabla de Significancia
+(vacía), Portada, Contrato, Jerarquía, Facultad, Antigüedad, Transición,
+Perfil de Transicionados.
+
+**Nota operativa**: Docker Desktop y el contenedor `ucen_db` estaban
+detenidos al retomar esta sesión (10 días desde el último uso) — se
+reiniciaron sin incidentes (`Start-Process Docker Desktop.exe`, esperar
+~10s, `docker exec ucen_db pg_isready`). Dejar anotado por si se repite en
+sesiones futuras tras una pausa larga.
+
+---
+
+## Catálogo de visualizaciones P1 confirmadas
+
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
 commitee** se registra acá con su fuente y filtros — para no tener que releer el
 script cada vez que alguien pregunte "¿de dónde sale este número?". Todas comparten
@@ -1002,3 +1420,5 @@ valor a una sola muestra.
 | 2026-08-04 (5) | Compilado el consolidado `P1_presentacion.pptx` a 39 diapositivas: (a) intro de `distribucion_horas/` excluida del ensamblado (redundante con el título de cada diapositiva), sus 2 diapositivas restantes (dona, sexo/escalafón) concatenadas al final de Bloque II a pedido explícito de la contraparte; (b) creado Bloque IV completo (Evaluación de Desempeño Docente, D28/D29) con su diapositiva Universo/Índice/Hallazgos (`uih_b4`) y las 3 visualizaciones EDD (`edd_sexo/`, `edd_jerarquia/`, `edd_facultad/`, cada una con prueba t); (c) actualizado `grid_b3` (grilla de apertura Bloque III+IV) para reflejar contenido real de Bloque IV en vez del placeholder "sin avance aún". Estados del catálogo #18-21 pasados a ✅ Aprobado. |
 | 2026-08-04 (6) | Agregada D31 y 3 visualizaciones de participación en instancias formativas al catálogo (`participacion_formacion_sexo/`, `participacion_formacion_jerarquia/`, `participacion_formacion_edad/`), sobre `analisis.universo_formados_p3` (confirmado que, a pesar del nombre, no está filtrada a apto_p3 — trae toda la participación del universo Jornada). Métrica: tasa de docentes con ≥1 instancia formativa, sin necesitar "grupo predominante" porque cada docente aporta 1 sola fila desde universo_base. Resultados: sexo significativo (p=0.0016, Mujeres 74.4% vs Hombres 62.4%), jerarquía/escalafón muy significativo (p<0.0001, Docente 76.5% vs Regular 48.9%), edad no significativa (p=0.0724, 47.4 vs 49.4 años). |
 | 2026-08-04 (7) | Compilados los 3 temas de participación formativa al consolidado `P1_presentacion.pptx`, ahora 44 diapositivas: concatenados a continuación de EDD en Bloque IV, a pedido explícito de la contraparte (no es EDD en sentido estricto). La diapositiva de prueba t de `participacion_formacion_edad/` se excluyó por no ser significativa (p=0.0724) — mismo criterio que `aprobacion_reprobacion_antiguedad_4tramos/3tramos` (se mantiene el descriptivo, se saca solo la prueba t), decidido explícitamente por el usuario entre los 2 precedentes existentes en el proyecto (el otro precedente, usado en `jerarquia_dificultad/`, es sacar el tema completo). Actualizados `grid_b3` y `uih_b4` en `slides_estructura.py` para reflejar que Bloque IV ahora cubre EDD + participación formativa. Estados del catálogo #22-24 pasados a ✅ Aprobado. |
+| 2026-08-12 | Agregada D32: volver sobre **P3** (no P1) a pedido de la contraparte — desagregado por facultad de participación en instancias formativas, 2 diapositivas (Jornada, Honorario), `generar_diapo_participacion_facultad.py`. Universo = todos los formados (no solo Aptos P3, mismo criterio D31). Hallazgo de calidad de datos: `unidad_facultad` en `universo_base` trae las 5 facultades académicas duplicadas bajo dos formatos de texto distintos (ya había una función `_fac()` en `generar_presentacion_v2.py` que lo resolvía para otras diapositivas; se reusó el mismo criterio). Se agregó una 6ta categoría "Otra / Sin facultad" agrupando 549 de 1.144 docentes sin una de las 5 facultades reales. Restaurado además el heading "## Catálogo de visualizaciones P1 confirmadas", que se había perdido en una edición anterior (la tabla seguía intacta, solo faltaba el título). |
+| 2026-09-13 | Reescrita `participacion_facultad` a pedido de la contraparte (rechazó la versión de D32): ahora 2 diapositivas simples, 100% apiladas Formados/No formados, por año (2023-2025) y por facultad, sin desagregar por tipo de formación ni por tipo de contrato (Jornada+Honorario combinados). Agregada D33: tema nuevo, tag Elector/Elegible para elección de Asamblea General, `products/elecciones_asamblea/etl/generar_tag_electores.py` → `analisis.universo_electores`. Calculado `es_elector` (Art. 2°) sobre los 1.144 docentes con 3 estados Sí/No/Sin dato (Honorario mayormente Sin dato por falta de `fecha_ingreso`, 507/520). `es_elegible` (Art. 4°) queda pendiente — el mapeo de "las 2 jerarquías más altas" no está confirmado con la contraparte; se dejó el componente de antigüedad (`cumple_antiguedad_8anios`) calculado como pieza reutilizable. |

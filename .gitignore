@@ -12,6 +12,13 @@ archive/legacy_918/NOTEBOOKS/*.pptx
 # ── Outputs generados (reproducibles con los scripts) ─────────────────────────
 outputs/
 **/dark_slides_v3/
+**/dark_slides/
+
+# ── Insumos con PII sueltos en la raíz (RUT/nombre de +1000 personas) — se
+#    entregan por Drive, nunca a git (mismo criterio que data/raw/) ───────────
+/Planeación docente- Docentes planta + honorarios 2026*.xlsx
+/_Historial Jerarquización_2020_2026*.xlsx
+/DOCUMENTO EXPLICATIVO DE CATEGORIA VARIAS*.docx
 
 # ── Caché de fondo/logo UCEN (shared/pptx_helpers.py) — igual en cada carpeta,
 #    se regenera desde assets/Fondotipop.pptx, no vale la pena versionarlo ─────
