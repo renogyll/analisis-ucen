@@ -77,67 +77,75 @@ tramo_mejor = tab["pct_aprobacion"].idxmax()
 tramo_peor = tab["pct_aprobacion"].idxmin()
 
 
+
+# ── Revisión 2026-09-26 (obs. 2 y 7) ──────────────────────────────────────────────────
+# Misma medida que sexo/escalafón: % de aprobación promedio POR DOCENTE (no por calificación),
+# con intervalo de confianza, y una prueba que antes no se mostraba: ANOVA de un factor entre
+# los 4 tramos (Kruskal-Wallis como verificación no paramétrica, en notas). Respalda la frase
+# "por antigüedad no hay diferencias significativas" del Bloque IV.
+from scipy import stats
+from pptx_helpers import prueba_dict
+
+por_docente = (raw.groupby(["rut_docente", "tramo_antiguedad"])["aprueba"].mean().mul(100)
+               .reset_index(name="pct_aprob"))
+series = {t: por_docente.loc[por_docente["tramo_antiguedad"] == t, "pct_aprob"] for t in TRAMOS_ORD}
+F_STAT, P_VAL = stats.f_oneway(*series.values())
+P_KRUSKAL = stats.kruskal(*series.values()).pvalue
+PRUEBAS = [prueba_dict("IV · Aprobación", "% aprobación por docente según tramo de antigüedad (4 tramos)",
+                       " / ".join(f"{t}: {s.mean():.1f}%" for t, s in series.items()),
+                       len(por_docente), P_VAL, prueba="ANOVA de un factor")]
+print({t: round(s.mean(), 1) for t, s in series.items()}, f"ANOVA p={P_VAL:.4f}  Kruskal p={P_KRUSKAL:.4f}")
+
+
 def agregar(prs):
-    """Construye el gráfico y agrega la diapositiva a `prs`."""
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
+    medias = [series[t].mean() for t in TRAMOS_ORD]
+    cis = [stats.t.ppf(0.975, len(series[t]) - 1) * series[t].std(ddof=1) / np.sqrt(len(series[t]))
+           for t in TRAMOS_ORD]
 
     fig = kit.new_chart_fig()
-    ax = kit.chart_axes(fig, top=0.15)   # deja espacio arriba para la leyenda
-
+    ax = kit.chart_axes(fig, top=0.14)
     x = np.arange(len(TRAMOS_ORD))
-    w = 0.34
-    bars_a = ax.bar(x - w/2, tab["pct_aprobacion"], width=w, color=COL_APROBACION,
-                     alpha=0.92, edgecolor="none", label="% Aprobación")
-    bars_r = ax.bar(x + w/2, tab["pct_reprobacion"], width=w, color=COL_REPROBACION,
-                     alpha=0.92, edgecolor="none", label="% Reprobación")
-
-    stroke = [pe.withStroke(linewidth=1.8, foreground="#0A0F18")]
-    for bars, color in [(bars_a, COL_APROBACION), (bars_r, COL_REPROBACION)]:
-        for b in bars:
-            h = b.get_height()
-            if pd.notna(h):
-                ax.text(b.get_x() + b.get_width()/2, h + 1.5, f"{h:.0f}%",
-                         ha="center", va="bottom", fontsize=9, fontweight="bold",
-                         color=color, path_effects=stroke, zorder=6)
-    for xi, n in zip(x, tab["n_docentes"]):
-        if pd.notna(n):
-            ax.text(xi, 100, f"N°={int(n)}", ha="center", va="bottom",
-                    fontsize=8, color="#8A97A3")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(TRAMOS_ORD, fontsize=11, color="white")
+    ax.bar(x, medias, width=0.5, color=COL_APROBACION, alpha=0.92, edgecolor="none",
+           yerr=cis, capsize=6, error_kw={"ecolor": "#DDDDDD", "linewidth": 1.3})
+    stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
+    for xi, m, ci, t in zip(x, medias, cis, TRAMOS_ORD):
+        ax.text(xi, m + ci + 2.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=12,
+                fontweight="bold", color="white", path_effects=stroke, zorder=6)
+        ax.text(xi, 8, f"N°={len(series[t])} docentes", ha="center", va="bottom", fontsize=8.5, color="white")
+    sig = "significativa" if P_VAL < 0.05 else "no significativa"
+    ax.text(0.5, 0.99, f"ANOVA de un factor entre los 4 tramos:  F = {F_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
+            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
+            fontsize=9.5, color="#F2D675", fontweight="bold")
+    ax.set_xticks(x); ax.set_xticklabels(TRAMOS_ORD, fontsize=11, color="white")
     ax.set_xlabel("Tramo de antigüedad en la institución (años)", color="#AAAAAA", fontsize=9)
-    ax.set_ylabel("% de calificaciones", color="#AAAAAA", fontsize=9)
-    ax.set_ylim(0, 112)
-    ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.tick_params(axis="x", length=0, pad=8)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
+    ax.set_ylabel("% de aprobación promedio por docente", color="#AAAAAA", fontsize=9)
+    ax.set_ylim(0, 112); ax.set_yticks([0, 20, 40, 60, 80, 100])
+    ax.tick_params(axis="x", length=0, pad=8); ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
     for sp in ax.spines.values():
         sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=9, framealpha=0.22, labelcolor="white",
-               facecolor="#101820", edgecolor="#444", loc="upper center",
-               bbox_to_anchor=(0.5, 0.99), ncol=2)
-
+    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5); ax.set_axisbelow(True)
     chart_path = kit.save_chart(fig, "aprobacion_reprobacion_antiguedad_4tramos_chart.png")
 
+    mejor, peor = max(series, key=lambda t: series[t].mean()), min(series, key=lambda t: series[t].mean())
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "% de Aprobación y Reprobación según Antigüedad del Docente (4 tramos) — Jornada")
-    kit.subtitulo(sl,
-        f"Universo: {N_JORNADA} docentes Jornada  ·  "
-        f"N°={int(tab['n_docentes'].sum())} con calificaciones y antigüedad registrada "
-        f"({N_SIN_ANTIGUEDAD_DOC} excluidos sin dato de antigüedad)")
+    kit.title(sl, "% de aprobación según antigüedad del docente — Docentes Jornada")
+    kit.subtitulo(sl, f"% de aprobación promedio por docente  ·  N°={len(por_docente)} docentes con calificaciones "
+                      f"y antigüedad registrada ({N_SIN_ANTIGUEDAD_DOC} sin dato de antigüedad)  ·  "
+                      f"barras = intervalo de confianza 95%")
     kit.punteo_numerado(sl, [
-        f"El tramo {tramo_mejor} tiene el mayor % de aprobación "
-        f"({tab.loc[tramo_mejor,'pct_aprobacion']:.1f}%, N°={int(tab.loc[tramo_mejor,'n_docentes'])} docentes).",
-        f"El tramo {tramo_peor} tiene el menor % de aprobación "
-        f"({tab.loc[tramo_peor,'pct_aprobacion']:.1f}%, N°={int(tab.loc[tramo_peor,'n_docentes'])} docentes).",
-    ])
+        f"El % de aprobación va de {series[peor].mean():.1f}% (tramo {peor}) a {series[mejor].mean():.1f}% "
+        f"(tramo {mejor}).",
+        f"El ANOVA entre los 4 tramos da p={P_VAL:.4f}: "
+        + ("la diferencia es estadísticamente significativa al 5%."
+           if P_VAL < 0.05 else "la antigüedad no se asocia de forma significativa con el % de aprobación."),
+    ], fs=12)
+    kit.notas(sl,
+        f"Verificación no paramétrica (Kruskal-Wallis): p={P_KRUSKAL:.4f}. El tramo 15+ tiene pocos docentes "
+        f"(N°={len(series['15+'])}) y un intervalo amplio. Tramos de antigüedad desde la fecha de ingreso (DOTACION).")
     return sl
 
 

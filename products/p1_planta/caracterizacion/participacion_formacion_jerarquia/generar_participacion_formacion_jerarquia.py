@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
 from config import OUTPUTS
-from pptx_helpers import UcenSlideKit
+from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict
 
 import numpy as np
 import pandas as pd
@@ -86,6 +86,9 @@ con_jer["es_regular"] = con_jer["jerarquia"].str.contains("REGULAR").astype(int)
 docente_g = con_jer.loc[con_jer["es_regular"] == 0, "participo"]
 regular_g = con_jer.loc[con_jer["es_regular"] == 1, "participo"]
 T_STAT, P_VAL = stats.ttest_ind(regular_g, docente_g, equal_var=False)   # Welch
+PRUEBAS = [prueba_dict("II · Participación", "Participación: escalafón Regular vs Docente",
+                       f"{100 * regular_g.mean():.1f}% vs {100 * docente_g.mean():.1f}%",
+                       len(regular_g) + len(docente_g), P_VAL)]
 
 print(f"\nPrueba t (escalafón Regular vs Docente, participó=1/no=0): "
       f"Regular N°={len(regular_g)} tasa={100*regular_g.mean():.1f}%  "
@@ -116,7 +119,7 @@ def agregar(prs):
         marca = " ⚠" if n < N_MIN_CONFIABLE else ""
         ax.text(v + 1.5, i, f"{v:.1f}%   (N°={int(n)}{marca})",
                 ha="left", va="center", fontsize=9.5, fontweight="bold",
-                color=colors[i], path_effects=stroke, zorder=6)
+                color="white", path_effects=stroke, zorder=6)
 
     ax.set_yticks(y)
     ax.set_yticklabels([CAT_LABEL[c] for c in CAT_DISPLAY], fontsize=10, color="white")
@@ -135,7 +138,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Participación en Instancias Formativas según Jerarquía — Jornada")
+    kit.title(sl, "Participación en instancias formativas según jerarquía — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_JORNADA} docentes Jornada  ·  "
         f"N°={len(con_jer)} con jerarquía válida")
@@ -156,8 +159,10 @@ def agregar(prs):
             f"{N_MIN_CONFIABLE} casos — su tasa no es representativa, se marca con textura "
             f"en el gráfico."
         )
-    bullets.append("Ver prueba de significancia por escalafón (Docente/Regular) en la siguiente diapositiva.")
-    kit.punteo_numerado(sl, bullets)
+    # Revisión 2026-09-26 (obs. 21): la prueba por escalafón va en esta misma diapositiva.
+    bullets.insert(1, f"Por escalafón: Docente {100 * docente_g.mean():.1f}% vs Regular "
+                      f"{100 * regular_g.mean():.1f}%. " + lectura_p(P_VAL))
+    kit.punteo_numerado(sl, bullets, fs=12)
     return sl
 
 

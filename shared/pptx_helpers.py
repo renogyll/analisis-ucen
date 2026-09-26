@@ -53,11 +53,13 @@ Uso típico (un script por sub-tema en products/<producto>/<carpeta>/<subtema>/)
     prs.save(OUT_PPTX)
 """
 import os
+import re
 import zipfile
 from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.text as _mtext
 from PIL import Image as PILImage
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
@@ -71,6 +73,54 @@ sys.path.insert(0, str(_ROOT))
 from config import ASSETS
 
 FONDOTIPO = os.path.join(ASSETS, "Fondotipop.pptx")
+
+
+# ── Formato numérico chileno (2026-09-26, revisión de coherencia P1, obs. 15-16) ──────
+# Los scripts formatean números al estilo inglés (f"{x:.1f}", f"{n:,}"). En vez de tocar
+# cada f-string, todo texto que pasa por el kit (títulos, bajadas, punteos, notas, franjas)
+# y todo texto de los gráficos matplotlib se convierte aquí: coma decimal, punto de miles,
+# y "p=0.0000" (imposible) pasa a "p<0,0001". Regla para los scripts: escribir SIEMPRE en
+# formato inglés (0.72, 134,640); nunca escribir a mano "0,72" o "134.640", porque el
+# punto de miles se leería como decimal.
+_RE_MILES = re.compile(r"(?<=\d),(?=\d{3}(?!\d))")
+_RE_DECIMAL = re.compile(r"(?<=\d)\.(?=\d)")
+_RE_P_CERO = re.compile(r"p(\s*)=(\s*)0[.,]0000\b")
+
+
+def formato_cl(s):
+    if not isinstance(s, str) or not any(ch.isdigit() for ch in s):
+        return s
+    s = _RE_P_CERO.sub(lambda m: f"p{m.group(1)}<{m.group(2)}0.0001", s)
+    s = _RE_MILES.sub("\x00", s)
+    s = _RE_DECIMAL.sub(",", s)
+    return s.replace("\x00", ".")
+
+
+def lectura_p(p, prueba="prueba t de Welch"):
+    """Frase estándar para interpretar un valor p (revisión P1, obs. 5): asociación, no causa;
+    'poco probable que se deba solo al azar' en vez de 'se puede descartar el azar'."""
+    pv = "p<0.0001" if p < 0.0001 else f"p={p:.4f}"
+    if p < 0.05:
+        return (f"La {prueba} da {pv}: la diferencia es estadísticamente significativa al 5% "
+                f"(es poco probable que se deba solo al azar).")
+    return (f"La {prueba} da {pv}: la diferencia no es estadísticamente significativa al 5% "
+            f"(podría deberse al azar).")
+
+
+def prueba_dict(bloque, comparacion, resultado, n, p, prueba="t de Welch"):
+    """Registro de una prueba para la tabla resumen del anexo (revisión P1, obs. 6)."""
+    return dict(bloque=bloque, comparacion=comparacion, resultado=resultado, n=int(n),
+                p=float(p), prueba=prueba)
+
+
+if not getattr(_mtext.Text.set_text, "_formato_cl", False):
+    _set_text_original = _mtext.Text.set_text
+
+    def _set_text_cl(self, s):
+        return _set_text_original(self, formato_cl(s) if isinstance(s, str) else s)
+
+    _set_text_cl._formato_cl = True
+    _mtext.Text.set_text = _set_text_cl
 
 
 class UcenSlideKit:
@@ -245,7 +295,7 @@ class UcenSlideKit:
             color="#FFFFFF", align=PP_ALIGN.LEFT, wrap=True, lspc=0, font_name="Calibri"):
         txb = sl.shapes.add_textbox(Emu(left), Emu(top), Emu(width), Emu(height))
         tf = txb.text_frame; tf.word_wrap = wrap
-        for i, line in enumerate(str(text).split("\n")):
+        for i, line in enumerate(formato_cl(str(text)).split("\n")):
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
             p.alignment = align
             if lspc > 0 and i > 0:
@@ -277,7 +327,7 @@ class UcenSlideKit:
         for i, item in enumerate(items):
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
             p.space_after = Pt(6); p.alignment = PP_ALIGN.LEFT
-            run = p.add_run(); run.text = f"{i + 1}.  {item}"
+            run = p.add_run(); run.text = f"{i + 1}.  {formato_cl(item)}"
             run.font.size = Pt(fs)
             run.font.name = "Calibri"
             run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
@@ -286,7 +336,7 @@ class UcenSlideKit:
         """Notas del orador (no se ven en la diapositiva, solo en modo presentador/al exportar).
         Uso: mover ahí detalle secundario que sobra en la bajada visible (ej. la explicación
         larga de por qué falta un dato, dejando en pantalla solo el N°)."""
-        sl.notes_slide.notes_text_frame.text = text
+        sl.notes_slide.notes_text_frame.text = formato_cl(text)
 
     # ── Layouts estructurales (portada, grillas de bloque, universo/índice/hallazgos) ──
     def portada(self, sl, titulo, subtitulo1, footer_lines, subtitulo2=None):
@@ -339,6 +389,107 @@ class UcenSlideKit:
         pos = [(self.CONTENT_L + pad_x + i * (bw + gap_x), box_t + pad_t) for i in range(3)]
         for (bx, by), (hdr, body) in zip(pos, cajas):
             self._caja_navy(sl, bx, by, bw, bh, hdr, body, fs_header=12, fs_body=10)
+
+    def franjas(self, sl, filas, top=None, fs=9, col_split=0.41):
+        """Formato "franjas" (pedido de la contraparte 2026-09-25): filas horizontales de
+        ancho completo, sin cajas de fondo, letras blancas, separadas por líneas finas.
+        Cada fila = (header, columnas): header a la izquierda (22% del ancho) y 1 o 2
+        columnas de texto a la derecha (`columnas` = lista de 1 o 2 strings; con 2, la
+        primera ocupa `col_split` del ancho total). El alto de cada fila es proporcional
+        a sus líneas estimadas, para que la más cargada no se desborde."""
+        top = top if top is not None else self.POP_T + self.POP_H + int(0.12 * self._IN)
+        bottom = self.BUL_T + self.BUL_H
+        l, w = self.CONTENT_L, self.CONTENT_W
+        col_hdr = int(w * 0.22)
+        pad = 60000
+
+        def _anchos(cols):
+            if len(cols) == 1:
+                return [w - col_hdr]
+            a = int(w * col_split)
+            return [a, w - col_hdr - a]
+
+        def _lineas(text, ancho_emu):
+            chars = max(20, int(ancho_emu / self._IN * 17.5 * 9 / fs))
+            return sum(max(1, -(-len(p) // chars)) for p in str(text).split("\n"))
+
+        pesos = []
+        for hdr, cols in filas:
+            n = max([_lineas(c, a) for c, a in zip(cols, _anchos(cols))] + [_lineas(hdr, col_hdr) * 1.4])
+            pesos.append(n + 1)
+        alturas = [(bottom - top) * p // sum(pesos) for p in pesos]
+
+        def _linea(y):
+            ln = sl.shapes.add_shape(MSO_SHAPE.RECTANGLE, Emu(l), Emu(y), Emu(w), Emu(9000))
+            ln.fill.solid(); ln.fill.fore_color.rgb = RGBColor(90, 140, 190)
+            ln.line.fill.background()
+
+        _linea(top)
+        y = top
+        for (hdr, cols), fh in zip(filas, alturas):
+            self.txt(sl, hdr, l, y + pad, col_hdr - pad, fh - 2 * pad,
+                      fs=12, bold=True, color="#FFFFFF")
+            x = l + col_hdr
+            for c, a in zip(cols, _anchos(cols)):
+                if c:
+                    self.txt(sl, c, x, y + pad, a - pad, fh - 2 * pad, fs=fs, color="#FFFFFF", lspc=2)
+                x += a
+            y += fh
+            _linea(y)
+
+    def franjas_bloques(self, sl, franjas, top=None):
+        """Grilla de apertura en franjas: una fila por bloque, con
+        nombre del bloque | descripción (viñetas) | "Qué vas a ver" (lista numerada).
+        `franjas` = lista de tuplas (header, descripcion_items, que_vas_a_ver_items)."""
+        filas = []
+        for hdr, desc, ver in franjas:
+            c1 = "\n".join(f"•  {d}" for d in desc)
+            c2 = ("Qué vas a ver\n" + "\n".join(f"{k + 1}. {v}" for k, v in enumerate(ver))) if ver else ""
+            filas.append((hdr, [c1, c2]))
+        self.franjas(sl, filas, top=top)
+
+    def franjas_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items):
+        """Universo / Índice / Hallazgos en formato franjas (reemplaza a la caja navy de
+        3 columnas de `caja_universo_indice_hallazgos`). Un índice largo (>5 ítems) se
+        reparte en 2 columnas para no alargar la fila."""
+        numerados = [f"{i + 1}. {it}" for i, it in enumerate(indice_items)]
+        if len(numerados) > 5:
+            mitad = -(-len(numerados) // 2)
+            indice_cols = ["\n".join(numerados[:mitad]), "\n".join(numerados[mitad:])]
+        else:
+            indice_cols = ["\n".join(numerados)]
+        self.franjas(sl, [
+            ("Universo", [universo_txt]),
+            ("Índice", indice_cols),
+            ("Hallazgos", ["\n".join(f"{i + 1}. {it}" for i, it in enumerate(hallazgos_items))]),
+        ], fs=10, col_split=0.39)
+
+    def tabla(self, sl, encabezados, filas, anchos, top=None, fs=9, resaltar=None):
+        """Tabla simple en formato franjas (sin cajas de color): encabezado en negrita,
+        filas en blanco, línea fina entre filas. `anchos` = fracciones del ancho de contenido.
+        `resaltar(i)` -> True pinta la fila i en dorado (ej. pruebas significativas)."""
+        top = top if top is not None else self.POP_T + self.POP_H + int(0.12 * self._IN)
+        bottom = self.BUL_T + self.BUL_H
+        l, w = self.CONTENT_L, self.CONTENT_W
+        n = len(filas) + 1
+        fh = (bottom - top) // n
+        xs = [l + int(w * sum(anchos[:j])) for j in range(len(anchos))]
+        ws = [int(w * a) for a in anchos]
+
+        def _linea(y, alpha_rgb=(90, 140, 190)):
+            ln = sl.shapes.add_shape(MSO_SHAPE.RECTANGLE, Emu(l), Emu(y), Emu(w), Emu(6000))
+            ln.fill.solid(); ln.fill.fore_color.rgb = RGBColor(*alpha_rgb)
+            ln.line.fill.background()
+
+        for x, cw, h in zip(xs, ws, encabezados):
+            self.txt(sl, h, x, top, cw - 30000, fh, fs=fs, bold=True, color="#FFFFFF")
+        _linea(top + fh)
+        for i, fila in enumerate(filas):
+            y = top + (i + 1) * fh
+            color = "#F2D675" if (resaltar and resaltar(i)) else "#FFFFFF"
+            for x, cw, v in zip(xs, ws, fila):
+                self.txt(sl, str(v), x, y + 15000, cw - 30000, fh, fs=fs, color=color)
+            _linea(y + fh, (60, 90, 125))
 
     def caja_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items):
         """1 caja navy de ancho completo, 3 columnas: Universo (párrafo) | Índice (lista) | Hallazgos (lista)."""

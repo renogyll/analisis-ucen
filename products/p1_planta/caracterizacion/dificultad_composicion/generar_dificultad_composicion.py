@@ -73,32 +73,47 @@ N_ASIG_TOTAL = int(rango["n_asignaturas_total"].sum())
 N_DOCENTES_TOTAL = int(tab["n_docentes"].sum())
 
 
+# Formato franjas + explicación de cada grupo antes de los N° (2026-09-25, anotaciones de
+# la contraparte: "Baja aprobación / Aprobación media / Aprobación alta, explicar en
+# detalle qué significa cada ítem, antes de dejar los N°").
+NOMBRES = {"Baja": "Baja aprobación", "Media": "Aprobación media", "Alta": "Aprobación alta"}
+SIGNIFICADO = {
+    "Baja": ("Tercio de asignaturas donde históricamente reprueban más alumnos. Son los "
+             "cursos más exigentes de la universidad, para cualquier docente que los dicte."),
+    "Media": ("Tercio intermedio: asignaturas donde la gran mayoría aprueba, pero con una "
+              "reprobación todavía visible. Representan la exigencia típica de la universidad."),
+    "Alta": ("Tercio de asignaturas donde prácticamente todos los alumnos aprueban. Son los "
+             "cursos de menor exigencia relativa en términos de aprobación."),
+}
+
+
 def agregar(prs):
-    """Construye la diapositiva (3 cajas, sin gráfico) y la agrega a `prs`."""
+    """Construye la diapositiva (franjas, sin gráfico) y la agrega a `prs`."""
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
 
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
-    kit.title(sl, "Composición de los Grupos de Dificultad de Asignaturas — Jornada")
+    kit.title(sl, "Composición de los grupos de dificultad de asignaturas — Docentes Jornada")
     kit.subtitulo(sl,
-        f"Universo: {N_JORNADA} docentes Jornada  ·  {N_ASIG_TOTAL} asignaturas clasificadas "
-        f"(terciles de % aprobación histórico institucional)")
+        f"Cada una de las {N_ASIG_TOTAL:,} asignaturas se clasifica según su % de aprobación "
+        f"histórico (todos los docentes y contratos, 2023-2025), en 3 grupos de igual tamaño")
 
-    cajas = []
+    filas = []
     for g in GRUPOS_ORD:
         r, t = rango.loc[g], tab.loc[g]
-        header = f"{g} aprobación histórica"
-        body = (
-            f"Rango institucional: {r['pct_min']:.1f}% – {r['pct_max']:.1f}% de aprobación "
-            f"histórica (todos los docentes, todos los contratos)\n\n"
-            f"• N° asignaturas (Jornada): {int(t['n_asignaturas'])}\n"
-            f"• N° calificaciones (Jornada): {int(t['n_calificaciones']):,}\n"
-            f"• N° docentes Jornada: {int(t['n_docentes'])}\n"
-            f"• % aprobación en Jornada: {t['pct_aprobacion']:.1f}%"
-        )
-        cajas.append((header, body))
-    kit.caja_grid_1x3(sl, cajas)
+        significado = (
+            f"Qué significa\n{SIGNIFICADO[g]}\n"
+            f"Rango: entre {r['pct_min']:.1f}% y {r['pct_max']:.1f}% de aprobación histórica "
+            f"de la asignatura.")
+        cifras = (
+            f"En cifras — docentes Jornada\n"
+            f"•  N° asignaturas: {int(t['n_asignaturas'])}\n"
+            f"•  N° calificaciones: {int(t['n_calificaciones']):,}\n"
+            f"•  N° docentes: {int(t['n_docentes'])}\n"
+            f"•  % de aprobación: {t['pct_aprobacion']:.1f}%")
+        filas.append((NOMBRES[g], [significado, cifras]))
+    kit.franjas(sl, filas, fs=10, col_split=0.46)
 
     kit.notas(sl,
         "Metodología completa en docs/DECISIONES_METODOLOGICAS.md D27. El % histórico se "

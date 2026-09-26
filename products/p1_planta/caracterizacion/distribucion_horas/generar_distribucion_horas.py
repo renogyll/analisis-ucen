@@ -232,7 +232,7 @@ def agregar_donut(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Composición de la Jornada (Horas Semanales) — Docentes de Jornada")
+    kit.title(sl, "Composición de la jornada (horas semanales) — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_JORNADA} docentes Jornada  ·  "
         f"{resumen['Completa']} con jornada completa (44h), {resumen['Parcial']} parcial")
@@ -254,12 +254,25 @@ def agregar_donut(prs):
 
 def agregar_sexo_jerarquia(prs):
     """Diapositiva 3: % jornada completa/parcial por sexo y por escalafón, 2 paneles."""
+    return _slide_sexo(prs, con_escalafon=True)
+
+
+def agregar_sexo(prs):
+    """Variante solo por sexo, 1 panel — la que usa el consolidado desde 2026-09-25
+    (anotaciones de la contraparte: "eliminemos el análisis de escalafón, dejemos solo sexo")."""
+    return _slide_sexo(prs, con_escalafon=False)
+
+
+def _slide_sexo(prs, con_escalafon):
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
 
     fig = kit.new_chart_fig()
-    ax1 = fig.add_axes([0.09, 0.20, 0.38, 0.68])
-    ax2 = fig.add_axes([0.58, 0.20, 0.38, 0.68])
+    if con_escalafon:
+        ax1 = fig.add_axes([0.09, 0.20, 0.38, 0.68])
+        ax2 = fig.add_axes([0.58, 0.20, 0.38, 0.68])
+    else:
+        ax1 = fig.add_axes([0.31, 0.20, 0.38, 0.68])
 
     stroke = [pe.withStroke(linewidth=1.8, foreground="#0A0F18")]
 
@@ -291,8 +304,9 @@ def agregar_sexo_jerarquia(prs):
         ax.set_axisbelow(True)
         ax.set_title(titulo, color="#DDDDDD", fontsize=9.5, pad=8)
 
-    _panel(ax1, tab_sexo, n_sexo, ["Hombre", "Mujer"], "Por sexo")
-    _panel(ax2, tab_escalafon, n_escalafon, ["Docente", "Regular"], "Por escalafón")
+    _panel(ax1, tab_sexo, n_sexo, ["Hombre", "Mujer"], "Por sexo" if con_escalafon else "")
+    if con_escalafon:
+        _panel(ax2, tab_escalafon, n_escalafon, ["Docente", "Regular"], "Por escalafón")
     ax1.set_ylabel("% de docentes", color="#AAAAAA", fontsize=9)
 
     handles, lbls = ax1.get_legend_handles_labels()
@@ -300,28 +314,38 @@ def agregar_sexo_jerarquia(prs):
                facecolor="#101820", edgecolor="#444", loc="upper center",
                bbox_to_anchor=(0.5, 0.99), ncol=2)
 
-    chart_path = kit.save_chart(fig, "distribucion_horas_sexo_jerarquia_chart.png")
+    chart_path = kit.save_chart(fig, "distribucion_horas_sexo_jerarquia_chart.png" if con_escalafon
+                                else "distribucion_horas_sexo_chart.png")
 
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Jornada Completa/Parcial según Sexo y Escalafón — Docentes de Jornada")
-    kit.subtitulo(sl,
-        f"N°={N_CON_DATO} docentes Jornada con horas de dotación válidas  ·  "
-        f"escalafón sobre {len(con_dato_jer)} con jerarquía válida")
-    kit.notas(sl,
-        f"Excluidos de este gráfico los {N_SIN_HORAS_FIJAS} docentes sin horas válidas "
-        f"(Sin dato/Variable) y, en el panel de escalafón, {N_SIN_JERARQUIA_VALIDA} "
-        f"adicionales sin jerarquía válida. Escalafón = colapso Docente/Regular, mismo "
-        f"criterio que el resto de P1 (D25/D27).")
-    kit.punteo_numerado(sl, [
+    punteo = [
         f"Los hombres tienen jornada completa con más frecuencia que las mujeres "
         f"({tab_sexo.loc['HOMBRE','Completa']:.1f}% vs {tab_sexo.loc['MUJER','Completa']:.1f}%) "
         f"— las mujeres concentran más jornada parcial.",
-        f"El escalafón Regular tiene jornada completa con más frecuencia que el escalafón "
-        f"Docente ({tab_escalafon.loc['Regular','Completa']:.1f}% vs "
-        f"{tab_escalafon.loc['Docente','Completa']:.1f}%).",
-    ])
+    ]
+    if con_escalafon:
+        kit.title(sl, "Jornada Completa/Parcial según Sexo y Escalafón — Docentes de Jornada")
+        kit.subtitulo(sl,
+            f"N°={N_CON_DATO} docentes Jornada con horas de dotación válidas  ·  "
+            f"escalafón sobre {len(con_dato_jer)} con jerarquía válida")
+        kit.notas(sl,
+            f"Excluidos de este gráfico los {N_SIN_HORAS_FIJAS} docentes sin horas válidas "
+            f"(Sin dato/Variable) y, en el panel de escalafón, {N_SIN_JERARQUIA_VALIDA} "
+            f"adicionales sin jerarquía válida. Escalafón = colapso Docente/Regular, mismo "
+            f"criterio que el resto de P1 (D25/D27).")
+        punteo.append(
+            f"El escalafón Regular tiene jornada completa con más frecuencia que el escalafón "
+            f"Docente ({tab_escalafon.loc['Regular','Completa']:.1f}% vs "
+            f"{tab_escalafon.loc['Docente','Completa']:.1f}%).")
+    else:
+        kit.title(sl, "Jornada completa/parcial según sexo — Docentes Jornada")
+        kit.subtitulo(sl, f"N°={int(n_sexo.sum())} docentes Jornada con horas de dotación válidas y sexo registrado")
+        kit.notas(sl,
+            f"Excluidos de este gráfico los {N_SIN_HORAS_FIJAS} docentes sin horas válidas "
+            f"(Sin dato/Variable) y los que no tienen sexo registrado.")
+    kit.punteo_numerado(sl, punteo)
     return sl
 
 

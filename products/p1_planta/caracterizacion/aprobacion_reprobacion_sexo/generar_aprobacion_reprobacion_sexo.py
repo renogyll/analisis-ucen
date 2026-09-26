@@ -89,127 +89,150 @@ print(f"\nPrueba t (por docente, Mujer vs Hombre): Mujer N°={len(mujer)} media=
       f"Hombre N°={len(hombre)} media={hombre.mean():.2f}%  t={T_STAT:.3f}  p={P_VAL:.4f}")
 
 
+
+# ── Revisión 2026-09-26 ───────────────────────────────────────────────────────────────
+# Obs. 2: una sola medida de aprobación por comparación — el promedio por docente (misma
+# unidad que la prueba t). La versión ponderada por calificación (tab, arriba) se conserva
+# solo como referencia en consola; la diapositiva descriptiva se fundió con la de prueba.
+# Obs. 4: los hombres dictan más asignaturas de baja aprobación (sexo_dificultad/), así que
+# la brecha global por sexo podría deberse a la dificultad de las asignaturas. Se compara
+# hombres vs mujeres DENTRO de cada grupo de dificultad: 1 valor por docente y grupo (el %
+# de aprobación del docente en las asignaturas de ese grupo).
+from pptx_helpers import lectura_p, prueba_dict
+
+GRUPOS_DIF = ["Baja", "Media", "Alta"]
+ETIQ_DIF = {"Baja": "Baja aprobación", "Media": "Aprobación media", "Alta": "Aprobación alta"}
+
+q3 = text("""
+    SELECT rut_docente, sexo, grupo_dificultad, aprueba
+    FROM intel.rendimiento_academico_alumnos
+    WHERE tipo_contrato_tag = 'JORNADA' AND aprueba IS NOT NULL
+      AND grupo_dificultad IS NOT NULL AND sexo IN ('HOMBRE', 'MUJER')
+""")
+with engine.connect() as conn:
+    raw_dif = pd.read_sql(q3, conn)
+por_doc_grupo = (raw_dif.groupby(["grupo_dificultad", "rut_docente", "sexo"])["aprueba"]
+                 .mean().mul(100).reset_index(name="pct_aprob"))
+DIF = {}
+for g in GRUPOS_DIF:
+    s = por_doc_grupo[por_doc_grupo["grupo_dificultad"] == g]
+    h, m = s.loc[s["sexo"] == "HOMBRE", "pct_aprob"], s.loc[s["sexo"] == "MUJER", "pct_aprob"]
+    t, p = stats.ttest_ind(m, h, equal_var=False)
+    DIF[g] = dict(h=h, m=m, t=t, p=p)
+    print(f"Grupo {g}: Hombre {h.mean():.1f}% (N°={len(h)})  Mujer {m.mean():.1f}% (N°={len(m)})  p={p:.4f}")
+
+PRUEBAS = [prueba_dict("IV · Aprobación", "% aprobación por docente: Mujer vs Hombre",
+                       f"{mujer.mean():.1f}% vs {hombre.mean():.1f}%", len(hombre) + len(mujer), P_VAL)]
+PRUEBAS += [prueba_dict("IV · Aprobación", f"% aprobación Mujer vs Hombre, dentro de {ETIQ_DIF[g].lower()}",
+                        f"{d['m'].mean():.1f}% vs {d['h'].mean():.1f}%", len(d['m']) + len(d['h']), d["p"])
+            for g, d in DIF.items()]
+
+
 def agregar(prs):
-    """Construye el gráfico y agrega la diapositiva a `prs`."""
+    """Aprobación por sexo, 1 valor por docente (descriptivo + prueba t en una diapositiva)."""
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
+    series = [hombre, mujer]
+    medias = [s.mean() for s in series]
+    cis = [stats.t.ppf(0.975, len(s) - 1) * s.std(ddof=1) / np.sqrt(len(s)) for s in series]
+    colors = ["#5C9BD6", "#FFB74D"]
 
     fig = kit.new_chart_fig()
-    ax = kit.chart_axes(fig, top=0.15)   # deja espacio arriba para la leyenda
-
-    x = np.arange(len(SEXO_ORD))
-    w = 0.34
-    bars_a = ax.bar(x - w/2, tab["pct_aprobacion"], width=w, color=COL_APROBACION,
-                     alpha=0.92, edgecolor="none", label="% Aprobación")
-    bars_r = ax.bar(x + w/2, tab["pct_reprobacion"], width=w, color=COL_REPROBACION,
-                     alpha=0.92, edgecolor="none", label="% Reprobación")
-
+    ax = kit.chart_axes(fig, top=0.14)
+    x = np.arange(2)
+    ax.bar(x, medias, width=0.42, color=colors, alpha=0.92, edgecolor="none",
+           yerr=cis, capsize=6, error_kw={"ecolor": "#DDDDDD", "linewidth": 1.3})
     stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
-    for bars, color in [(bars_a, COL_APROBACION), (bars_r, COL_REPROBACION)]:
-        for b in bars:
-            h = b.get_height()
-            ax.text(b.get_x() + b.get_width()/2, h + 1.5, f"{h:.1f}%",
-                     ha="center", va="bottom", fontsize=10, fontweight="bold",
-                     color=color, path_effects=stroke, zorder=6)
-    # N° de docentes con calificaciones, una vez por sexo
-    for xi, n in zip(x, tab["n_docentes"]):
-        ax.text(xi, 100, f"N°={int(n)} docentes", ha="center", va="bottom",
-                fontsize=8, color="#8A97A3")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(["Hombre", "Mujer"], fontsize=12, color="white")
-    ax.set_ylabel("% de calificaciones", color="#AAAAAA", fontsize=9)
-    ax.set_ylim(0, 112)
-    ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.tick_params(axis="x", length=0, pad=8)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
+    for xi, m, ci, s in zip(x, medias, cis, series):
+        ax.text(xi, m + ci + 2.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=13,
+                fontweight="bold", color="white", path_effects=stroke, zorder=6)
+        ax.text(xi, 8, f"N°={len(s)} docentes", ha="center", va="bottom", fontsize=8.5, color="white")
+    sig = "significativa" if P_VAL < 0.05 else "no significativa"
+    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   diferencia {sig} al 5%",
+            transform=ax.transAxes, ha="center", va="top", fontsize=9.5, color="#F2D675", fontweight="bold")
+    ax.set_xticks(x); ax.set_xticklabels(["Hombre", "Mujer"], fontsize=12, color="white")
+    ax.set_ylabel("% de aprobación promedio por docente", color="#AAAAAA", fontsize=9)
+    ax.set_ylim(0, 112); ax.set_yticks([0, 20, 40, 60, 80, 100])
+    ax.tick_params(axis="x", length=0, pad=8); ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
     for sp in ax.spines.values():
         sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=9, framealpha=0.22, labelcolor="white",
-               facecolor="#101820", edgecolor="#444", loc="upper center",
-               bbox_to_anchor=(0.5, 0.99), ncol=2)
-
+    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5); ax.set_axisbelow(True)
     chart_path = kit.save_chart(fig, "aprobacion_reprobacion_sexo_chart.png")
 
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "% de Aprobación y Reprobación según Sexo del Docente — Jornada")
-    kit.subtitulo(sl,
-        f"Universo: {N_JORNADA} docentes Jornada  ·  "
-        f"N°={int(tab['n_docentes'].sum())} con calificaciones y sexo registrados "
-        f"({N_SIN_SEXO_DOC} excluidos sin sexo)")
+    kit.title(sl, "¿Difiere el % de aprobación según sexo del docente? — Docentes Jornada")
+    kit.subtitulo(sl, f"% de aprobación promedio por docente (no por calificación)  ·  N°={len(hombre) + len(mujer)} "
+                      f"docentes con calificaciones y sexo registrado  ·  barras = intervalo de confianza 95%")
     kit.punteo_numerado(sl, [
-        f"{sexo_mayor} tienen mayor % de aprobación: Mujeres {tab.loc['MUJER','pct_aprobacion']:.1f}% "
-        f"vs Hombres {tab.loc['HOMBRE','pct_aprobacion']:.1f}% (diferencia de {abs(brecha):.1f} puntos).",
-        f"El % de reprobación es mayor entre docentes hombres "
-        f"({tab.loc['HOMBRE','pct_reprobacion']:.1f}% vs {tab.loc['MUJER','pct_reprobacion']:.1f}% en mujeres).",
-    ])
+        f"Las docentes mujeres aprueban en promedio el {mujer.mean():.1f}% de sus calificaciones, vs "
+        f"{hombre.mean():.1f}% los hombres (diferencia de {mujer.mean() - hombre.mean():.1f} puntos). "
+        + lectura_p(P_VAL),
+        "Esta diferencia desaparece al comparar dentro de cada grupo de dificultad (siguiente diapositiva).",
+    ], fs=12)
+    kit.notas(sl,
+        f"{N_SIN_SEXO_DOC} docentes sin sexo registrado, excluidos. Se usa el promedio por docente "
+        f"porque es la unidad de la prueba t; ponderado por calificación, el resultado va en el mismo "
+        f"sentido (Mujeres {tab.loc['MUJER', 'pct_aprobacion']:.1f}% vs Hombres "
+        f"{tab.loc['HOMBRE', 'pct_aprobacion']:.1f}%).")
     return sl
 
 
-def agregar_ttest(prs):
-    """Construye el gráfico de la prueba t (Hombre vs Mujer) y agrega la diapositiva a `prs`."""
+def agregar_por_dificultad(prs):
+    """Hombres vs mujeres dentro de cada grupo de dificultad (control de la obs. 4)."""
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
-
-    grupos = ["Hombre", "Mujer"]
-    medias = [hombre.mean(), mujer.mean()]
-    ns = [len(hombre), len(mujer)]
-    cis = [stats.t.ppf(0.975, n - 1) * s.std(ddof=1) / np.sqrt(n)
-           for s, n in [(hombre, len(hombre)), (mujer, len(mujer))]]
-    colors = ["#5C9BD6", "#FFB74D"]   # mismo par que edad_sexo/ (Hombre azul, Mujer naranjo)
-
     fig = kit.new_chart_fig()
     ax = kit.chart_axes(fig, top=0.14)
-
-    x = np.arange(2)
-    ax.bar(x, medias, width=0.42, color=colors, alpha=0.92, edgecolor="none",
-           yerr=cis, capsize=6, error_kw={"ecolor": "#DDDDDD", "linewidth": 1.3})
-
+    x = np.arange(3); w = 0.36
     stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
-    for xi, media, ci, n, color in zip(x, medias, cis, ns, colors):
-        ax.text(xi, media + ci + 2.5, f"{media:.1f}%", ha="center", va="bottom",
-                 fontsize=13, fontweight="bold", color=color, path_effects=stroke, zorder=6)
-        ax.text(xi, 8, f"N°={n} docentes", ha="center", va="bottom",
-                 fontsize=8.5, color="white")
-
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
-            fontsize=9.5, color="#F2D675", fontweight="bold")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(grupos, fontsize=12, color="white")
+    for off, clave, col, lab in [(-w / 2, "h", "#5C9BD6", "Hombre"), (w / 2, "m", "#FFB74D", "Mujer")]:
+        medias = [DIF[g][clave].mean() for g in GRUPOS_DIF]
+        cis = [stats.t.ppf(0.975, len(DIF[g][clave]) - 1) * DIF[g][clave].std(ddof=1) / np.sqrt(len(DIF[g][clave]))
+               for g in GRUPOS_DIF]
+        ax.bar(x + off, medias, width=w, color=col, alpha=0.92, edgecolor="none", label=lab,
+               yerr=cis, capsize=4, error_kw={"ecolor": "#DDDDDD", "linewidth": 1.1})
+        for xi, m, ci, g in zip(x + off, medias, cis, GRUPOS_DIF):
+            ax.text(xi, m + ci + 1.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=10.5,
+                    fontweight="bold", color="white", path_effects=stroke, zorder=6)
+            ax.text(xi, 4, f"N°={len(DIF[g][clave])}", ha="center", va="bottom", fontsize=7.5, color="white")
+    for xi, g in zip(x, GRUPOS_DIF):
+        p = DIF[g]["p"]
+        ax.text(xi, 108, f"p={p:.2f}" + (" *" if p < 0.05 else " (n.s.)"), ha="center", va="bottom",
+                fontsize=9, color="#F2D675", fontweight="bold")
+    ax.set_xticks(x); ax.set_xticklabels([ETIQ_DIF[g] for g in GRUPOS_DIF], fontsize=11.5, color="white")
+    ax.set_xlabel("Grupo de dificultad de la asignatura", color="#AAAAAA", fontsize=9)
     ax.set_ylabel("% de aprobación promedio por docente", color="#AAAAAA", fontsize=9)
-    ax.set_ylim(0, 112)
-    ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.tick_params(axis="x", length=0, pad=8)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
+    ax.set_ylim(0, 118); ax.set_yticks([0, 20, 40, 60, 80, 100])
+    ax.tick_params(axis="x", length=0, pad=6); ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
     for sp in ax.spines.values():
         sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
+    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5); ax.set_axisbelow(True)
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=9, framealpha=0.22, labelcolor="white", facecolor="#101820",
+               edgecolor="#444", loc="upper center", bbox_to_anchor=(0.5, 0.99), ncol=2)
+    chart_path = kit.save_chart(fig, "aprobacion_sexo_por_dificultad_chart.png")
 
-    chart_path = kit.save_chart(fig, "aprobacion_reprobacion_sexo_ttest_chart.png")
-
+    difs = [DIF[g]["m"].mean() - DIF[g]["h"].mean() for g in GRUPOS_DIF]
+    n_sig = sum(DIF[g]["p"] < 0.05 for g in GRUPOS_DIF)
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "¿El sexo del docente influye en el % de Aprobación? — Prueba t, Jornada")
-    kit.subtitulo(sl,
-        f"Unidad de análisis: % de aprobación promedio por docente (no por calificación individual) "
-        f"·  N°={len(hombre)+len(mujer)} docentes con sexo registrado  ·  Barras = intervalo de confianza 95%")
+    kit.title(sl, "% de aprobación según sexo, dentro de cada grupo de dificultad — Docentes Jornada")
+    kit.subtitulo(sl, "1 valor por docente y grupo: su % de aprobación en las asignaturas de ese grupo  ·  "
+                      "prueba t de Welch por grupo (n.s. = no significativa al 5%)")
     kit.punteo_numerado(sl, [
-        f"Las docentes mujeres aprueban en promedio {mujer.mean():.1f}% de sus calificaciones, vs "
-        f"{hombre.mean():.1f}% en hombres (diferencia de {mujer.mean()-hombre.mean():.1f} puntos).",
-        f"La prueba t de Welch da p={P_VAL:.4f} — la diferencia {'sí' if P_VAL<0.05 else 'no'} es "
-        f"estadísticamente significativa al 5% (con estos N°, {'se puede' if P_VAL<0.05 else 'no se puede'} "
-        f"descartar que la diferencia observada se deba al azar).",
-    ])
+        f"Dentro de cada grupo de dificultad, hombres y mujeres aprueban casi igual: las diferencias van de "
+        f"{min(difs):+.1f} a {max(difs):+.1f} puntos, y {'ninguna' if n_sig == 0 else n_sig} es "
+        f"estadísticamente significativa al 5%.",
+        "La brecha global por sexo se explica porque los hombres dictan más asignaturas de baja aprobación "
+        "(Bloque IV, sexo según grupo de dificultad), no por una diferencia entre docentes en cursos comparables.",
+    ], fs=12)
+    kit.notas(sl,
+        "Control por dificultad (revisión 2026-09-26, obs. 4). Un docente que dicta asignaturas de varios "
+        "grupos aporta un valor en cada grupo, pero solo uno por grupo, así que cada prueba compara docentes "
+        "distintos. Grupos de dificultad según D27.")
     return sl
 
 
@@ -217,6 +240,6 @@ if __name__ == "__main__":
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
     agregar(prs)
-    agregar_ttest(prs)
+    agregar_por_dificultad(prs)
     prs.save(OUT_PPTX)
     print(f"\n✓ Guardado: {OUT_PPTX}")

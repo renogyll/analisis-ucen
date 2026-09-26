@@ -99,145 +99,37 @@ print(f"\nPrueba t (por docente, grupo predominante Baja vs Media+Alta, %Mujer):
       f"Resto N°={len(grupo_resto)} %mujer={100*grupo_resto.mean():.1f}  t={T_STAT:.3f}  p={P_VAL:.4f}")
 
 
+
+# ── Revisión 2026-09-26 (obs. 3 y 21): descriptivo y prueba con la misma unidad (1 valor por
+# docente, grupo predominante), en una sola diapositiva. Ver dificultad_comun.py. ──────────
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dificultad_comun import slide_por_grupo
+from pptx_helpers import prueba_dict
+
+PRUEBAS = [prueba_dict("IV · Aprobación", "% mujeres: grupo predominante Baja vs Media+Alta",
+                       f"{100 * grupo_baja.mean():.1f}% vs {100 * grupo_resto.mean():.1f}%",
+                       len(grupo_baja) + len(grupo_resto), P_VAL)]
+
+
 def agregar(prs):
-    """Construye el gráfico descriptivo (barra 100% apilada Hombre/Mujer) y agrega
-    la diapositiva a `prs`."""
     kit = UcenSlideKit(out_dir=HERE)
     kit.ensure_bg()
-
-    fig = kit.new_chart_fig()
-    ax = kit.chart_axes(fig, top=0.15)   # deja espacio arriba para la leyenda
-
-    x = np.arange(len(GRUPOS_ORD))
-    w = 0.45
-    bars_h = ax.bar(x, tab["pct_hombre"], width=w, color=COL_HOMBRE, alpha=0.92,
-                     edgecolor="none", label="Hombre")
-    bars_m = ax.bar(x, tab["pct_mujer"], width=w, bottom=tab["pct_hombre"],
-                     color=COL_MUJER, alpha=0.92, edgecolor="none", label="Mujer")
-
-    stroke = [pe.withStroke(linewidth=1.8, foreground="#0A0F18")]
-    for xi, h, m in zip(x, tab["pct_hombre"], tab["pct_mujer"]):
-        ax.text(xi, h / 2, f"{h:.0f}%", ha="center", va="center",
-                 fontsize=11, fontweight="bold", color="white", path_effects=stroke, zorder=6)
-        ax.text(xi, h + m / 2, f"{m:.0f}%", ha="center", va="center",
-                 fontsize=11, fontweight="bold", color="white", path_effects=stroke, zorder=6)
-    for xi, n in zip(x, tab["n_docentes"]):
-        ax.text(xi, 102, f"N°={int(n)} docentes", ha="center", va="bottom",
-                 fontsize=8.5, color="#AAAAAA")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"{g} aprobación" for g in GRUPOS_ORD], fontsize=12, color="white")
-    ax.set_xlabel("Grupo de dificultad de la asignatura", color="#AAAAAA", fontsize=9)
-    ax.set_ylabel("% de docentes (Hombre / Mujer)", color="#AAAAAA", fontsize=9)
-    ax.set_ylim(0, 112)
-    ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.tick_params(axis="x", length=0, pad=8)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
-    for sp in ax.spines.values():
-        sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=9, framealpha=0.22, labelcolor="white",
-               facecolor="#101820", edgecolor="#444", loc="upper center",
-               bbox_to_anchor=(0.5, 0.99), ncol=2)
-
-    chart_path = kit.save_chart(fig, "sexo_dificultad_chart.png")
-
-    sl = kit.new_slide(prs)
-    kit.pic(sl, prs, kit.SHARED_BG)
-    kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Sexo de los Docentes según Grupo de Dificultad de Asignatura — Jornada")
-    kit.subtitulo(sl,
-        f"Universo: {N_JORNADA} docentes Jornada  ·  "
-        f"N°={int(tab['n_instancias'].sum()):,} instancias con sexo registrado")
-    kit.notas(sl,
-        f"{N_SIN_SEXO} instancias sin dato de sexo. Grupos de dificultad definidos en D27 — "
-        f"terciles de % de aprobación histórico por asignatura, calculados sobre todo el "
-        f"universo (no solo Jornada).")
-    kit.punteo_numerado(sl, [
-        f"El % de docentes mujeres es más bajo en el grupo {grupo_menor} aprobación "
-        f"({tab.loc[grupo_menor,'pct_mujer']:.1f}%) que en {grupo_mayor} "
-        f"({tab.loc[grupo_mayor,'pct_mujer']:.1f}%) — diferencia de {diferencia:.1f} puntos.",
-        f"Los hombres están sobrerrepresentados en asignaturas de baja aprobación histórica "
-        f"respecto a su participación en el resto (ver prueba de significancia en la "
-        f"siguiente diapositiva).",
-    ])
-    return sl
-
-
-def agregar_ttest(prs):
-    """Construye el gráfico de la prueba t (grupo predominante Baja vs Media+Alta)
-    y agrega la diapositiva a `prs`."""
-    kit = UcenSlideKit(out_dir=HERE)
-    kit.ensure_bg()
-
-    grupos = ["Baja (predominante)", "Media + Alta (predominante)"]
-    medias = [100 * grupo_baja.mean(), 100 * grupo_resto.mean()]
-    ns = [len(grupo_baja), len(grupo_resto)]
-    cis = [100 * stats.t.ppf(0.975, n - 1) * s.std(ddof=1) / np.sqrt(n)
-           for s, n in [(grupo_baja, len(grupo_baja)), (grupo_resto, len(grupo_resto))]]
-    colors = ["#1F5C99", "#7FADD9"]
-
-    fig = kit.new_chart_fig()
-    ax = kit.chart_axes(fig, top=0.14)
-
-    x = np.arange(2)
-    ax.bar(x, medias, width=0.42, color=colors, alpha=0.92, edgecolor="none",
-           yerr=cis, capsize=6, error_kw={"ecolor": "#DDDDDD", "linewidth": 1.3})
-
-    stroke = [pe.withStroke(linewidth=2, foreground="#0A0F18")]
-    for xi, media, ci, n, color in zip(x, medias, cis, ns, colors):
-        ax.text(xi, media + ci + 1.5, f"{media:.1f}%", ha="center", va="bottom",
-                 fontsize=13, fontweight="bold", color=color, path_effects=stroke, zorder=6)
-        ax.text(xi, 2, f"N°={n} docentes", ha="center", va="bottom",
-                 fontsize=8.5, color="white")
-
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
-            fontsize=9.5, color="#F2D675", fontweight="bold")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(grupos, fontsize=12, color="white")
-    ax.set_ylabel("% de docentes mujeres", color="#AAAAAA", fontsize=9)
-    ax.set_ylim(0, 100)
-    ax.tick_params(axis="x", length=0, pad=8)
-    ax.tick_params(axis="y", colors="#AAAAAA", labelsize=8.5)
-    for sp in ax.spines.values():
-        sp.set_edgecolor("white"); sp.set_alpha(0.20); sp.set_linewidth(0.7)
-    ax.yaxis.grid(True, color="white", alpha=0.07, linewidth=0.5)
-    ax.set_axisbelow(True)
-
-    chart_path = kit.save_chart(fig, "sexo_dificultad_ttest_chart.png")
-
-    sl = kit.new_slide(prs)
-    kit.pic(sl, prs, kit.SHARED_BG)
-    kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "¿El sexo se asocia al grupo de dificultad? — Prueba t, Jornada")
-    kit.subtitulo(sl,
-        f"Unidad de análisis: 1 valor por docente (Mujer=1/Hombre=0), asignado a su grupo de "
-        f"dificultad predominante  ·  N°={len(grupo_baja)+len(grupo_resto)} docentes  ·  "
-        f"Barras = intervalo de confianza 95%")
-    kit.notas(sl,
-        "Grupo predominante = el grupo de dificultad (Baja/Media/Alta) donde el docente "
-        "tiene más instancias docente×asignatura×período — ver D27.")
-    kit.punteo_numerado(sl, [
-        f"Entre los docentes cuyo grupo predominante es Baja aprobación, el "
-        f"{100*grupo_baja.mean():.1f}% son mujeres, vs {100*grupo_resto.mean():.1f}% "
-        f"en quienes predominan en Media o Alta (diferencia de "
-        f"{100*(grupo_baja.mean()-grupo_resto.mean()):.1f} puntos).",
-        f"La prueba t de Welch da p={P_VAL:.4f} — la diferencia {'sí' if P_VAL<0.05 else 'no'} es "
-        f"estadísticamente significativa al 5% (con estos N°, {'se puede' if P_VAL<0.05 else 'no se puede'} "
-        f"descartar que la diferencia observada se deba al azar).",
-    ])
-    return sl
+    return slide_por_grupo(
+        prs, kit, por_docente, "es_mujer", escala=100, fmt="{:.1f}", unidad="%",
+        ylabel="% de docentes mujeres",
+        titulo="Sexo de los docentes según grupo de dificultad — Docentes Jornada",
+        subtitulo=f"1 valor por docente (Mujer=1/Hombre=0), asignado a su grupo de dificultad "
+                  f"predominante  ·  N°={len(por_docente)} docentes con sexo registrado",
+        frase_valor=lambda b, r: (f"Entre los docentes que dictan principalmente asignaturas de baja "
+                                  f"aprobación, el {b:.1f}% son mujeres, vs {r:.1f}% en el resto: los "
+                                  f"hombres están sobrerrepresentados en las asignaturas más exigentes."),
+        notas="% de mujeres = promedio de la variable Mujer=1/Hombre=0.",
+        chart_name="sexo_dificultad_chart.png")
 
 
 if __name__ == "__main__":
     prs = Presentation()
     prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
     agregar(prs)
-    agregar_ttest(prs)
     prs.save(OUT_PPTX)
     print(f"\n✓ Guardado: {OUT_PPTX}")

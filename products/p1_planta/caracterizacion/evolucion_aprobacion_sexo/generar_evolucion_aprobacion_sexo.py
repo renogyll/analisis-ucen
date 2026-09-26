@@ -120,7 +120,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Evolución de la Tasa de Aprobación de Alumnos por Sexo del Docente — Jornada")
+    kit.title(sl, "Evolución de la tasa de aprobación según sexo del docente — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_JORNADA} docentes Jornada  ·  2023 a 2025  ·  "
         f"% ponderado sobre calificaciones evaluables por año")

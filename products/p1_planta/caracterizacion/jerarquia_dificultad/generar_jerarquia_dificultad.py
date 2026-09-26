@@ -100,6 +100,12 @@ por_docente = predominante.merge(jer_doc, on="rut_docente")
 grupo_baja = por_docente.loc[por_docente["grupo_predominante"] == "Baja", "es_regular"]
 grupo_resto = por_docente.loc[por_docente["grupo_predominante"] != "Baja", "es_regular"]
 T_STAT, P_VAL = stats.ttest_ind(grupo_baja, grupo_resto, equal_var=False)   # Welch
+# Revisión 2026-09-26 (obs. 6): no va como diapositiva (no significativa), pero sí en la tabla
+# resumen de pruebas del anexo, para no ocultar resultados no significativos.
+from pptx_helpers import prueba_dict
+PRUEBAS = [prueba_dict("IV · Aprobación", "% escalafón Regular: grupo predominante Baja vs Media+Alta",
+                       f"{100 * grupo_baja.mean():.1f}% vs {100 * grupo_resto.mean():.1f}%",
+                       len(grupo_baja) + len(grupo_resto), P_VAL)]
 
 print(f"\nPrueba t (por docente, grupo predominante Baja vs Media+Alta, %Regular): "
       f"Baja N°={len(grupo_baja)} %regular={100*grupo_baja.mean():.1f}  "

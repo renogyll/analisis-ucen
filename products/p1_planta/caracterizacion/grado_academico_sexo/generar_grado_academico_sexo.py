@@ -65,6 +65,19 @@ nivel_top = tab.sum(axis=1).idxmax()
 n_top = int(tab.sum(axis=1).max())
 pct_mujer_doctor = 100 * tab.loc["Doctor", "MUJER"] / tab.loc["Doctor"].sum()
 pct_mujer_total = 100 * n_mujer / N_CON_DATOS
+# Punteos enriquecidos (2026-09-25, anotación de la contraparte: "más conclusivos, dando insight")
+pct_postgrado = 100 * tab.loc[["Magíster o Master", "Doctor"]].values.sum() / N_CON_DATOS
+pct_doc_h = 100 * tab.loc["Doctor", "HOMBRE"] / n_hombre
+pct_doc_m = 100 * tab.loc["Doctor", "MUJER"] / n_mujer
+pct_prof_h = 100 * tab.loc["Profesional/Técnico", "HOMBRE"] / n_hombre
+pct_prof_m = 100 * tab.loc["Profesional/Técnico", "MUJER"] / n_mujer
+pct_mujer_prof = 100 * tab.loc["Profesional/Técnico", "MUJER"] / tab.loc["Profesional/Técnico"].sum()
+# Doctorado dentro del escalafón Regular (contexto para la implicancia de la brecha)
+reg = con_datos[con_datos["jerarquia"].str.contains("REGULAR", na=False)]
+pct_doc_regular = 100 * (reg["nivel"] == "Doctor").mean()
+print(f"Postgrado: {pct_postgrado:.1f}%  |  Doctor H {pct_doc_h:.1f}% / M {pct_doc_m:.1f}%  |  "
+      f"Prof/Téc H {pct_prof_h:.1f}% / M {pct_prof_m:.1f}%  |  Doctor en escalafón Regular: "
+      f"{pct_doc_regular:.1f}% (N°={len(reg)})")
 
 def agregar(prs):
     """Construye el gráfico y agrega la diapositiva de este sub-tema a `prs`
@@ -108,17 +121,24 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Grado Académico por Sexo — Docentes de Planta (Jornada)")
+    kit.title(sl, "Grado académico según sexo — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con grado académico y sexo disponibles "
         f"({N_SIN_DATOS} sin dato)")
     kit.punteo_numerado(sl, [
-        f"{nivel_top} es el grado más común (N°={n_top} de {N_CON_DATOS}, "
-        f"{100*n_top/N_CON_DATOS:.0f}%).",
-        f"Las mujeres son el {pct_mujer_total:.0f}% del universo con dato, pero solo el "
-        f"{pct_mujer_doctor:.0f}% de quienes tienen Doctorado — la representación femenina "
-        f"cae en el grado más alto.",
-    ])
+        f"Cuerpo académico altamente posgraduado: {pct_postgrado:.0f}% tiene Magíster o Doctorado; "
+        f"{nivel_top} es el grado predominante ({100*n_top/N_CON_DATOS:.0f}%).",
+        f"Brecha de género en el Doctorado: {pct_doc_h:.0f}% de los hombres es Doctor vs "
+        f"{pct_doc_m:.0f}% de las mujeres — ellas son el {pct_mujer_total:.0f}% del cuerpo, "
+        f"pero solo el {pct_mujer_doctor:.0f}% de los Doctores.",
+        f"En el otro extremo, {pct_mujer_prof:.0f}% de quienes no tienen posgrado son mujeres "
+        f"({pct_prof_m:.0f}% de ellas vs {pct_prof_h:.0f}% de los hombres).",
+        f"Implicancia: el Doctorado predomina en el escalafón Regular ({pct_doc_regular:.0f}% "
+        f"lo tiene), por lo que esta brecha podría limitar la progresión académica de las mujeres.",
+    ], fs=11)
+    kit.notas(sl,
+        "La implicancia del punto 4 es una hipótesis: asocia dos distribuciones "
+        "(grado × sexo y grado × escalafón), no mide trayectorias individuales de ascenso.")
     return sl
 
 

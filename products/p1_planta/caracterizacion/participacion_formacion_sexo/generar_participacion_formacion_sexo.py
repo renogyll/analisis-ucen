@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
 from config import OUTPUTS
-from pptx_helpers import UcenSlideKit
+from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict
 
 import numpy as np
 import pandas as pd
@@ -70,6 +70,8 @@ print(tab)
 hombre = con_sexo.loc[con_sexo["sexo"] == "HOMBRE", "participo"]
 mujer = con_sexo.loc[con_sexo["sexo"] == "MUJER", "participo"]
 T_STAT, P_VAL = stats.ttest_ind(mujer, hombre, equal_var=False)   # Welch
+PRUEBAS = [prueba_dict("II · Participación", "Participación: Mujer vs Hombre",
+                       f"{100 * mujer.mean():.1f}% vs {100 * hombre.mean():.1f}%", len(mujer) + len(hombre), P_VAL)]
 
 brecha = tab.loc["MUJER", "tasa"] - tab.loc["HOMBRE", "tasa"]
 sexo_mayor = "Mujeres" if brecha > 0 else "Hombres"
@@ -179,19 +181,21 @@ def agregar_ttest(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "¿El sexo del docente influye en la participación formativa? — Prueba t, Jornada")
+    # Revisión 2026-09-26 (obs. 5 y 21): única diapositiva del tema en el consolidado
+    # (descriptivo + prueba), título sin lenguaje causal.
+    kit.title(sl, "¿Difiere la participación en instancias formativas según sexo? — Docentes Jornada")
     kit.subtitulo(sl,
-        f"Unidad de análisis: 1 valor por docente (participó=1/no participó=0) "
-        f"·  N°={len(hombre)+len(mujer)} docentes con sexo registrado  ·  "
-        f"Barras = intervalo de confianza 95%")
+        f"1 valor por docente (participó=1/no participó=0)  ·  N°={len(hombre)+len(mujer)} docentes "
+        f"con sexo registrado  ·  barras = intervalo de confianza 95%")
     kit.punteo_numerado(sl, [
         f"Las docentes mujeres participan en instancias formativas en el "
         f"{mujer.mean()*100:.1f}% de los casos, vs {hombre.mean()*100:.1f}% en hombres "
         f"(diferencia de {(mujer.mean()-hombre.mean())*100:.1f} puntos).",
-        f"La prueba t de Welch da p={P_VAL:.4f} — la diferencia {'sí' if P_VAL<0.05 else 'no'} es "
-        f"estadísticamente significativa al 5% (con estos N°, {'se puede' if P_VAL<0.05 else 'no se puede'} "
-        f"descartar que la diferencia observada se deba al azar).",
-    ])
+        lectura_p(P_VAL),
+    ], fs=12)
+    kit.notas(sl,
+        f"{N_SIN_SEXO} docentes sin sexo registrado, excluidos. Participación = al menos 1 instancia "
+        f"formativa (Taller/Diplomado/Proyecto) 2022-2025 (D31).")
     return sl
 
 

@@ -106,7 +106,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Distribución por Sexo y Tramo de Edad — Docentes de Planta (Jornada)")
+    kit.title(sl, "Distribución por sexo y tramo de edad — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con sexo y edad disponibles "
         f"({N_SIN_DATOS} sin dato)")
@@ -117,8 +117,10 @@ def agregar(prs):
     kit.punteo_numerado(sl, [
         f"El tramo {tramo_top} concentra la mayor cantidad de docentes ({n_top} de {N_CON_DATOS}, "
         f"{100*n_top/N_CON_DATOS:.0f}%).",
-        f"La mayor brecha entre sexos se da en el tramo {tramo_mayor_brecha}, con "
-        f"{brecha_val} docentes más {sexo_mayor_en_brecha.lower()} que del otro sexo en ese tramo.",
+        # Revisión 2026-09-26 (obs. 20): redacción más directa.
+        f"La mayor diferencia entre sexos está en el tramo {tramo_mayor_brecha}: "
+        f"{tab.loc[tramo_mayor_brecha, 'MUJER']} mujeres vs {tab.loc[tramo_mayor_brecha, 'HOMBRE']} hombres "
+        f"({brecha_val} {sexo_mayor_en_brecha.lower()} más).",
     ])
     return sl
 

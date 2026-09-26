@@ -95,7 +95,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "% de Aprobación y Reprobación de Alumnos — Docentes de Planta (Jornada)")
+    kit.title(sl, "Aprobación y reprobación de alumnos — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_JORNADA} docentes Jornada  ·  {N_DOCENTES} con calificaciones registradas "
         f"({100*N_DOCENTES/N_JORNADA:.0f}%)  ·  N°={N_EVALUABLE:,} evaluaciones de docentes Jornada evaluables")

@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
 from config import OUTPUTS
-from pptx_helpers import UcenSlideKit
+from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict
 
 import numpy as np
 import pandas as pd
@@ -76,6 +76,9 @@ N_SIN_EDAD_ANIOS = N_JORNADA - len(con_edad)
 participo_g = con_edad.loc[con_edad["participo"] == 1, "edad_anios"]
 no_participo_g = con_edad.loc[con_edad["participo"] == 0, "edad_anios"]
 T_STAT, P_VAL = stats.ttest_ind(participo_g, no_participo_g, equal_var=False)   # Welch
+PRUEBAS = [prueba_dict("II · Participación", "Edad: participó vs no participó",
+                       f"{participo_g.mean():.1f} vs {no_participo_g.mean():.1f} años",
+                       len(participo_g) + len(no_participo_g), P_VAL)]
 
 print(f"\nPrueba t (edad_anios, Participó vs No participó): "
       f"Participó N°={len(participo_g)} media={participo_g.mean():.1f}  "
@@ -126,7 +129,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Participación en Instancias Formativas según Tramo de Edad — Jornada")
+    kit.title(sl, "Participación en instancias formativas según tramo de edad — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_JORNADA} docentes Jornada  ·  "
         f"N°={len(con_tramo)} con tramo de edad válido")
@@ -138,8 +141,9 @@ def agregar(prs):
         f"({tab.loc[tramo_mayor,'tasa']:.1f}%, N°={int(tab.loc[tramo_mayor,'n'])}), y "
         f"{tramo_menor} la más baja ({tab.loc[tramo_menor,'tasa']:.1f}%, "
         f"N°={int(tab.loc[tramo_menor,'n'])}).",
-        "No se observa un patrón lineal claro por edad — ver prueba t en la siguiente "
-        "diapositiva (Participó vs No participó, edad continua).",
+        # Revisión 2026-09-26 (obs. 6): la prueba no significativa se muestra, no se oculta.
+        f"No hay un patrón lineal claro por edad. Edad promedio: participó {participo_g.mean():.1f} vs "
+        f"no participó {no_participo_g.mean():.1f} años. " + lectura_p(P_VAL),
     ]
     if tramos_muestra_chica:
         nombres = ", ".join(tramos_muestra_chica)
@@ -148,7 +152,7 @@ def agregar(prs):
             f"{N_MIN_CONFIABLE} casos — su tasa no es representativa, se marca con textura "
             f"en el gráfico."
         )
-    kit.punteo_numerado(sl, bullets)
+    kit.punteo_numerado(sl, bullets, fs=12)
     return sl
 
 

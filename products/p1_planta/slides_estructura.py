@@ -53,7 +53,7 @@ def portada(prs):
         subtitulo1="Análisis de Incidencia",
         footer_lines=["Universidad Central",
                       "Producto 1: Caracterización Cuerpo Académico Jornada",
-                      "Agosto 2026"])
+                      "Septiembre 2026"])
     return sl
 
 
@@ -125,133 +125,224 @@ def grid_b3(prs):
     return sl
 
 
+def grid_bloques(prs):
+    """Apertura única (2026-09-25): 4 franjas horizontales, una por bloque, en el orden de la
+    contraparte. Revisión 2026-09-26: período de cada bloque (obs. 12) y listas alineadas con las
+    diapositivas fundidas (obs. 21)."""
+    sl = _nueva(prs)
+    kit.title(sl, "Contenido de la presentación — Bloques I a IV", fs=17)
+    kit.subtitulo(sl, "Universo: 624 docentes Jornada  ·  cada bloque indica su período de datos")
+    kit.franjas_bloques(sl, [
+        ("Bloque I — Caracterización del cuerpo académico",
+         ["Universo: 624 docentes Jornada",
+          "Período: dotación vigente; carga académica según archivo de mayo 2026"],
+         ["Sexo y tramo de edad · edad y trayectoria según jerarquía",
+          "Unidad/facultad · carga académica · grado académico según sexo",
+          "Jornada completa/parcial: composición y según sexo"]),
+        ("Bloque II — Análisis de la participación en el perfeccionamiento docente",
+         ["Universo: 624 docentes Jornada, 418 (67.0%) con al menos una instancia formativa "
+          "(Oferta formativa (Taller), Diplomado o Proyecto)",
+          "Período: 2022-2025 (el 74% de los registros son de 2025)"],
+         ["Participación y modalidades · tipos (Venn) · intensidad",
+          "Participación según sexo, jerarquía/escalafón y facultad",
+          "Antigüedad de los formados · participación según edad",
+          "Tipo de formación según antigüedad, sexo y edad"]),
+        ("Bloque III — Evaluación de Desempeño Docente (EDD)",
+         ["Universo: 624 docentes Jornada, 491 con EDD (hecha por la jefatura, distinta de la "
+          "evaluación que hacen los estudiantes)",
+          "Período: 2022-2025, EDD ajustada por año por un cambio de escala en 2024"],
+         ["EDD por año y sexo",
+          "EDD según sexo, jerarquía/escalafón y facultad, con sus pruebas"]),
+        ("Bloque IV — Aprobación y reprobación de alumnos",
+         ["Universo: 624 docentes Jornada, 515 con calificaciones registradas",
+          "Período: 2023-01 a 2025-02"],
+         ["Aprobación global · según sexo (y dentro de cada grupo de dificultad) · escalafón · antigüedad",
+          "Evolución de la aprobación según sexo (2023-2025)",
+          "Grupos de dificultad: composición, y antigüedad/edad/sexo según grupo",
+          "Anexo: resumen de todas las pruebas estadísticas"]),
+    ])
+    return sl
+
+
+# ── Anexo: resumen de pruebas estadísticas (revisión 2026-09-26, obs. 6-7) ────────
+# El deck mostraba solo las pruebas significativas; esta tabla reúne TODAS las del P1
+# (incluidas las no significativas) y agrega el valor p ajustado por Holm, que corrige por
+# hacer muchas comparaciones a la vez. Cada script expone su lista `PRUEBAS`.
+
+def _holm(pvals):
+    orden = sorted(range(len(pvals)), key=lambda i: pvals[i])
+    m = len(pvals); ajust = [0.0] * m; previo = 0.0
+    for rango, i in enumerate(orden):
+        previo = max(previo, min(1.0, (m - rango) * pvals[i]))
+        ajust[i] = previo
+    return ajust
+
+
+def _fmt_p(p):
+    return "<0.0001" if p < 0.0001 else f"{p:.4f}"
+
+
+def anexo_pruebas(prs, pruebas, por_diapo=12):
+    """Una o más diapositivas de tabla con todas las pruebas; filas doradas = significativas
+    al 5% después del ajuste de Holm."""
+    holm = _holm([pr["p"] for pr in pruebas])
+    filas = [[pr["bloque"], pr["comparacion"], pr["resultado"], pr["n"], pr["prueba"],
+              _fmt_p(pr["p"]), _fmt_p(h), "Sí" if h < 0.05 else "No"]
+             for pr, h in zip(pruebas, holm)]
+    n_sig, n_sig_holm = sum(pr["p"] < 0.05 for pr in pruebas), sum(h < 0.05 for h in holm)
+    partes = [filas[i:i + por_diapo] for i in range(0, len(filas), por_diapo)]
+    slides = []
+    for k, parte in enumerate(partes):
+        sl = _nueva(prs)
+        sufijo = f" ({k + 1}/{len(partes)})" if len(partes) > 1 else ""
+        kit.title(sl, f"Anexo — Resumen de pruebas estadísticas{sufijo}", fs=18)
+        kit.subtitulo(sl, f"{len(pruebas)} pruebas en total: {n_sig} significativas al 5% sin ajuste, "
+                          f"{n_sig_holm} tras el ajuste de Holm por comparaciones múltiples (en dorado)")
+        kit.tabla(sl, ["Bloque", "Comparación", "Resultado", "N°", "Prueba", "p", "p ajustado (Holm)",
+                       "¿Signif.? (Holm)"],
+                  parte, anchos=[0.10, 0.33, 0.17, 0.05, 0.10, 0.07, 0.08, 0.10], fs=8.5,
+                  resaltar=lambda i, parte=parte: parte[i][-1] == "Sí")
+        kit.notas(sl,
+            "Ajuste de Holm: ordena los p de menor a mayor y multiplica cada uno por el número de pruebas "
+            "que quedan; controla la probabilidad de declarar significativa al menos una diferencia que no "
+            "lo es. Todas las pruebas usan 1 valor por docente. Incluye las no significativas que no tienen "
+            "diapositiva propia (escalafón según grupo de dificultad).")
+        slides.append(sl)
+    return slides
+
+
+# ── Universo / Índice / Hallazgos por bloque (2026-09-26) ─────────────────────
+# Reorden acordado con el usuario: los 4 bloques abren con su UIH en formato franjas y
+# siguen el orden que anuncia la grilla (I Caracterización, II Participación, III EDD,
+# IV Aprobación). Referencias internas (D-números, tablas) van a notas del orador, no en
+# pantalla. Hallazgos = cifras ya impresas por cada script del bloque.
+
 def uih_b1(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque I — Caracterización del Cuerpo Académico de Jornada (N°624)", fs=16)
-    kit.caja_universo_indice_hallazgos(sl,
+    kit.title(sl, "Bloque I — Caracterización del cuerpo académico de Jornada (N°624)", fs=16)
+    kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes con contrato de Jornada (planta), sub-universo de "
-            "analisis.universo_base (1.144 docentes totales). Es el universo de "
-            "trabajo de todo el Producto 1. Este bloque caracteriza quién es el "
-            "docente de Jornada — sexo, edad, jerarquía y grado académico."),
+            "624 docentes con contrato de Jornada (planta), universo de todo el Producto 1. "
+            "Jerarquía = 8 categorías (Instructor a Titular, cada una Docente o Regular); escalafón = "
+            "Docente o Regular. 90 docentes (14%) no tienen registro en dotación (sin edad, antigüedad, "
+            "cargo ni jornada): son más mujeres (66% vs 51%) y menos Regulares (7% vs 16%)."),
         indice_items=[
-            "Distribución por Sexo y Tramo de Edad",
-            "Edad Promedio por Jerarquía",
-            "Grado Académico por Sexo",
+            "Distribución por sexo y tramo de edad",
+            "Distribución de la edad según jerarquía",
+            "Años de trayectoria según jerarquía",
+            "Distribución por unidad/facultad",
+            "Distribución de la carga académica",
+            "Grado académico según sexo",
+            "Composición de la jornada (horas semanales)",
+            "Jornada completa/parcial según sexo",
         ],
         hallazgos_items=[
-            "Las mujeres son mayoría en el cuerpo académico Jornada (273 vs 240 "
-            "hombres), pero su representación cae en el grado más alto: son 53% "
-            "del universo con dato pero solo 46% de quienes tienen Doctorado.",
-            "La edad promedio aumenta de forma consistente con la jerarquía "
-            "académica: de 41 años en Instructor a 67 años en Titular Docente.",
+            "Las mujeres son mayoría (53% con dato), pero solo el 46% de los Doctores.",
+            "Edad y trayectoria crecen con la jerarquía: de 41.2 a 67.3 años de edad y de 3.2 a 14.9 "
+            "años en la universidad entre Instructor Docente y Titular Docente.",
+            "Medicina y C. Salud concentra el 32% de los docentes; Docencia es la función principal del 49%.",
+            "Los hombres tienen jornada completa con más frecuencia que las mujeres (82% vs 75%).",
         ])
+    kit.notas(sl,
+        "Universo: sub-universo Jornada de analisis.universo_base (1,144 docentes totales). Los 90 sin "
+        "dotación (brecha NOMINA→DOTACION, D22/D23) quedan fuera de los gráficos de edad, antigüedad, "
+        "carga académica y jornada; el 81% tampoco tiene unidad registrada. Su tasa de participación en "
+        "formación es igual al resto (66% vs 67%).")
     return sl
 
 
 def uih_b2(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque II — Evaluación Estudiantil por Dimensión (N°624)", fs=16)
-    kit.caja_universo_indice_hallazgos(sl,
+    kit.title(sl, "Bloque II — Participación en el perfeccionamiento docente (N°624)", fs=16)
+    kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes Jornada, 6 semestres (2023-01 a 2025-02). Instrumento "
-            "de evaluación estudiantil, 3 dimensiones: Aprendizajes (APR, 3 "
-            "preguntas), Metodologías y Evaluación (MET, 5 preguntas), Aspectos "
-            "Formales (AFO, 9 preguntas). Solo secciones con cobertura ≥40% "
-            "(ver docs/DECISIONES_METODOLOGICAS.md D10); % ponderado por alumnos "
-            "evaluadores (D11). Se descarta la respuesta \"indiferente\"."),
+            "624 docentes Jornada; 418 (67%) cursaron al menos una instancia formativa: Oferta "
+            "formativa (Taller), Diplomado o Proyecto, entre 2022 y 2025. Primero, cuánto y cómo "
+            "participan; después, quién participa, con su prueba estadística en la misma diapositiva."),
         indice_items=[
-            "Dimensión Aprendizajes (APR_01-03)",
-            "Dimensión Metodologías y Evaluación (MET_01-02)",
-            "Dimensión Metodologías y Evaluación (MET_03-05)",
-            "Dimensión Aspectos Formales (AFO_01-03)",
-            "Dimensión Aspectos Formales (AFO_04-06)",
-            "Dimensión Aspectos Formales (AFO_07-09)",
+            "Participación y modalidades de formación",
+            "Tipos de formación (Venn)",
+            "Intensidad de participación",
+            "Participación según sexo",
+            "Participación según jerarquía / escalafón",
+            "Participación según facultad",
+            "Antigüedad de los docentes formados",
+            "Participación según tramo de edad",
+            "Tipo de formación según antigüedad, sexo y edad",
         ],
         hallazgos_items=[
-            "Tendencia positiva y estable en las 3 dimensiones entre 2023 y "
-            "2025: el % de acuerdo se mantiene sobre 83% y el % de desacuerdo "
-            "baja de forma sostenida en las 17 preguntas del instrumento.",
-            "AFO_07 (\"Entrega evaluaciones a tiempo\") y MET_02/MET_03 "
-            "(evaluación y metodología) son las preguntas con mayor % de "
-            "desacuerdo relativo — las más \"duras\" del instrumento.",
+            "67% participa; entre ellos, 61% solo en Oferta formativa y 30% combina 2 o más tipos "
+            "(Participación Mixta). La mitad cursó 3 o más instancias.",
+            "Las mujeres participan más que los hombres (74% vs 62%, p=0.0016) y el escalafón Docente "
+            "mucho más que el Regular (77% vs 49%, p<0.0001).",
+            "Por facultad, de 80% (Derecho y Humanidades) a 42% (VR Investigación). Por antigüedad la "
+            "tasa es pareja (65%-72%) y por edad la diferencia no es significativa (p=0.0724).",
         ])
+    kit.notas(sl,
+        "Participación = al menos 1 registro en analisis.universo_formados_p3, sin filtrar a apto_p3 "
+        "(D31). Unidad de análisis: 1 valor por docente.")
     return sl
 
 
 def uih_b3(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque III — Aprobación y Reprobación de Alumnos (N°624)", fs=16)
-    kit.caja_universo_indice_hallazgos(sl,
+    kit.title(sl, "Bloque III — Evaluación de desempeño docente (N°624)", fs=16)
+    kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes de Jornada, de los cuales 515 (82.5%) tienen al menos "
-            "una calificación de alumnos registrada en el período 2023-01 a "
-            "2025-02. % de aprobación calculado sobre calificaciones evaluables "
-            "(se excluyen estados administrativos como No Presentado o "
-            "Postergado — ver docs/DECISIONES_METODOLOGICAS.md D26)."),
+            "624 docentes Jornada; 491 (78.7%) tienen al menos una evaluación de desempeño docente (EDD) "
+            "entre 2022 y 2025, hecha por la jefatura. La escala cambió en 2024 (promedio 0.87 → 0.68), "
+            "así que las comparaciones usan la EDD ajustada por año, expresada en la escala 2025."),
         indice_items=[
-            "% de Aprobación y Reprobación — global",
-            "% de Aprobación y Reprobación según Sexo del Docente + prueba t",
-            "% de Aprobación y Reprobación según Escalafón (Docente/Regular) + prueba t",
-            "% de Aprobación y Reprobación según Antigüedad — variante 4 tramos",
-            "% de Aprobación y Reprobación según Antigüedad — variante 3 tramos",
-            "Evolución de la Tasa de Aprobación por Sexo del Docente (2023-2025)",
-            "Composición de los Grupos de Dificultad de Asignaturas",
-            "Antigüedad según Grupo de Dificultad + prueba t",
-            "Edad según Grupo de Dificultad + prueba t",
-            "Sexo según Grupo de Dificultad + prueba t",
+            "Calificación EDD por año y sexo",
+            "Calificación EDD según sexo",
+            "Calificación EDD según jerarquía / escalafón",
+            "Calificación EDD según facultad",
         ],
         hallazgos_items=[
-            "El 88.5% de las calificaciones de alumnos de docentes Jornada "
-            "corresponde a aprobación (N°=134.640 calificaciones evaluables).",
-            "Las docentes mujeres tienen mayor % de aprobación que los hombres "
-            "(91.1% vs 87.7%) — diferencia estadísticamente significativa "
-            "(prueba t de Welch, p=0.0016).",
-            "Los docentes de escalafón Docente aprueban más que los de "
-            "escalafón Regular (90.5% vs 84.3%, p=0.0008); según tramo de edad "
-            "o de antigüedad (frente a % de aprobación directo) no hubo "
-            "diferencias significativas.",
-            "Controlando por dificultad de la asignatura (D27): los docentes "
-            "de asignaturas de baja aprobación histórica son más frecuentemente "
-            "hombres (56% vs 39% en el resto, p=0.0001), y en promedio mayores "
-            "y con más antigüedad. El escalafón no mostró diferencia "
-            "significativa por dificultad (p=0.0716) — se probó pero no se "
-            "incluyó como diapositiva, ver D27.",
+            "La brecha por sexo se invierte entre períodos: mujeres más alto en 2022-2023 y hombres en "
+            "2024-2025. Con la EDD ajustada, hombres 0.66 vs mujeres 0.61 (p=0.0408).",
+            "El escalafón Docente supera al Regular (0.66 vs 0.52, p=0.0011).",
+            "5 de 6 facultades difieren del resto: Derecho y Humanidades, Ingeniería y Economía por "
+            "encima; Medicina y VR Investigación por debajo.",
         ])
+    kit.notas(sl,
+        "Fuente: intel.evaluacion_jefes (D28/D29). EDD ajustada por año según D36: cada evaluación se "
+        "estandariza dentro de su año y se expresa en la escala de 2025; después se promedia por docente. "
+        "Sin el ajuste, VR Investigación (evaluada solo en 2024-2025) aparecía artificialmente más baja.")
     return sl
 
 
 def uih_b4(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque IV — EDD y Participación en Instancias Formativas (N°624)", fs=15)
-    kit.caja_universo_indice_hallazgos(sl,
+    kit.title(sl, "Bloque IV — Aprobación y reprobación de alumnos (N°624)", fs=16)
+    kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes de Jornada. 491 (78.7%) tienen al menos una evaluación de "
-            "desempeño docente (EDD) registrada entre 2022 y 2025 — la hace la "
-            "jefatura/director, distinta de la evaluación estudiantil de Bloque II "
-            "(D28/D29). 418 (67.0%) participaron en al menos una instancia formativa "
-            "(Taller/Diplomado/Proyecto) — fuente analisis.universo_formados_p3, sin "
-            "filtrar a apto_p3 (D31). Unidad de análisis en ambos casos: 1 valor por "
-            "docente — ver docs/DECISIONES_METODOLOGICAS.md D28/D29/D31."),
+            "624 docentes Jornada, de los cuales 515 (82.5%) tienen al menos una calificación de alumnos "
+            "entre 2023-01 y 2025-02. Las comparaciones usan el % de aprobación promedio por docente y "
+            "controlan por la dificultad de las asignaturas cuando corresponde."),
         indice_items=[
-            "Calificación EDD según Sexo del Docente + prueba t",
-            "Calificación EDD según Jerarquía (8 categorías) / Escalafón + prueba t",
-            "Calificación EDD según Facultad + 6 pruebas t (cada facultad vs. el resto)",
-            "Participación en Instancias Formativas según Sexo + prueba t",
-            "Participación en Instancias Formativas según Jerarquía / Escalafón + prueba t",
-            "Participación en Instancias Formativas según Tramo de Edad",
+            "Aprobación y reprobación — global",
+            "Según sexo del docente",
+            "Según sexo, dentro de cada grupo de dificultad",
+            "Según escalafón",
+            "Según antigüedad del docente",
+            "Evolución de la aprobación según sexo (2023-2025)",
+            "Composición de los grupos de dificultad",
+            "Antigüedad, edad y sexo según grupo de dificultad",
+            "Anexo: resumen de pruebas estadísticas",
         ],
         hallazgos_items=[
-            "Los docentes hombres tienen una calificación EDD promedio más alta que "
-            "las mujeres (0.72 vs 0.66, p=0.0183) — dirección opuesta a la evaluación "
-            "estudiantil de Bloque II, donde las mujeres puntúan más alto.",
-            "El escalafón Docente tiene una calificación EDD promedio más alta que el "
-            "escalafón Regular (0.71 vs 0.59, p=0.0011); por facultad, 4 de 6 muestran "
-            "diferencia significativa frente al resto (FACDEH/FINARQ por encima, "
-            "FAMEDSA/VRIIP por debajo — sin corrección por comparaciones múltiples, D29).",
-            "Las docentes mujeres participan más en instancias formativas que los "
-            "hombres (74.4% vs 62.4%, p=0.0016), y el escalafón Docente mucho más que "
-            "el Regular (76.5% vs 48.9%, p<0.0001) — la edad no mostró diferencia "
-            "significativa (p=0.0724).",
+            "El 88.5% de las calificaciones de alumnos de docentes Jornada son aprobaciones.",
+            "Las mujeres aprueban más en el total (91.1% vs 87.7%, p=0.0016), pero dentro de cada grupo "
+            "de dificultad la diferencia desaparece: se explica porque los hombres dictan más asignaturas "
+            "de baja aprobación (56% vs 39%).",
+            "El escalafón Docente aprueba más que el Regular (90.5% vs 84.3%, p=0.0008); la diferencia se "
+            "concentra en las asignaturas de baja aprobación. Por antigüedad no hay diferencia "
+            "significativa (p=0.2832).",
         ])
+    kit.notas(sl,
+        "Estados administrativos excluidos según D26; grupos de dificultad según D27. Escalafón dentro de "
+        "cada grupo de dificultad: Baja 81.8% vs 74.6% (p=0.0015), Media 94.9% vs 93.6% (p=0.1638), Alta "
+        "98.8% vs 98.5% (p=0.7745). Escalafón según grupo de dificultad: no significativo (p=0.0716), en "
+        "el anexo.")
     return sl

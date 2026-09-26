@@ -92,7 +92,7 @@ def agregar(prs):
         marca = " ⚠" if n < N_MIN_CONFIABLE else ""
         ax.text(edad + 0.8, i, f"{edad:.1f} años   (N°={int(n)}{marca})",
                 ha="left", va="center", fontsize=9.5, fontweight="bold",
-                color=colors[i], path_effects=stroke, zorder=6)
+                color="white", path_effects=stroke, zorder=6)
 
     ax.set_yticks(y)
     ax.set_yticklabels([CAT_LABEL[c] for c in CAT_DISPLAY], fontsize=10, color="white")
@@ -111,7 +111,7 @@ def agregar(prs):
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
-    kit.title(sl, "Edad Promedio por Jerarquía — Docentes de Planta (Jornada)")
+    kit.title(sl, "Distribución de la edad según jerarquía — Docentes Jornada")
     kit.subtitulo(sl,
         f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con jerarquía y edad disponibles "
         f"({N_SIN_DATOS} sin dato)")

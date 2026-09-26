@@ -67,6 +67,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 30 | Distribución de la Jornada (`jornada_dot`) — Completa/Parcial/Sin dato | ✅ Resuelto | 624 (Jornada), 531 con horas válidas | ✅ Vigente |
 | 31 | Participación en instancias formativas según sexo/jerarquía/edad | ✅ Resuelto | 624 (Jornada), 534-603 con dato válido | ✅ Vigente |
 | 32 | Participación en instancias formativas por Facultad (P3, Jornada+Honorario) | ✅ Resuelto | 1.144 (595 en 5 facultades + 549 Otra/Sin facultad) | ✅ Vigente |
+| 36 | Revisión de coherencia P1: EDD ajustada por año, control por dificultad, anexo de pruebas con Holm, diapositivas fundidas, formato numérico | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
 
 ---
 
@@ -1352,6 +1353,59 @@ sesiones futuras tras una pausa larga.
 
 ---
 
+## D36 — Revisión de coherencia del P1 (2026-09-26)
+
+Revisión extensiva del deck `P1_presentacion.pptx` (21 observaciones, informe en Claude Docs
+"Revisión P1 — Coherencia, lógica y pulcridad del deck"). Decisiones que cambian cálculo:
+
+**1. EDD ajustada por año.** La escala de `edd_total` cambió entre 2023 y 2024: promedio
+0.86-0.88 en 2022-2023 vs 0.67-0.69 en 2024-2025, desviación estándar 0.15 → 0.33. Promediar
+años distintos por docente mezclaba escalas (216 de 491 docentes Jornada solo tienen
+evaluaciones 2024-2025; VRIIP no tiene 2022-2023). Se estandariza cada evaluación dentro de
+su año (z = (edd − media_año) / desv_año) y se re-expresa en la escala de 2025
+(`edd_aj = z · desv_2025 + media_2025`), luego se promedia por docente. Transformación lineal
+del z-score: las pruebas t son idénticas a usar z. Se estandariza con media Y desviación (no
+solo centrando) porque la dispersión también cambió. Código: `caracterizacion/edd_comun.py`.
+Efectos: sexo sigue significativo pero más débil (p=0.0408 vs 0.0183) y la brecha se invierte
+entre períodos (mujeres más alto 2022-2023, hombres 2024-2025) — se agregó una diapositiva por
+año; escalafón igual (p=0.0011); facultad pasa a 5 de 6 significativas (FEGOC entra) y la
+brecha de VRIIP baja de −0.23 a −0.18. **Pendiente con la contraparte**: confirmar si el
+instrumento EDD cambió en 2024.
+
+**2. Una sola medida de aprobación por comparación.** Sexo/escalafón/antigüedad usan el % de
+aprobación promedio por docente (unidad de la prueba t). La versión ponderada por calificación
+queda en notas. La aprobación global (88.5%) sigue ponderada por calificación.
+
+**3. Dificultad: descriptivo y prueba con la misma unidad.** Antes el descriptivo usaba
+instancias y comparaba Baja vs Alta; ahora 1 valor por docente en su grupo predominante (D27),
+3 grupos con IC 95%, y prueba Baja vs Media+Alta en la misma diapositiva
+(`caracterizacion/dificultad_comun.py`).
+
+**4. Sexo × aprobación controlando por dificultad.** Dentro de cada grupo de dificultad no hay
+diferencia por sexo (Baja 81.0% vs 80.0% p=0.53; Media 94.9 vs 94.4 p=0.30; Alta 98.8 vs 98.6
+p=0.76). La brecha global (91.1% vs 87.7%, p=0.0016) se explica porque los hombres dictan más
+asignaturas de baja aprobación. En cambio, escalafón sí se mantiene en Baja (Docente 81.8% vs
+Regular 74.6%, p=0.0015), no en Media (p=0.16) ni Alta (p=0.77).
+
+**5. Antigüedad × aprobación con prueba.** ANOVA de un factor entre 4 tramos, p=0.2832
+(Kruskal-Wallis p=0.0874): respalda "sin diferencia significativa".
+
+**6. Anexo con todas las pruebas.** 21 pruebas, incluidas las no significativas, con p ajustado
+por Holm sobre el conjunto. Cada script expone `PRUEBAS`; `generar_presentacion.py` las reúne.
+Con Holm dejan de ser significativas: EDD sexo, antigüedad y edad por dificultad, FINARQ y
+FEGOC en EDD por facultad — **pendiente decidir** si las diapositivas lo señalan o si el ajuste
+se hace por familia (bloque) en vez de sobre el total.
+
+**Forma**: formato numérico chileno centralizado en `shared/pptx_helpers.formato_cl` (todo texto
+del kit y de matplotlib; los scripts escriben en formato inglés), `p<0.0001` en vez de
+`p=0.0000`, frase estándar de lectura del valor p (`lectura_p`, asociación, no causa), títulos
+en tipo oración con sufijo "— Docentes Jornada", pares descriptivo + prueba fundidos en una
+diapositiva (45 → 39 diapositivas), facultad de EDD con nombres en vez de siglas, "instancias
+formativas" (total) vs "Oferta formativa (Taller)" (tipo), período por bloque en la grilla,
+90 docentes sin dotación declarados en el Bloque I (66% mujeres vs 51%; 7% Regulares vs 16%).
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
 De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
@@ -1422,3 +1476,4 @@ valor a una sola muestra.
 | 2026-08-04 (7) | Compilados los 3 temas de participación formativa al consolidado `P1_presentacion.pptx`, ahora 44 diapositivas: concatenados a continuación de EDD en Bloque IV, a pedido explícito de la contraparte (no es EDD en sentido estricto). La diapositiva de prueba t de `participacion_formacion_edad/` se excluyó por no ser significativa (p=0.0724) — mismo criterio que `aprobacion_reprobacion_antiguedad_4tramos/3tramos` (se mantiene el descriptivo, se saca solo la prueba t), decidido explícitamente por el usuario entre los 2 precedentes existentes en el proyecto (el otro precedente, usado en `jerarquia_dificultad/`, es sacar el tema completo). Actualizados `grid_b3` y `uih_b4` en `slides_estructura.py` para reflejar que Bloque IV ahora cubre EDD + participación formativa. Estados del catálogo #22-24 pasados a ✅ Aprobado. |
 | 2026-08-12 | Agregada D32: volver sobre **P3** (no P1) a pedido de la contraparte — desagregado por facultad de participación en instancias formativas, 2 diapositivas (Jornada, Honorario), `generar_diapo_participacion_facultad.py`. Universo = todos los formados (no solo Aptos P3, mismo criterio D31). Hallazgo de calidad de datos: `unidad_facultad` en `universo_base` trae las 5 facultades académicas duplicadas bajo dos formatos de texto distintos (ya había una función `_fac()` en `generar_presentacion_v2.py` que lo resolvía para otras diapositivas; se reusó el mismo criterio). Se agregó una 6ta categoría "Otra / Sin facultad" agrupando 549 de 1.144 docentes sin una de las 5 facultades reales. Restaurado además el heading "## Catálogo de visualizaciones P1 confirmadas", que se había perdido en una edición anterior (la tabla seguía intacta, solo faltaba el título). |
 | 2026-09-13 | Reescrita `participacion_facultad` a pedido de la contraparte (rechazó la versión de D32): ahora 2 diapositivas simples, 100% apiladas Formados/No formados, por año (2023-2025) y por facultad, sin desagregar por tipo de formación ni por tipo de contrato (Jornada+Honorario combinados). Agregada D33: tema nuevo, tag Elector/Elegible para elección de Asamblea General, `products/elecciones_asamblea/etl/generar_tag_electores.py` → `analisis.universo_electores`. Calculado `es_elector` (Art. 2°) sobre los 1.144 docentes con 3 estados Sí/No/Sin dato (Honorario mayormente Sin dato por falta de `fecha_ingreso`, 507/520). `es_elegible` (Art. 4°) queda pendiente — el mapeo de "las 2 jerarquías más altas" no está confirmado con la contraparte; se dejó el componente de antigüedad (`cumple_antiguedad_8anios`) calculado como pieza reutilizable. |
+| 2026-09-26 | Agregada D36: revisión de coherencia del P1 — EDD ajustada por año, control de sexo por dificultad, anexo de 21 pruebas con Holm, pares descriptivo+prueba fundidos (39 diapositivas), formato numérico chileno centralizado. |
