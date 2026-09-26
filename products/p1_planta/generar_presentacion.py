@@ -137,16 +137,19 @@ def cargar_modulo(carpeta, script_name):
 
 PRUEBAS = []            # todas las pruebas del deck, para el anexo (obs. 6)
 _pruebas_vistas = set()
+SLIDES_POR_MODULO = {}  # carpeta -> diapositivas que generó (para marcar las no sostenidas por Holm)
 
 
 def agregar_bloque(prs, bloque, etiqueta):
     for carpeta, script_name, funciones in bloque:
         print(f"\n── {etiqueta}: {carpeta} " + "─" * max(1, 50 - len(carpeta) - len(etiqueta)))
         mod = cargar_modulo(carpeta, script_name)
+        antes = len(prs.slides)
         for funcion in funciones:
             getattr(mod, funcion)(prs)
+        SLIDES_POR_MODULO.setdefault(carpeta, []).extend(list(prs.slides)[antes:])
         if carpeta not in _pruebas_vistas:          # formacion_jornada se carga 3 veces
-            PRUEBAS.extend(getattr(mod, "PRUEBAS", []))
+            PRUEBAS.extend(dict(pr, carpeta=carpeta) for pr in getattr(mod, "PRUEBAS", []))
             _pruebas_vistas.add(carpeta)
 
 
@@ -172,7 +175,14 @@ estructura.uih_b4(prs)
 agregar_bloque(prs, BLOQUE_IV, "Bloque IV — Aprobación")
 
 print(f"\n── Anexo: {len(PRUEBAS)} pruebas estadísticas ───────────────────────────")
-estructura.anexo_pruebas(prs, PRUEBAS)
+# Holm por bloque (decisión del usuario 2026-09-26): anexo + aviso en las diapositivas cuyo
+# resultado deja de ser significativo con la corrección.
+HOLM = estructura.holm_por_bloque(PRUEBAS)
+estructura.anexo_pruebas(prs, PRUEBAS, HOLM)
+avisos = estructura.marcar_no_sostenidas(SLIDES_POR_MODULO, PRUEBAS, HOLM)
+for carpeta, lista in avisos.items():
+    print(f"  ⚠ No se sostiene con Holm por bloque ({carpeta}): "
+          + "; ".join(f"{pr['comparacion']} p={pr['p']:.4f} → {h:.4f}" for pr, h in lista))
 
 prs.save(OUT_PPTX)
 print(f"\n✓ Guardado: {OUT_PPTX}  ({len(prs.slides)} diapositivas)")

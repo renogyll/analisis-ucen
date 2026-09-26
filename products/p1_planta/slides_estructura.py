@@ -182,10 +182,21 @@ def _fmt_p(p):
     return "<0.0001" if p < 0.0001 else f"{p:.4f}"
 
 
-def anexo_pruebas(prs, pruebas, por_diapo=12):
+def holm_por_bloque(pruebas):
+    """p ajustado por Holm DENTRO de cada bloque (familia de pruebas), no sobre el total.
+    Decisión del usuario 2026-09-26: Holm sobre las 21 pruebas juntas era demasiado estricto
+    (mezcla preguntas de bloques distintos); lo habitual es corregir por familia."""
+    ajust = [None] * len(pruebas)
+    for bloque in dict.fromkeys(pr["bloque"] for pr in pruebas):
+        idx = [i for i, pr in enumerate(pruebas) if pr["bloque"] == bloque]
+        for i, h in zip(idx, _holm([pruebas[i]["p"] for i in idx])):
+            ajust[i] = h
+    return ajust
+
+
+def anexo_pruebas(prs, pruebas, holm, por_diapo=12):
     """Una o más diapositivas de tabla con todas las pruebas; filas doradas = significativas
-    al 5% después del ajuste de Holm."""
-    holm = _holm([pr["p"] for pr in pruebas])
+    al 5% después del ajuste de Holm por bloque."""
     filas = [[pr["bloque"], pr["comparacion"], pr["resultado"], pr["n"], pr["prueba"],
               _fmt_p(pr["p"]), _fmt_p(h), "Sí" if h < 0.05 else "No"]
              for pr, h in zip(pruebas, holm)]
@@ -197,18 +208,53 @@ def anexo_pruebas(prs, pruebas, por_diapo=12):
         sufijo = f" ({k + 1}/{len(partes)})" if len(partes) > 1 else ""
         kit.title(sl, f"Anexo — Resumen de pruebas estadísticas{sufijo}", fs=18)
         kit.subtitulo(sl, f"{len(pruebas)} pruebas en total: {n_sig} significativas al 5% sin ajuste, "
-                          f"{n_sig_holm} tras el ajuste de Holm por comparaciones múltiples (en dorado)")
-        kit.tabla(sl, ["Bloque", "Comparación", "Resultado", "N°", "Prueba", "p", "p ajustado (Holm)",
-                       "¿Signif.? (Holm)"],
-                  parte, anchos=[0.10, 0.33, 0.17, 0.05, 0.10, 0.07, 0.08, 0.10], fs=8.5,
+                          f"{n_sig_holm} tras el ajuste de Holm por bloque (en dorado)")
+        kit.tabla(sl, ["Bloque", "Comparación", "Resultado", "N°", "Prueba", "p",
+                       "p ajustado (Holm por bloque)", "¿Signif.? (Holm)"],
+                  parte, anchos=[0.10, 0.32, 0.17, 0.05, 0.10, 0.07, 0.09, 0.10], fs=8.5,
                   resaltar=lambda i, parte=parte: parte[i][-1] == "Sí")
         kit.notas(sl,
-            "Ajuste de Holm: ordena los p de menor a mayor y multiplica cada uno por el número de pruebas "
-            "que quedan; controla la probabilidad de declarar significativa al menos una diferencia que no "
-            "lo es. Todas las pruebas usan 1 valor por docente. Incluye las no significativas que no tienen "
-            "diapositiva propia (escalafón según grupo de dificultad).")
+            "Ajuste de Holm por bloque: dentro de cada bloque, ordena los p de menor a mayor y multiplica "
+            "cada uno por el número de pruebas que quedan; controla la probabilidad de declarar significativa "
+            "al menos una diferencia que no lo es dentro de esa familia de preguntas. Todas las pruebas usan "
+            "1 valor por docente. Incluye las no significativas que no tienen diapositiva propia (escalafón "
+            "según grupo de dificultad).")
         slides.append(sl)
     return slides
+
+
+def marcar_no_sostenidas(slides_por_modulo, pruebas, holm):
+    """Agrega un aviso al punteo de las diapositivas cuyo resultado era significativo sin ajuste
+    pero deja de serlo con Holm por bloque (decisión del usuario 2026-09-26). El aviso va en la
+    última diapositiva que generó el script de esa prueba."""
+    from pptx.util import Pt
+    from pptx.dml.color import RGBColor
+    from pptx_helpers import formato_cl
+    avisos = {}
+    for pr, h in zip(pruebas, holm):
+        if pr["p"] < 0.05 and h >= 0.05:
+            avisos.setdefault(pr["carpeta"], []).append((pr, h))
+    for carpeta, lista in avisos.items():
+        sl = slides_por_modulo[carpeta][-1]
+        cuerpo = [sh for sh in sl.shapes if sh.has_text_frame and sh.text_frame.text.startswith("1.")]
+        if not cuerpo:
+            continue
+        if len(lista) == 1:
+            texto = (f"⚠ Con la corrección de Holm por bloque esta diferencia deja de ser significativa "
+                     f"(p ajustado={lista[0][1]:.2f}): tomarla como indicio, no como hallazgo firme.")
+        else:
+            nombres = ", ".join(pr["comparacion"].split(": ")[-1].replace(" vs resto", "") for pr, _ in lista)
+            punto = "" if nombres.endswith(".") else "."    # "Economía, Gob. y Com." ya termina en punto
+            texto = (f"⚠ Con la corrección de Holm por bloque dejan de ser significativas: {nombres}{punto} "
+                     f"Tomarlas como indicio, no como hallazgo firme.")
+        tf = cuerpo[0].text_frame
+        ref = tf.paragraphs[0].runs[0].font
+        p = tf.add_paragraph(); p.space_before = Pt(4)
+        run = p.add_run(); run.text = formato_cl(texto)
+        # blanco en negrita: el dorado se leía mal sobre la parte clara (inferior) del fondo
+        run.font.size = ref.size; run.font.name = ref.name; run.font.bold = True
+        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    return avisos
 
 
 # ── Universo / Índice / Hallazgos por bloque (2026-09-26) ─────────────────────
@@ -300,10 +346,11 @@ def uih_b3(prs):
         ],
         hallazgos_items=[
             "La brecha por sexo se invierte entre períodos: mujeres más alto en 2022-2023 y hombres en "
-            "2024-2025. Con la EDD ajustada, hombres 0.66 vs mujeres 0.61 (p=0.0408).",
+            "2024-2025. En el total (hombres 0.66 vs mujeres 0.61) la diferencia no se sostiene al "
+            "corregir por comparaciones múltiples.",
             "El escalafón Docente supera al Regular (0.66 vs 0.52, p=0.0011).",
-            "5 de 6 facultades difieren del resto: Derecho y Humanidades, Ingeniería y Economía por "
-            "encima; Medicina y VR Investigación por debajo.",
+            "Por facultad, con la corrección se sostienen 3 diferencias: Derecho y Humanidades por encima "
+            "del resto; Medicina y VR Investigación por debajo.",
         ])
     kit.notas(sl,
         "Fuente: intel.evaluacion_jefes (D28/D29). EDD ajustada por año según D36: cada evaluación se "
@@ -336,13 +383,11 @@ def uih_b4(prs):
             "Las mujeres aprueban más en el total (91.1% vs 87.7%, p=0.0016), pero dentro de cada grupo "
             "de dificultad la diferencia desaparece: se explica porque los hombres dictan más asignaturas "
             "de baja aprobación (56% vs 39%).",
-            "El escalafón Docente aprueba más que el Regular (90.5% vs 84.3%, p=0.0008); la diferencia se "
-            "concentra en las asignaturas de baja aprobación. Por antigüedad no hay diferencia "
-            "significativa (p=0.2832).",
+            "El escalafón Docente aprueba más que el Regular (90.5% vs 84.3%, p=0.0008). Por antigüedad no "
+            "hay diferencia significativa (p=0.2832).",
         ])
     kit.notas(sl,
-        "Estados administrativos excluidos según D26; grupos de dificultad según D27. Escalafón dentro de "
-        "cada grupo de dificultad: Baja 81.8% vs 74.6% (p=0.0015), Media 94.9% vs 93.6% (p=0.1638), Alta "
-        "98.8% vs 98.5% (p=0.7745). Escalafón según grupo de dificultad: no significativo (p=0.0716), en "
-        "el anexo.")
+        "Estados administrativos excluidos según D26; grupos de dificultad según D27. Escalafón según "
+        "grupo de dificultad: no significativo (p=0.0716), en el anexo. Antigüedad y edad según grupo de "
+        "dificultad: significativas sin ajuste, no se sostienen con Holm por bloque (ver anexo).")
     return sl

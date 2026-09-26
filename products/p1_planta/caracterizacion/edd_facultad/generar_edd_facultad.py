@@ -122,11 +122,11 @@ def agregar(prs):
     arriba = [f for f, r in res.iterrows() if r["signif"] and r["dif"] > 0]
     abajo = [f for f, r in res.iterrows() if r["signif"] and r["dif"] < 0]
     no_sig = [f for f, r in res.iterrows() if not r["signif"]]
-    bullets = [f"{int(res['signif'].sum())} de 6 facultades difieren del resto al 5%: por encima "
-               f"{', '.join(arriba)}; por debajo {', '.join(abajo)}."]
+    # Sin ajuste; el aviso de Holm por bloque lo agrega el ensamblador (marcar_no_sostenidas).
+    bullets = [f"Sin corregir por comparaciones múltiples, {int(res['signif'].sum())} de 6 facultades "
+               f"difieren del resto al 5%: por encima {', '.join(arriba)}; por debajo {', '.join(abajo)}."]
     if no_sig:
-        bullets.append(f"Sin diferencia significativa: {', '.join(no_sig)}. Sin corrección por comparaciones "
-                       f"múltiples; con corrección de Holm, ver anexo.")
+        bullets.append(f"Sin diferencia significativa: {', '.join(no_sig)}.")
     kit.punteo_numerado(sl, bullets, fs=12)
     kit.notas(sl,
         f"Facultad = facultad_jefe (unidad de la jefatura que evalúa), predominante entre los años "

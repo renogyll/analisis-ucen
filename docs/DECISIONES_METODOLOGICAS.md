@@ -1384,17 +1384,21 @@ instancias y comparaba Baja vs Alta; ahora 1 valor por docente en su grupo predo
 **4. Sexo × aprobación controlando por dificultad.** Dentro de cada grupo de dificultad no hay
 diferencia por sexo (Baja 81.0% vs 80.0% p=0.53; Media 94.9 vs 94.4 p=0.30; Alta 98.8 vs 98.6
 p=0.76). La brecha global (91.1% vs 87.7%, p=0.0016) se explica porque los hombres dictan más
-asignaturas de baja aprobación. En cambio, escalafón sí se mantiene en Baja (Docente 81.8% vs
-Regular 74.6%, p=0.0015), no en Media (p=0.16) ni Alta (p=0.77).
+asignaturas de baja aprobación. El mismo control para escalafón (Docente 81.8% vs Regular 74.6%
+en Baja, p=0.0015; no en Media ni Alta) se calculó pero el usuario decidió no incluirlo en el deck
+(2026-09-26).
 
 **5. Antigüedad × aprobación con prueba.** ANOVA de un factor entre 4 tramos, p=0.2832
 (Kruskal-Wallis p=0.0874): respalda "sin diferencia significativa".
 
-**6. Anexo con todas las pruebas.** 21 pruebas, incluidas las no significativas, con p ajustado
-por Holm sobre el conjunto. Cada script expone `PRUEBAS`; `generar_presentacion.py` las reúne.
-Con Holm dejan de ser significativas: EDD sexo, antigüedad y edad por dificultad, FINARQ y
-FEGOC en EDD por facultad — **pendiente decidir** si las diapositivas lo señalan o si el ajuste
-se hace por familia (bloque) en vez de sobre el total.
+**6. Anexo con todas las pruebas, Holm por bloque.** 21 pruebas, incluidas las no significativas.
+Cada script expone `PRUEBAS`; `generar_presentacion.py` las reúne. Decisión del usuario
+(2026-09-26): p ajustado por Holm DENTRO de cada bloque (familia de preguntas: II participación,
+III EDD, IV aprobación), no sobre el total (demasiado estricto). Con Holm por bloque dejan de ser
+significativas: EDD por sexo, Ingeniería y Economía en EDD por facultad, antigüedad y edad por
+grupo de dificultad. Esas diapositivas llevan un aviso dorado en el punteo
+(`slides_estructura.marcar_no_sostenidas`) y los hallazgos del Bloque III se redactaron con lo que
+se sostiene. Interpretación: siguen siendo indicios, no hallazgos firmes.
 
 **Forma**: formato numérico chileno centralizado en `shared/pptx_helpers.formato_cl` (todo texto
 del kit y de matplotlib; los scripts escriben en formato inglés), `p<0.0001` en vez de

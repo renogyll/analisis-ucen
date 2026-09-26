@@ -136,8 +136,9 @@ COMENTARIOS = {
         "EDD ajustada por año: cada evaluación se estandariza dentro de su año (se resta el promedio del "
         "año y se divide por su desviación) y se expresa en la escala de 2025. Así un docente evaluado "
         "solo en 2024-2025 no queda más bajo solo por el año.",
-        "La diferencia a favor de los hombres se sostiene con el ajuste, pero es más débil (p=0.0408 "
-        "vs 0.0183 sin ajuste) y proviene de 2024-2025: en 2022-2023 las mujeres puntuaban más alto.",
+        "Con la EDD ajustada, la diferencia a favor de los hombres es más débil (p=0.0408 vs 0.0183 sin "
+        "ajuste), proviene de 2024-2025 y no se sostiene al corregir por comparaciones múltiples dentro "
+        "del Bloque III. En 2022-2023 las mujeres puntuaban más alto.",
     ],
     "Calificación EDD según facultad": [
         "Con la EDD ajustada, VR Investigación sigue más baja que el resto, pero la brecha se reduce: "
@@ -146,7 +147,8 @@ COMENTARIOS = {
         "Se usan los nombres de facultad del Bloque I en vez de siglas. Ojo: aquí la facultad es la de "
         "la jefatura que evalúa (facultad_jefe), otro campo que la unidad del Bloque I; por eso los N° "
         "no coinciden.",
-        "6 pruebas sin corrección; en el anexo está el valor p ajustado por Holm.",
+        "Con la corrección de Holm por bloque se sostienen 3 de las 5 diferencias (Derecho y "
+        "Humanidades, Medicina, VR Investigación); Ingeniería y Economía quedan como indicio.",
     ],
     "¿Difiere el % de aprobación según sexo": [
         "Decisión: se usa una sola medida, el % de aprobación promedio por docente (la unidad de la "
@@ -160,9 +162,7 @@ COMENTARIOS = {
         "más en cursos comparables.",
     ],
     "¿Difiere el % de aprobación según escalafón": [
-        "Misma medida que en sexo (promedio por docente). Controlando por dificultad, la diferencia "
-        "Docente vs Regular se mantiene en las asignaturas de baja aprobación (81.8% vs 74.6%, "
-        "p=0.0015) y no en las de media o alta (detalle en notas del Bloque IV).",
+        "Misma medida que en sexo: % de aprobación promedio por docente.",
     ],
     "% de aprobación según antigüedad del docente": [
         "Antes esta diapositiva no tenía prueba y el Bloque IV afirmaba 'sin diferencias significativas'. "
@@ -181,8 +181,9 @@ COMENTARIOS = {
     ],
     "Anexo — Resumen de pruebas estadísticas": [
         "Decisión: se muestran todas las pruebas, incluidas las no significativas, para no sesgar la "
-        "lectura. La columna 'p ajustado (Holm)' corrige por hacer muchas comparaciones a la vez; en "
-        "dorado, las que siguen siendo significativas después del ajuste.",
+        "lectura. La columna 'p ajustado' corrige por hacer muchas comparaciones a la vez, dentro de cada "
+        "bloque (familia de preguntas); en dorado, las que siguen siendo significativas después del ajuste. "
+        "Las diapositivas cuyo resultado no se sostiene llevan un aviso en el punteo.",
     ],
 }
 
