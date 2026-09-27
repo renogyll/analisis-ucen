@@ -68,6 +68,7 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 31 | Participación en instancias formativas según sexo/jerarquía/edad | ✅ Resuelto | 624 (Jornada), 534-603 con dato válido | ✅ Vigente |
 | 32 | Participación en instancias formativas por Facultad (P3, Jornada+Honorario) | ✅ Resuelto | 1.144 (595 en 5 facultades + 549 Otra/Sin facultad) | ✅ Vigente |
 | 36 | Revisión de coherencia P1: EDD ajustada por año, control por dificultad, anexo de pruebas con Holm, diapositivas fundidas, formato numérico | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
+| 37 | EDD limpia (notas dañadas 2024-2025) + regla binaria de significancia con Holm por bloque | ✅ Resuelto | 491 con EDD → 396 con nota limpia | ✅ Vigente |
 
 ---
 
@@ -1358,7 +1359,7 @@ sesiones futuras tras una pausa larga.
 Revisión extensiva del deck `P1_presentacion.pptx` (21 observaciones, informe en Claude Docs
 "Revisión P1 — Coherencia, lógica y pulcridad del deck"). Decisiones que cambian cálculo:
 
-**1. EDD ajustada por año.** La escala de `edd_total` cambió entre 2023 y 2024: promedio
+**1. EDD ajustada por año — ⚠ REEMPLAZADO por D37 (2026-09-27): el diagnóstico de "cambio de escala" era incorrecto; el problema eran notas dañadas.** La escala de `edd_total` cambió entre 2023 y 2024: promedio
 0.86-0.88 en 2022-2023 vs 0.67-0.69 en 2024-2025, desviación estándar 0.15 → 0.33. Promediar
 años distintos por docente mezclaba escalas (216 de 491 docentes Jornada solo tienen
 evaluaciones 2024-2025; VRIIP no tiene 2022-2023). Se estandariza cada evaluación dentro de
@@ -1407,6 +1408,54 @@ en tipo oración con sufijo "— Docentes Jornada", pares descriptivo + prueba f
 diapositiva (45 → 39 diapositivas), facultad de EDD con nombres en vez de siglas, "instancias
 formativas" (total) vs "Oferta formativa (Taller)" (tipo), período por bloque en la grilla,
 90 docentes sin dotación declarados en el Bloque I (66% mujeres vs 51%; 7% Regulares vs 16%).
+
+---
+
+## D37 — EDD limpia y regla binaria de significancia (2026-09-27)
+
+**Contexto.** Al investigar si el instrumento EDD cambió en 2024 (pregunta abierta de D36) se
+encontró que la escala NO cambió: en 2024 y 2025 hay notas dañadas en `intel.evaluacion_jefes`.
+
+**Evidencia (Base):**
+- La distribución del concepto cualitativo es estable todos los años (67-73% "Muy Bueno"), pero la
+  nota de un mismo concepto cae: "Muy Bueno" = 0.87-0.90 en 2022-2023 y 0.71 en 2024-2025.
+- 2025: 62 notas exactamente 0, 37 con concepto "Muy Bueno" → datos vacíos guardados como 0.
+- 2024: 159 notas (42%) forman un grupo bajo 0.55, separado por un vacío (ninguna entre 0.50 y
+  0.55); su nota es casi exactamente la mitad del puntaje del director (razón mediana 0.47, vs 0.92
+  en el grupo alto) → un componente faltante contado como 0. En 2025 aparece el mismo grupo.
+- En 2022-2023 solo 23 de 466 notas (5%) son < 0.55; en 2024-2025, 327 de 853 (38%).
+- Los mismos 171 docentes con igual concepto en 2023 y 2024 "bajan" de 0.88 a 0.72.
+- Sin las notas dañadas, la EDD es estable: 0.856 / 0.879 / 0.874 / 0.894 (2022-2025).
+- Los componentes `edd_director`/`edd_docente` solo existen en 2024 (74%/43% de cobertura).
+
+**Decisión (usuario, opción B):** nota sospechosa = `edd_total == 0` o `edd_total < 0.55` en
+2024-2025; se excluye y cada docente se resume con el promedio de sus notas limpias
+(`caracterizacion/edd_comun.py`). Costos: se pierden ~5% de notas bajas reales de esos años y 95 de
+491 docentes quedan sin nota limpia (N° 396). Verificación con el concepto (% "Muy Bueno"): sexo y
+escalafón tampoco difieren; por facultad el concepto sí muestra diferencias (Medicina más baja,
+Economía y Derecho más altas), que con la nota limpia no aparecen.
+
+**Resultados con la nota limpia:** sexo (0.869 vs 0.884, p=0.19), escalafón (0.882 vs 0.849,
+p=0.11) y las 6 facultades vs el resto: ninguna diferencia significativa. Las diferencias de las
+versiones anteriores (hombres y escalafón Docente más altos, VRIIP y FAMEDSA más bajas) venían de
+las notas dañadas, que afectaron más a las mujeres (42.6% vs 32.4% de sus notas 2024-2025) y a
+unidades evaluadas solo en 2024-2025. **Recomendación:** informar el problema a quien administra la
+base de EDD.
+
+**Regla binaria de significancia (usuario):** una diferencia es significativa solo si su p corregido
+por Holm dentro de su bloque es < 0.05; si no, se informa "sin diferencia" (sin categoría de
+"indicio"). Implementación: `generar_presentacion.py` carga primero todos los scripts, calcula Holm
+por bloque y deja el p corregido en `pptx_helpers.P_AJUSTADO`; cada script lo usa en el recuadro del
+gráfico (`encabezado_prueba`) y en el punteo (`lectura_p`). 27 pruebas: 10 con p < 0.05 sin corregir,
+6 significativas con la regla. Dejan de serlo: participación Educación y Derecho vs resto, antigüedad y
+edad por grupo de dificultad.
+
+**Otras decisiones del mismo día:** trayectoria = años en UCEN (explícito en la bajada); se quita el
+punteo sobre Regulares que ingresan jerarquizados; "posible implicancia" en grado académico; pruebas
+de participación por facultad (cada unidad vs el resto); en la carga académica, los 7 Vicedecano(a)
+y las 8 autoridades superiores (Rector, Vicerrector Académico, Vicerrector Regional, 3 Decanos(as),
+Presidente y Director de la Junta Directiva) se reclasifican de VcM a Gestión Académica por ser
+cargos de gestión. Resultado: Gestión Académica 73 (13,7%), VcM 33 (6,2%).
 
 ---
 
@@ -1481,3 +1530,4 @@ valor a una sola muestra.
 | 2026-08-12 | Agregada D32: volver sobre **P3** (no P1) a pedido de la contraparte — desagregado por facultad de participación en instancias formativas, 2 diapositivas (Jornada, Honorario), `generar_diapo_participacion_facultad.py`. Universo = todos los formados (no solo Aptos P3, mismo criterio D31). Hallazgo de calidad de datos: `unidad_facultad` en `universo_base` trae las 5 facultades académicas duplicadas bajo dos formatos de texto distintos (ya había una función `_fac()` en `generar_presentacion_v2.py` que lo resolvía para otras diapositivas; se reusó el mismo criterio). Se agregó una 6ta categoría "Otra / Sin facultad" agrupando 549 de 1.144 docentes sin una de las 5 facultades reales. Restaurado además el heading "## Catálogo de visualizaciones P1 confirmadas", que se había perdido en una edición anterior (la tabla seguía intacta, solo faltaba el título). |
 | 2026-09-13 | Reescrita `participacion_facultad` a pedido de la contraparte (rechazó la versión de D32): ahora 2 diapositivas simples, 100% apiladas Formados/No formados, por año (2023-2025) y por facultad, sin desagregar por tipo de formación ni por tipo de contrato (Jornada+Honorario combinados). Agregada D33: tema nuevo, tag Elector/Elegible para elección de Asamblea General, `products/elecciones_asamblea/etl/generar_tag_electores.py` → `analisis.universo_electores`. Calculado `es_elector` (Art. 2°) sobre los 1.144 docentes con 3 estados Sí/No/Sin dato (Honorario mayormente Sin dato por falta de `fecha_ingreso`, 507/520). `es_elegible` (Art. 4°) queda pendiente — el mapeo de "las 2 jerarquías más altas" no está confirmado con la contraparte; se dejó el componente de antigüedad (`cumple_antiguedad_8anios`) calculado como pieza reutilizable. |
 | 2026-09-26 | Agregada D36: revisión de coherencia del P1 — EDD ajustada por año, control de sexo por dificultad, anexo de 21 pruebas con Holm, pares descriptivo+prueba fundidos (39 diapositivas), formato numérico chileno centralizado. |
+| 2026-09-27 | Agregada D37: EDD limpia (notas dañadas 2024-2025, reemplaza el ajuste por año de D36), regla binaria de significancia con Holm por bloque, pruebas de participación por facultad, Vicedecano y autoridades superiores a Gestión Académica. |

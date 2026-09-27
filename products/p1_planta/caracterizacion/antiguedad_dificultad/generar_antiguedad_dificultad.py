@@ -127,6 +127,7 @@ def agregar(prs):
                                   f"tienen en promedio {b:.1f} años de antigüedad, vs {r:.1f} en el resto "
                                   f"(diferencia de {b - r:.1f} años)."),
         notas="Antigüedad = años desde la fecha de ingreso a UCEN.",
+        clave="Antigüedad: grupo predominante Baja vs Media+Alta",
         chart_name="antiguedad_dificultad_chart.png")
 
 

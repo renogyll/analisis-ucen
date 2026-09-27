@@ -114,16 +114,19 @@ def agregar(prs):
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
     kit.title(sl, "Años de trayectoria promedio según jerarquía — Docentes Jornada")
+    # Decisiones del usuario 2026-09-26: trayectoria = años en UCEN, explícito en la bajada;
+    # se quita el punteo interpretativo sobre Regulares que ingresan ya jerarquizados.
     kit.subtitulo(sl,
-        f"Universo: {N_TOTAL} docentes Jornada  ·  {N_CON_DATOS} con jerarquía y antigüedad disponibles "
-        f"({N_SIN_DATOS} sin dato)")
+        f"Años en UCEN desde la fecha de ingreso (no incluye carrera previa)  ·  {N_CON_DATOS} de "
+        f"{N_TOTAL} docentes Jornada con jerarquía y antigüedad ({N_SIN_DATOS} sin dato)")
     bullets = [
         f"La trayectoria crece con la jerarquía: {CAT_LABEL[cat_mayor]} promedia "
         f"{tab.loc[cat_mayor, 'tray_prom']:.1f} años en la universidad, frente a "
         f"{tab.loc[cat_menor, 'tray_prom']:.1f} en {CAT_LABEL[cat_menor]}.",
-        f"En {n_regular_menor} de 3 niveles, el escalafón Regular tiene menos años en la universidad "
-        f"que el Docente del mismo nivel (Titular: {tit_r:.1f} vs {tit_d:.1f} años) — sugiere que "
-        f"parte de los Regulares ingresa ya jerarquizado.",
+        f"En los 3 niveles comparables, el escalafón Regular tiene menos años en la universidad que el "
+        f"Docente del mismo nivel (Titular: {tit_r:.1f} vs {tit_d:.1f} años)." if n_regular_menor == 3 else
+        f"En {n_regular_menor} de 3 niveles, el escalafón Regular tiene menos años en la universidad que el "
+        f"Docente del mismo nivel.",
     ]
     if cats_muestra_chica:
         nombres = ", ".join(CAT_LABEL[c] for c in cats_muestra_chica)

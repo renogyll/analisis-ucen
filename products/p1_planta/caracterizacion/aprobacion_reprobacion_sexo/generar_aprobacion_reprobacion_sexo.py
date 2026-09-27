@@ -98,7 +98,8 @@ print(f"\nPrueba t (por docente, Mujer vs Hombre): Mujer N°={len(mujer)} media=
 # la brecha global por sexo podría deberse a la dificultad de las asignaturas. Se compara
 # hombres vs mujeres DENTRO de cada grupo de dificultad: 1 valor por docente y grupo (el %
 # de aprobación del docente en las asignaturas de ese grupo).
-from pptx_helpers import lectura_p, prueba_dict
+from pptx_helpers import lectura_p, prueba_dict, encabezado_prueba, es_significativa
+CLAVE = "% aprobación por docente: Mujer vs Hombre"   # = comparación registrada en PRUEBAS
 
 GRUPOS_DIF = ["Baja", "Media", "Alta"]
 ETIQ_DIF = {"Baja": "Baja aprobación", "Media": "Aprobación media", "Alta": "Aprobación alta"}
@@ -123,7 +124,11 @@ for g in GRUPOS_DIF:
 
 PRUEBAS = [prueba_dict("IV · Aprobación", "% aprobación por docente: Mujer vs Hombre",
                        f"{mujer.mean():.1f}% vs {hombre.mean():.1f}%", len(hombre) + len(mujer), P_VAL)]
-PRUEBAS += [prueba_dict("IV · Aprobación", f"% aprobación Mujer vs Hombre, dentro de {ETIQ_DIF[g].lower()}",
+def _clave_dif(g):
+    return f"% aprobación Mujer vs Hombre, dentro de {ETIQ_DIF[g].lower()}"
+
+
+PRUEBAS += [prueba_dict("IV · Aprobación", _clave_dif(g),
                         f"{d['m'].mean():.1f}% vs {d['h'].mean():.1f}%", len(d['m']) + len(d['h']), d["p"])
             for g, d in DIF.items()]
 
@@ -147,8 +152,7 @@ def agregar(prs):
         ax.text(xi, m + ci + 2.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=13,
                 fontweight="bold", color="white", path_effects=stroke, zorder=6)
         ax.text(xi, 8, f"N°={len(s)} docentes", ha="center", va="bottom", fontsize=8.5, color="white")
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   diferencia {sig} al 5%",
+    ax.text(0.5, 0.99, encabezado_prueba("Prueba t de Welch", "t", T_STAT, P_VAL, CLAVE),
             transform=ax.transAxes, ha="center", va="top", fontsize=9.5, color="#F2D675", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(["Hombre", "Mujer"], fontsize=12, color="white")
     ax.set_ylabel("% de aprobación promedio por docente", color="#AAAAAA", fontsize=9)
@@ -168,7 +172,7 @@ def agregar(prs):
     kit.punteo_numerado(sl, [
         f"Las docentes mujeres aprueban en promedio el {mujer.mean():.1f}% de sus calificaciones, vs "
         f"{hombre.mean():.1f}% los hombres (diferencia de {mujer.mean() - hombre.mean():.1f} puntos). "
-        + lectura_p(P_VAL),
+        + lectura_p(P_VAL, clave=CLAVE),
         "Esta diferencia desaparece al comparar dentro de cada grupo de dificultad (siguiente diapositiva).",
     ], fs=12)
     kit.notas(sl,
@@ -199,7 +203,7 @@ def agregar_por_dificultad(prs):
             ax.text(xi, 4, f"N°={len(DIF[g][clave])}", ha="center", va="bottom", fontsize=7.5, color="white")
     for xi, g in zip(x, GRUPOS_DIF):
         p = DIF[g]["p"]
-        ax.text(xi, 108, f"p={p:.2f}" + (" *" if p < 0.05 else " (n.s.)"), ha="center", va="bottom",
+        ax.text(xi, 108, f"p={p:.2f}" + (" *" if es_significativa(p, _clave_dif(g)) else " (n.s.)"), ha="center", va="bottom",
                 fontsize=9, color="#F2D675", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels([ETIQ_DIF[g] for g in GRUPOS_DIF], fontsize=11.5, color="white")
     ax.set_xlabel("Grupo de dificultad de la asignatura", color="#AAAAAA", fontsize=9)
@@ -215,17 +219,17 @@ def agregar_por_dificultad(prs):
     chart_path = kit.save_chart(fig, "aprobacion_sexo_por_dificultad_chart.png")
 
     difs = [DIF[g]["m"].mean() - DIF[g]["h"].mean() for g in GRUPOS_DIF]
-    n_sig = sum(DIF[g]["p"] < 0.05 for g in GRUPOS_DIF)
+    n_sig = sum(es_significativa(DIF[g]["p"], _clave_dif(g)) for g in GRUPOS_DIF)
     sl = kit.new_slide(prs)
     kit.pic(sl, prs, kit.SHARED_BG)
     kit.pic_chart(sl, prs, chart_path)
     kit.title(sl, "% de aprobación según sexo, dentro de cada grupo de dificultad — Docentes Jornada")
     kit.subtitulo(sl, "1 valor por docente y grupo: su % de aprobación en las asignaturas de ese grupo  ·  "
-                      "prueba t de Welch por grupo (n.s. = no significativa al 5%)")
+                      "prueba t de Welch por grupo, p corregido por comparaciones múltiples (n.s. = no significativa)")
     kit.punteo_numerado(sl, [
         f"Dentro de cada grupo de dificultad, hombres y mujeres aprueban casi igual: las diferencias van de "
         f"{min(difs):+.1f} a {max(difs):+.1f} puntos, y {'ninguna' if n_sig == 0 else n_sig} es "
-        f"estadísticamente significativa al 5%.",
+        f"estadísticamente significativa.",
         "La brecha global por sexo se explica porque los hombres dictan más asignaturas de baja aprobación "
         "(Bloque IV, sexo según grupo de dificultad), no por una diferencia entre docentes en cursos comparables.",
     ], fs=12)

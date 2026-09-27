@@ -59,6 +59,17 @@ N_ARCHIVO = len(clas)
 clas = clas[clas["rut_key"].astype(str).isin(doc["rut_key"].astype(str))].copy()
 clas["funcion"] = clas["CLASIFICACION"].str.strip().map(CLASIF_MAP)
 assert clas["funcion"].notna().all(), f"Clasificación sin mapear: {clas.loc[clas['funcion'].isna(), 'CLASIFICACION'].unique()}"
+# Decisión del usuario 2026-09-27: Vicedecano(a) (y sus variantes: interino, sede) es un cargo de
+# gestión; el archivo lo traía en VCM. Se reclasifica a Gestión Académica.
+ES_VICEDECANO = clas["CARGO"].str.contains("Vicedecano", case=False, na=False)
+N_VICEDECANO = int(ES_VICEDECANO.sum())
+clas.loc[ES_VICEDECANO, "funcion"] = "Gestión Académica"
+# Mismo criterio para las autoridades superiores que el archivo traía en VCM (decisión 2026-09-27).
+AUTORIDADES = {"Rector", "Vicerrector Académico", "Vicerrector Regional", "Decano(a)",
+               "Presidente Honorable Junta Directiva", "Director Honorable Junta Directiva"}
+ES_AUTORIDAD = clas["CARGO"].str.strip().isin(AUTORIDADES)
+N_AUTORIDAD = int(ES_AUTORIDAD.sum())
+clas.loc[ES_AUTORIDAD, "funcion"] = "Gestión Académica"
 N = len(clas)
 
 conteo = clas["funcion"].value_counts()
@@ -137,7 +148,9 @@ def agregar(prs):
     kit.notas(sl,
         "Fuente: archivo de la contraparte 'CONSOLIDADO DOCENTES 3-05-2026 — dotacion_con_clasificacion' "
         f"({N_ARCHIVO} docentes), cruzado por RUT con el universo Jornada. Clasificación tal como viene "
-        "en la columna CLASIFICACION; 'DOCENTE' (1 caso, cargo Profesor) se sumó a Docencia. Cada "
+        f"en la columna CLASIFICACION, con dos ajustes: 'DOCENTE' (1 caso, cargo Profesor) se sumó a Docencia, "
+        f"y los {N_VICEDECANO} Vicedecano(a) y {N_AUTORIDAD} autoridades superiores (Rector, Vicerrectores, "
+        "Decanos(as) y Junta Directiva) pasaron de Vinculación con el Medio a Gestión Académica. Cada "
         "docente tiene un solo cargo principal en dotación. Bajo cada barra, los 2 cargos más "
         "frecuentes de esa función.")
     return sl

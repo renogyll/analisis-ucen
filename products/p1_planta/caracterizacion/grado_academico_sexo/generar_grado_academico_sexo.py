@@ -133,7 +133,7 @@ def agregar(prs):
         f"pero solo el {pct_mujer_doctor:.0f}% de los Doctores.",
         f"En el otro extremo, {pct_mujer_prof:.0f}% de quienes no tienen posgrado son mujeres "
         f"({pct_prof_m:.0f}% de ellas vs {pct_prof_h:.0f}% de los hombres).",
-        f"Implicancia: el Doctorado predomina en el escalafón Regular ({pct_doc_regular:.0f}% "
+        f"Posible implicancia: el Doctorado predomina en el escalafón Regular ({pct_doc_regular:.0f}% "
         f"lo tiene), por lo que esta brecha podría limitar la progresión académica de las mujeres.",
     ], fs=11)
     kit.notas(sl,

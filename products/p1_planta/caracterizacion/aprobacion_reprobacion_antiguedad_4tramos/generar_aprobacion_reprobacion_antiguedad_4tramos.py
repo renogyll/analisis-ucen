@@ -84,7 +84,8 @@ tramo_peor = tab["pct_aprobacion"].idxmin()
 # los 4 tramos (Kruskal-Wallis como verificación no paramétrica, en notas). Respalda la frase
 # "por antigüedad no hay diferencias significativas" del Bloque IV.
 from scipy import stats
-from pptx_helpers import prueba_dict
+from pptx_helpers import prueba_dict, encabezado_prueba, es_significativa
+CLAVE = "% aprobación por docente según tramo de antigüedad (4 tramos)"   # = comparación en PRUEBAS
 
 por_docente = (raw.groupby(["rut_docente", "tramo_antiguedad"])["aprueba"].mean().mul(100)
                .reset_index(name="pct_aprob"))
@@ -114,9 +115,8 @@ def agregar(prs):
         ax.text(xi, m + ci + 2.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=12,
                 fontweight="bold", color="white", path_effects=stroke, zorder=6)
         ax.text(xi, 8, f"N°={len(series[t])} docentes", ha="center", va="bottom", fontsize=8.5, color="white")
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"ANOVA de un factor entre los 4 tramos:  F = {F_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
+    ax.text(0.5, 0.99, encabezado_prueba("ANOVA de un factor entre los 4 tramos", "F", F_STAT, P_VAL, CLAVE),
+            transform=ax.transAxes, ha="center", va="top",
             fontsize=9.5, color="#F2D675", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(TRAMOS_ORD, fontsize=11, color="white")
     ax.set_xlabel("Tramo de antigüedad en la institución (años)", color="#AAAAAA", fontsize=9)
@@ -140,8 +140,8 @@ def agregar(prs):
         f"El % de aprobación va de {series[peor].mean():.1f}% (tramo {peor}) a {series[mejor].mean():.1f}% "
         f"(tramo {mejor}).",
         f"El ANOVA entre los 4 tramos da p={P_VAL:.4f}: "
-        + ("la diferencia es estadísticamente significativa al 5%."
-           if P_VAL < 0.05 else "la antigüedad no se asocia de forma significativa con el % de aprobación."),
+        + ("la diferencia es estadísticamente significativa."
+           if es_significativa(P_VAL, CLAVE) else "la antigüedad no se asocia de forma significativa con el % de aprobación."),
     ], fs=12)
     kit.notas(sl,
         f"Verificación no paramétrica (Kruskal-Wallis): p={P_KRUSKAL:.4f}. El tramo 15+ tiene pocos docentes "

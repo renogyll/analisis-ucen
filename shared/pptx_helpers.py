@@ -96,15 +96,46 @@ def formato_cl(s):
     return s.replace("\x00", ".")
 
 
-def lectura_p(p, prueba="prueba t de Welch"):
-    """Frase estándar para interpretar un valor p (revisión P1, obs. 5): asociación, no causa;
-    'poco probable que se deba solo al azar' en vez de 'se puede descartar el azar'."""
-    pv = "p<0.0001" if p < 0.0001 else f"p={p:.4f}"
-    if p < 0.05:
-        return (f"La {prueba} da {pv}: la diferencia es estadísticamente significativa al 5% "
+# Valores p corregidos por Holm por bloque, {comparacion: p_ajustado}. Los llena el ensamblador
+# (generar_presentacion.py) ANTES de crear las diapositivas; en modo standalone queda vacío y
+# se usa el p sin corregir. Regla binaria (decisión del usuario 2026-09-27): significativa solo
+# si el p corregido es < 0.05; si no, "no hay diferencia" — sin categoría de "indicio".
+P_AJUSTADO = {}
+
+
+def _p_txt(p):
+    return "p<0.0001" if p < 0.0001 else f"p={p:.4f}"
+
+
+def lectura_p(p, prueba="prueba t de Welch", clave=None):
+    """Frase estándar para interpretar un valor p (revisión P1, obs. 5): asociación, no causa.
+    Con `clave` (la comparación registrada en PRUEBAS) usa el p corregido por Holm por bloque."""
+    pa = P_AJUSTADO.get(clave) if clave else None
+    if pa is None:
+        if p < 0.05:
+            return (f"La {prueba} da {_p_txt(p)}: la diferencia es estadísticamente significativa al 5% "
+                    f"(es poco probable que se deba solo al azar).")
+        return (f"La {prueba} da {_p_txt(p)}: no hay diferencia estadísticamente significativa al 5%.")
+    corr = f"{_p_txt(pa)} corregido por comparaciones múltiples"
+    if pa < 0.05:
+        return (f"La {prueba} da {_p_txt(p)} ({corr}): la diferencia es estadísticamente significativa "
                 f"(es poco probable que se deba solo al azar).")
-    return (f"La {prueba} da {pv}: la diferencia no es estadísticamente significativa al 5% "
-            f"(podría deberse al azar).")
+    return f"La {prueba} da {_p_txt(p)} ({corr}): no hay diferencia estadísticamente significativa."
+
+
+def es_significativa(p, clave=None):
+    """Veredicto binario con el p corregido si existe (regla del usuario 2026-09-27)."""
+    pa = P_AJUSTADO.get(clave) if clave else None
+    return (pa if pa is not None else p) < 0.05
+
+
+def encabezado_prueba(nombre, estadistico, valor, p, clave=None):
+    """Texto del recuadro dorado sobre los gráficos de prueba: estadístico, p y veredicto binario."""
+    pa = P_AJUSTADO.get(clave) if clave else None
+    base = f"{nombre}:  {estadistico} = {valor:.2f}   ·   p = {p:.4f}"
+    if pa is not None:
+        base += f"   ·   p corregido = {pa:.4f}"
+    return base + ("   ·   diferencia significativa" if es_significativa(p, clave) else "   ·   sin diferencia significativa")
 
 
 def prueba_dict(bloque, comparacion, resultado, n, p, prueba="t de Welch"):

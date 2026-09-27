@@ -150,8 +150,8 @@ def grid_bloques(prs):
         ("Bloque III — Evaluación de Desempeño Docente (EDD)",
          ["Universo: 624 docentes Jornada, 491 con EDD (hecha por la jefatura, distinta de la "
           "evaluación que hacen los estudiantes)",
-          "Período: 2022-2025, EDD ajustada por año por un cambio de escala en 2024"],
-         ["EDD por año y sexo",
+          "Período: 2022-2025; se excluyen las notas dañadas de 2024-2025"],
+         ["Calidad de los datos de la EDD por año",
           "EDD según sexo, jerarquía/escalafón y facultad, con sus pruebas"]),
         ("Bloque IV — Aprobación y reprobación de alumnos",
          ["Universo: 624 docentes Jornada, 515 con calificaciones registradas",
@@ -194,7 +194,7 @@ def holm_por_bloque(pruebas):
     return ajust
 
 
-def anexo_pruebas(prs, pruebas, holm, por_diapo=12):
+def anexo_pruebas(prs, pruebas, holm, por_diapo=14):
     """Una o más diapositivas de tabla con todas las pruebas; filas doradas = significativas
     al 5% después del ajuste de Holm por bloque."""
     filas = [[pr["bloque"], pr["comparacion"], pr["resultado"], pr["n"], pr["prueba"],
@@ -207,10 +207,10 @@ def anexo_pruebas(prs, pruebas, holm, por_diapo=12):
         sl = _nueva(prs)
         sufijo = f" ({k + 1}/{len(partes)})" if len(partes) > 1 else ""
         kit.title(sl, f"Anexo — Resumen de pruebas estadísticas{sufijo}", fs=18)
-        kit.subtitulo(sl, f"{len(pruebas)} pruebas en total: {n_sig} significativas al 5% sin ajuste, "
-                          f"{n_sig_holm} tras el ajuste de Holm por bloque (en dorado)")
+        kit.subtitulo(sl, f"{len(pruebas)} pruebas en total: {n_sig} con p < 0.05 sin corregir, {n_sig_holm} "
+                          f"significativas con el p corregido por comparaciones múltiples (Holm por bloque, en dorado)")
         kit.tabla(sl, ["Bloque", "Comparación", "Resultado", "N°", "Prueba", "p",
-                       "p ajustado (Holm por bloque)", "¿Signif.? (Holm)"],
+                       "p corregido", "¿Signif.?"],
                   parte, anchos=[0.10, 0.32, 0.17, 0.05, 0.10, 0.07, 0.09, 0.10], fs=8.5,
                   resaltar=lambda i, parte=parte: parte[i][-1] == "Sí")
         kit.notas(sl,
@@ -223,38 +223,8 @@ def anexo_pruebas(prs, pruebas, holm, por_diapo=12):
     return slides
 
 
-def marcar_no_sostenidas(slides_por_modulo, pruebas, holm):
-    """Agrega un aviso al punteo de las diapositivas cuyo resultado era significativo sin ajuste
-    pero deja de serlo con Holm por bloque (decisión del usuario 2026-09-26). El aviso va en la
-    última diapositiva que generó el script de esa prueba."""
-    from pptx.util import Pt
-    from pptx.dml.color import RGBColor
-    from pptx_helpers import formato_cl
-    avisos = {}
-    for pr, h in zip(pruebas, holm):
-        if pr["p"] < 0.05 and h >= 0.05:
-            avisos.setdefault(pr["carpeta"], []).append((pr, h))
-    for carpeta, lista in avisos.items():
-        sl = slides_por_modulo[carpeta][-1]
-        cuerpo = [sh for sh in sl.shapes if sh.has_text_frame and sh.text_frame.text.startswith("1.")]
-        if not cuerpo:
-            continue
-        if len(lista) == 1:
-            texto = (f"⚠ Con la corrección de Holm por bloque esta diferencia deja de ser significativa "
-                     f"(p ajustado={lista[0][1]:.2f}): tomarla como indicio, no como hallazgo firme.")
-        else:
-            nombres = ", ".join(pr["comparacion"].split(": ")[-1].replace(" vs resto", "") for pr, _ in lista)
-            punto = "" if nombres.endswith(".") else "."    # "Economía, Gob. y Com." ya termina en punto
-            texto = (f"⚠ Con la corrección de Holm por bloque dejan de ser significativas: {nombres}{punto} "
-                     f"Tomarlas como indicio, no como hallazgo firme.")
-        tf = cuerpo[0].text_frame
-        ref = tf.paragraphs[0].runs[0].font
-        p = tf.add_paragraph(); p.space_before = Pt(4)
-        run = p.add_run(); run.text = formato_cl(texto)
-        # blanco en negrita: el dorado se leía mal sobre la parte clara (inferior) del fondo
-        run.font.size = ref.size; run.font.name = ref.name; run.font.bold = True
-        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-    return avisos
+# marcar_no_sostenidas (avisos agregados después) se reemplazó el 2026-09-27 por el veredicto con p
+# corregido directamente en cada script (pptx_helpers.P_AJUSTADO / lectura_p / encabezado_prueba).
 
 
 # ── Universo / Índice / Hallazgos por bloque (2026-09-26) ─────────────────────
@@ -321,8 +291,9 @@ def uih_b2(prs):
             "(Participación Mixta). La mitad cursó 3 o más instancias.",
             "Las mujeres participan más que los hombres (74% vs 62%, p=0.0016) y el escalafón Docente "
             "mucho más que el Regular (77% vs 49%, p<0.0001).",
-            "Por facultad, de 80% (Derecho y Humanidades) a 42% (VR Investigación). Por antigüedad la "
-            "tasa es pareja (65%-72%) y por edad la diferencia no es significativa (p=0.0724).",
+            "Por facultad, solo VR Investigación (42%) participa menos que el resto; entre las facultades "
+            "académicas no hay diferencias significativas. Por antigüedad la tasa es pareja (65%-72%) y por "
+            "edad no hay diferencia significativa.",
         ])
     kit.notas(sl,
         "Participación = al menos 1 registro en analisis.universo_formados_p3, sin filtrar a apto_p3 "
@@ -336,26 +307,27 @@ def uih_b3(prs):
     kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
             "624 docentes Jornada; 491 (78.7%) tienen al menos una evaluación de desempeño docente (EDD) "
-            "entre 2022 y 2025, hecha por la jefatura. La escala cambió en 2024 (promedio 0.87 → 0.68), "
-            "así que las comparaciones usan la EDD ajustada por año, expresada en la escala 2025."),
+            "entre 2022 y 2025, hecha por la jefatura. En 2024-2025 cerca del 38% de las notas está dañado "
+            "(ceros que son datos vacíos y notas partidas a la mitad); las comparaciones usan la nota limpia "
+            "(396 docentes)."),
         indice_items=[
-            "Calificación EDD por año y sexo",
+            "Calidad de los datos de la EDD por año",
             "Calificación EDD según sexo",
             "Calificación EDD según jerarquía / escalafón",
             "Calificación EDD según facultad",
         ],
         hallazgos_items=[
-            "La brecha por sexo se invierte entre períodos: mujeres más alto en 2022-2023 y hombres en "
-            "2024-2025. En el total (hombres 0.66 vs mujeres 0.61) la diferencia no se sostiene al "
-            "corregir por comparaciones múltiples.",
-            "El escalafón Docente supera al Regular (0.66 vs 0.52, p=0.0011).",
-            "Por facultad, con la corrección se sostienen 3 diferencias: Derecho y Humanidades por encima "
-            "del resto; Medicina y VR Investigación por debajo.",
+            "Sin las notas dañadas, la EDD es estable 2022-2025 (0.86 a 0.89): la caída aparente de 2024 "
+            "era un problema de datos, no de desempeño.",
+            "Con la nota limpia no hay diferencias significativas por sexo, escalafón ni facultad: la EDD "
+            "va de 0.84 a 0.90 en todos los grupos.",
+            "Las diferencias que mostraba la versión anterior venían de las notas dañadas, que afectaron "
+            "más a las mujeres (43% vs 32% de sus notas 2024-2025).",
         ])
     kit.notas(sl,
-        "Fuente: intel.evaluacion_jefes (D28/D29). EDD ajustada por año según D36: cada evaluación se "
-        "estandariza dentro de su año y se expresa en la escala de 2025; después se promedia por docente. "
-        "Sin el ajuste, VR Investigación (evaluada solo en 2024-2025) aparecía artificialmente más baja.")
+        "Fuente: intel.evaluacion_jefes (D28/D29). EDD limpia según D37: se excluyen notas de 0 exacto y "
+        "notas menores a 0.55 en 2024-2025 (la mitad del puntaje del director: componente faltante). 95 de "
+        "491 docentes solo tienen notas dañadas y quedan fuera. Reemplaza el ajuste por año de D36.")
     return sl
 
 

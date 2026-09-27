@@ -100,7 +100,8 @@ print(f"\nPrueba t (por docente, Docente vs Regular): Docente N°={len(grupo_doc
 # ── Revisión 2026-09-26 (obs. 2 y 21): una sola medida (promedio por docente, la unidad de la
 # prueba t) y descriptivo + prueba en una sola diapositiva. La versión ponderada por
 # calificación (tab) queda solo como referencia en notas. ────────────────────────────────
-from pptx_helpers import lectura_p, prueba_dict
+from pptx_helpers import lectura_p, prueba_dict, encabezado_prueba
+CLAVE = "% aprobación por docente: escalafón Docente vs Regular"   # = comparación registrada en PRUEBAS
 
 PRUEBAS = [prueba_dict("IV · Aprobación", "% aprobación por docente: escalafón Docente vs Regular",
                        f"{grupo_docente.mean():.1f}% vs {grupo_regular.mean():.1f}%",
@@ -125,8 +126,7 @@ def agregar(prs):
         ax.text(xi, m + ci + 2.5, f"{m:.1f}%", ha="center", va="bottom", fontsize=13,
                 fontweight="bold", color="white", path_effects=stroke, zorder=6)
         ax.text(xi, 8, f"N°={len(s)} docentes", ha="center", va="bottom", fontsize=8.5, color="white")
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   diferencia {sig} al 5%",
+    ax.text(0.5, 0.99, encabezado_prueba("Prueba t de Welch", "t", T_STAT, P_VAL, CLAVE),
             transform=ax.transAxes, ha="center", va="top", fontsize=9.5, color="#F2D675", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(ESCALAFON_ORD, fontsize=12, color="white")
     ax.set_ylabel("% de aprobación promedio por docente", color="#AAAAAA", fontsize=9)
@@ -147,7 +147,7 @@ def agregar(prs):
     kit.punteo_numerado(sl, [
         f"Los docentes de escalafón Docente aprueban en promedio el {grupo_docente.mean():.1f}% de sus "
         f"calificaciones, vs {grupo_regular.mean():.1f}% en el escalafón Regular (diferencia de "
-        f"{grupo_docente.mean() - grupo_regular.mean():.1f} puntos). " + lectura_p(P_VAL),
+        f"{grupo_docente.mean() - grupo_regular.mean():.1f} puntos). " + lectura_p(P_VAL, clave=CLAVE),
         f"El escalafón Regular tiene muchos menos docentes con calificaciones (N°={len(grupo_regular)} vs "
         f"N°={len(grupo_docente)}).",
     ], fs=12)

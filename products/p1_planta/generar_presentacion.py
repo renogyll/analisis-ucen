@@ -127,32 +127,47 @@ BLOQUE_IV = [
 ]
 
 
+MODULOS = {}   # carpeta -> módulo ya cargado (cada script se ejecuta una sola vez)
+
+
 def cargar_modulo(carpeta, script_name):
-    path = CARAC / carpeta / script_name
-    spec = importlib.util.spec_from_file_location(f"p1_{carpeta}", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)   # ejecuta el script: carga sus propios datos
-    return mod
-
-
-PRUEBAS = []            # todas las pruebas del deck, para el anexo (obs. 6)
-_pruebas_vistas = set()
-SLIDES_POR_MODULO = {}  # carpeta -> diapositivas que generó (para marcar las no sostenidas por Holm)
+    if carpeta not in MODULOS:
+        path = CARAC / carpeta / script_name
+        spec = importlib.util.spec_from_file_location(f"p1_{carpeta}", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)   # ejecuta el script: carga sus datos y calcula sus pruebas
+        MODULOS[carpeta] = mod
+    return MODULOS[carpeta]
 
 
 def agregar_bloque(prs, bloque, etiqueta):
     for carpeta, script_name, funciones in bloque:
         print(f"\n── {etiqueta}: {carpeta} " + "─" * max(1, 50 - len(carpeta) - len(etiqueta)))
         mod = cargar_modulo(carpeta, script_name)
-        antes = len(prs.slides)
         for funcion in funciones:
             getattr(mod, funcion)(prs)
-        SLIDES_POR_MODULO.setdefault(carpeta, []).extend(list(prs.slides)[antes:])
-        if carpeta not in _pruebas_vistas:          # formacion_jornada se carga 3 veces
-            PRUEBAS.extend(dict(pr, carpeta=carpeta) for pr in getattr(mod, "PRUEBAS", []))
-            _pruebas_vistas.add(carpeta)
 
 
+# ── Pasada 1: cargar todos los scripts y corregir sus pruebas ANTES de crear diapositivas ──
+# (decisión del usuario 2026-09-27: regla binaria — significativa solo si el p corregido por
+# Holm dentro del bloque es < 0.05). El p corregido se deja en pptx_helpers.P_AJUSTADO y cada
+# script lo usa para el recuadro del gráfico y el punteo (encabezado_prueba / lectura_p).
+import pptx_helpers
+print("── Pasada 1: cargando scripts y pruebas ──────────────────────")
+PRUEBAS = []
+for bloque in (BLOQUE_I, BLOQUE_II, BLOQUE_III, BLOQUE_IV):
+    for carpeta, script_name, _ in bloque:
+        if carpeta not in MODULOS:
+            mod = cargar_modulo(carpeta, script_name)
+            PRUEBAS.extend(getattr(mod, "PRUEBAS", []))
+HOLM = estructura.holm_por_bloque(PRUEBAS)
+pptx_helpers.P_AJUSTADO.update({pr["comparacion"]: h for pr, h in zip(PRUEBAS, HOLM)})
+for pr, h in zip(PRUEBAS, HOLM):
+    if (pr["p"] < 0.05) != (h < 0.05):
+        print(f"  Sin ajuste significativa, con Holm por bloque no: {pr['comparacion']} "
+              f"(p={pr['p']:.4f} → {h:.4f})")
+
+# ── Pasada 2: diapositivas ──────────────────────────────────────────────────────────────
 prs = Presentation()
 prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
 
@@ -175,14 +190,8 @@ estructura.uih_b4(prs)
 agregar_bloque(prs, BLOQUE_IV, "Bloque IV — Aprobación")
 
 print(f"\n── Anexo: {len(PRUEBAS)} pruebas estadísticas ───────────────────────────")
-# Holm por bloque (decisión del usuario 2026-09-26): anexo + aviso en las diapositivas cuyo
-# resultado deja de ser significativo con la corrección.
-HOLM = estructura.holm_por_bloque(PRUEBAS)
+# Holm por bloque (decisión del usuario 2026-09-26); el veredicto ya va en cada diapositiva.
 estructura.anexo_pruebas(prs, PRUEBAS, HOLM)
-avisos = estructura.marcar_no_sostenidas(SLIDES_POR_MODULO, PRUEBAS, HOLM)
-for carpeta, lista in avisos.items():
-    print(f"  ⚠ No se sostiene con Holm por bloque ({carpeta}): "
-          + "; ".join(f"{pr['comparacion']} p={pr['p']:.4f} → {h:.4f}" for pr, h in lista))
 
 prs.save(OUT_PPTX)
 print(f"\n✓ Guardado: {OUT_PPTX}  ({len(prs.slides)} diapositivas)")

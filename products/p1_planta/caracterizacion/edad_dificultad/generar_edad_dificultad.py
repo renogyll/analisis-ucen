@@ -121,6 +121,7 @@ def agregar(prs):
                                   f"tienen en promedio {b:.1f} años de edad, vs {r:.1f} en el resto "
                                   f"(diferencia de {b - r:.1f} años)."),
         notas="Edad a la fecha de corte.",
+        clave="Edad: grupo predominante Baja vs Media+Alta",
         chart_name="edad_dificultad_chart.png")
 
 

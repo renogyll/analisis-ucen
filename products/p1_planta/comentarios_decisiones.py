@@ -30,10 +30,11 @@ COMENTARIOS = {
     "Contenido de la presentación": [
         "Decisión: el deck sigue los 4 bloques de esta grilla. La participación en formación quedó "
         "toda en el Bloque II y EDD pasó antes que Aprobación.",
-        "Revisión de coherencia (26-09): cada par 'descriptivo + prueba t' se fundió en una sola "
+        "Revisión de coherencia (26-27/09): cada par 'descriptivo + prueba t' se fundió en una sola "
         "diapositiva, se quitaron gráficos que repetían información y se agregó un anexo con todas las "
         "pruebas estadísticas, incluidas las no significativas.",
-        "Cada bloque indica su período: los datos no cubren los mismos años en todos los bloques.",
+        "Regla de significancia: una diferencia es significativa solo si su p, corregido por comparaciones "
+        "múltiples dentro de su bloque (Holm), es menor a 0.05. Si no, se informa como 'sin diferencia'.",
     ],
     "Bloque I —": [
         "Se declara aquí, una sola vez, que 90 docentes (14%) no tienen registro en dotación y quedan "
@@ -43,130 +44,118 @@ COMENTARIOS = {
     ],
     "Distribución de la edad según jerarquía": [
         "El título original 'según edad y categoría docente' repetía 'edad'; se usa 'jerarquía', el "
-        "término que el deck usa para las 8 categorías. Confirmar si prefieren otro.",
+        "término que el deck usa para las 8 categorías.",
     ],
     "Años de trayectoria promedio": [
-        "Decisión: 'años de trayectoria' se midió como años en UCEN desde la fecha de ingreso "
-        "(antigüedad), no como trayectoria académica total: no hay dato de la carrera previa a "
-        "UCEN. ¿Es la lectura que buscaban?",
-        "Quedan fuera los docentes sin fecha de ingreso registrada y los 'Sin jerarquía' "
-        "(detalle en la bajada). Se usan las mismas 8 categorías, orden por magnitud y colores "
-        "que la diapositiva de edad por jerarquía, para leerlas como par.",
-        "El punteo 2 ('parte de los Regulares ingresa ya jerarquizado') es una interpretación, no "
-        "un dato medido: no tenemos la fecha de paso a Regular. Evaluar si se deja, se suaviza o "
-        "se quita.",
+        "Decisión: 'años de trayectoria' = años en UCEN desde la fecha de ingreso (antigüedad). No hay "
+        "dato de la carrera previa a UCEN; se indica en la bajada.",
+        "Se usan las mismas 8 categorías, orden por magnitud y colores que la diapositiva de edad por "
+        "jerarquía, para leerlas como par.",
     ],
     "Distribución por unidad/facultad": [
         "Decisión: se normalizaron los nombres de unidad. La fuente escribe algunas facultades de "
-        "dos formas ('FAC. DE MEDICINA…' / 'Facultad de Medicina…'); en la diapositiva de "
-        "referencia de P3 eso producía barras duplicadas. Aquí se suman en una sola barra.",
+        "dos formas ('FAC. DE MEDICINA…' / 'Facultad de Medicina…'); se suman en una sola barra.",
         "VR de Investigación y Postgrado va como barra propia (80 docentes). Junta Directiva, Sede La "
         "Serena, Dir. de Aseguramiento de la Calidad y Gabinete de Rectoría se agrupan en 'Otras "
-        "unidades' (13 docentes).",
-        "Los 73 docentes sin unidad registrada no se grafican; los % son sobre los 551 con dato. "
-        "Alternativa: agregarlos como barra 'Sin dato'. ¿Cuál prefieren?",
+        "unidades' (13 docentes). Los 73 sin unidad registrada se informan en la bajada, no como barra.",
     ],
     "Distribución de la carga académica": [
-        "Fuente nueva: archivo 'CONSOLIDADO DOCENTES 3-05-2026 — dotacion_con_clasificacion' "
-        "(547 docentes). Se cruzó por RUT con el universo Jornada: 534 de 624 están en el archivo.",
-        "Categoría = columna CLASIFICACION tal como viene. Único ajuste: 'DOCENTE' (1 caso, cargo "
-        "'Profesor') se sumó a 'Docencia', porque los demás 'Profesor' ya estaban clasificados así.",
-        "Cada docente cuenta una sola vez, con su cargo principal en dotación. Si en la práctica "
-        "ejerce varias funciones, este gráfico no lo captura.",
-        "A confirmar: la clasificación ubica 'Coordinador(a) Campos Clínicos' y 'Vicedecano(a)' en "
-        "Vinculación con el Medio. Se respetó tal cual; conviene validarlo.",
+        "Fuente: archivo 'CONSOLIDADO DOCENTES 3-05-2026 — dotacion_con_clasificacion' (547 docentes), "
+        "cruzado por RUT con el universo Jornada: 534 de 624 están en el archivo.",
+        "Categoría = columna CLASIFICACION del archivo, con dos ajustes: 'DOCENTE' (1 caso, cargo "
+        "'Profesor') se sumó a Docencia, y los Vicedecano(a) y las autoridades superiores (Rector, "
+        "Vicerrectores, Decanos(as) y Junta Directiva) pasaron de Vinculación con el Medio a Gestión "
+        "Académica, por ser cargos de gestión.",
+        "Cada docente cuenta una sola vez, con su cargo principal en dotación.",
     ],
     "Grado académico según sexo": [
-        "El punteo 4 (implicancia) es una hipótesis: relaciona dos distribuciones (grado × sexo y "
-        "grado × escalafón), no mide trayectorias de ascenso individuales. Evaluar si se deja, se "
-        "suaviza o se quita.",
+        "El punteo 4 se presenta como 'posible implicancia': relaciona dos distribuciones (grado × sexo "
+        "y grado × escalafón), no mide trayectorias de ascenso individuales.",
         "Técnico (N°=2) se sumó a Profesional por tamaño; 'No informa' se trata como sin dato (D21).",
     ],
     "Participación en instancias formativas y modalidades": [
-        "Decisión: las diapositivas de modalidades, Venn, intensidad, antigüedad y tipo por grupo "
-        "replican gráficos del informe P3, pero sobre el universo Jornada (624 docentes, 418 formados), "
-        "no sobre los 316 'Aptos P3'. Por eso los N° no coinciden con P3.",
+        "Las diapositivas de modalidades, Venn, intensidad, antigüedad y tipo por grupo replican gráficos "
+        "del informe P3, pero sobre el universo Jornada (624 docentes, 418 formados), no sobre los 316 "
+        "'Aptos P3'. Por eso los N° no coinciden con P3.",
         "Terminología: 'instancias formativas' = cualquier Taller, Diplomado o Proyecto; 'Oferta "
         "formativa (Taller)' = solo el tipo Taller, como en P3. Quien combina 2 o más tipos tiene "
         "'Participación Mixta'.",
     ],
     "Tipos de formación (diagrama de Venn)": [
-        "Decisión: el Venn es esquemático, el tamaño de los círculos NO es proporcional al N° (con "
-        "381 vs 31 docentes, un Venn proporcional dejaría Proyecto casi invisible). El número de cada "
-        "región sí es el conteo real.",
+        "El Venn es esquemático: el tamaño de los círculos NO es proporcional al N° (con 381 vs 31 "
+        "docentes, un Venn proporcional dejaría Proyecto casi invisible). El número de cada región sí "
+        "es el conteo real.",
     ],
     "Intensidad de participación": [
-        "Decisión: instancia = actividad distinta (nombre + período). Se descartó 1 registro duplicado "
-        "exacto; cursar la misma actividad en 2 períodos cuenta 2 veces. ¿Coincide con cómo lo cuentan?",
-        "El punteo 2 dice que los docentes con 3+ instancias son los más relevantes para efectos "
-        "acumulativos: es una orientación para el análisis, no un resultado medido en P1.",
+        "Instancia = actividad distinta (nombre + período). Se descartó 1 registro duplicado exacto; "
+        "cursar la misma actividad en 2 períodos cuenta 2 veces.",
+        "El punteo 2 (docentes con 3+ instancias como grupo clave para efectos acumulativos) es una "
+        "orientación para el análisis, no un resultado medido en P1.",
     ],
     "¿Difiere la participación en instancias formativas según sexo": [
-        "Revisión de coherencia: la diapositiva descriptiva y la de prueba t mostraban las mismas barras; "
-        "quedó una sola, con el intervalo de confianza y el resultado de la prueba.",
+        "La diapositiva descriptiva y la de prueba t mostraban las mismas barras; quedó una sola, con el "
+        "intervalo de confianza y el resultado de la prueba.",
         "Títulos '¿Difiere…?' en vez de '¿Influye…?': una prueba t muestra asociación, no causa.",
     ],
     "Participación en instancias formativas según facultad": [
-        "Solo facultad: el panel por jerarquía que acompañaba a este gráfico se quitó porque repetía "
-        "la diapositiva de participación según jerarquía.",
-        "Descriptivo, sin prueba t: por facultad no se pidió. Se puede agregar (cada facultad vs. el "
-        "resto, como en EDD) si les interesa.",
+        "Solo facultad: el panel por jerarquía se quitó porque repetía la diapositiva de participación "
+        "según jerarquía.",
+        "Se agregó la prueba de cada unidad vs el resto (como en EDD). Con la corrección por comparaciones "
+        "múltiples solo VR Investigación difiere; Educación y Derecho eran significativas sin corregir.",
     ],
     "Antigüedad en la institución de los docentes formados": [
-        "Decisión: se agregó la tasa de participación por tramo (formados / todos los docentes del "
-        "tramo). En P3 se interpretó 'a mayor antigüedad, menor participación' mirando solo conteos; "
-        "con tasas, la participación es pareja (65%-72%) en los tramos con N° suficiente.",
+        "Se agregó la tasa de participación por tramo (formados / todos los docentes del tramo). Mirando "
+        "solo conteos parecía que los antiguos participan menos; con tasas la participación es pareja "
+        "(65%-72%) en los tramos con N° suficiente.",
     ],
     "Tipo de formación según antigüedad, sexo y edad": [
-        "Decisión: se interpretó 'participación por antigüedad, sexo y edad' como la composición por "
-        "tipo de formación (réplica del gráfico de P3). Si buscaban la tasa Cursa / No cursa por grupo, "
-        "se puede cambiar.",
+        "Se muestra la composición por tipo de formación (réplica del gráfico de P3); la tasa Cursa / No "
+        "cursa por grupo está en las diapositivas de participación.",
         "El ancho de cada barra es proporcional al N° del grupo (mosaico): con barras de igual ancho, "
         "un grupo de 190 docentes se veía igual que uno de 23. Antigüedad 15-19 y 20+ se fusionaron en "
         "'15+' por tamaño.",
     ],
-    "Calificación EDD por año y sexo": [
-        "Decisión clave (D36): la EDD promedio cae de 0.87 (2022-2023) a 0.68 (2024-2025) y su dispersión "
-        "se duplica. Parece un cambio de escala o de instrumento, no de desempeño. ¿Pueden confirmar si "
-        "el instrumento o la forma de calcular la EDD cambió en 2024?",
-        "Por eso esta diapositiva muestra los años por separado (escala original) y las siguientes usan "
-        "la EDD ajustada por año.",
+    "Calidad de los datos de la EDD por año": [
+        "Hallazgo clave (D37): en 2024 y 2025 hay notas EDD dañadas. 62 notas de 2025 valen exactamente 0 "
+        "(37 con concepto 'Muy Bueno': son datos vacíos) y un grupo de notas de 2024-2025 vale casi "
+        "exactamente la mitad del puntaje del director (un componente faltante contado como 0).",
+        "Criterio: se excluyen las notas de 0 y las menores a 0.55 en 2024-2025 (en 2022-2023 solo el 5% "
+        "de las notas era menor a 0.55; en 2024-2025, el 38%). Sin ellas la EDD es estable los 4 años. "
+        "Conviene informar el problema a quien administra la base de EDD.",
+        "Esto reemplaza el 'ajuste por año' de la versión anterior (D36), que suponía un cambio de escala "
+        "que no existió.",
     ],
     "¿Difiere la calificación EDD según sexo": [
-        "EDD ajustada por año: cada evaluación se estandariza dentro de su año (se resta el promedio del "
-        "año y se divide por su desviación) y se expresa en la escala de 2025. Así un docente evaluado "
-        "solo en 2024-2025 no queda más bajo solo por el año.",
-        "Con la EDD ajustada, la diferencia a favor de los hombres es más débil (p=0.0408 vs 0.0183 sin "
-        "ajuste), proviene de 2024-2025 y no se sostiene al corregir por comparaciones múltiples dentro "
-        "del Bloque III. En 2022-2023 las mujeres puntuaban más alto.",
+        "Con la nota limpia no hay diferencia por sexo. La ventaja de los hombres que mostraba la versión "
+        "anterior venía de las notas dañadas, que afectaron más a las mujeres (43% vs 32%).",
+    ],
+    "Calificación EDD según jerarquía": [
+        "Con la nota limpia tampoco hay diferencia por escalafón: la diferencia Docente vs Regular de la "
+        "versión anterior venía de las notas dañadas.",
     ],
     "Calificación EDD según facultad": [
-        "Con la EDD ajustada, VR Investigación sigue más baja que el resto, pero la brecha se reduce: "
-        "sin ajuste se comparaba solo contra años de escala alta, porque VRIIP no tiene evaluaciones "
-        "2022-2023.",
-        "Se usan los nombres de facultad del Bloque I en vez de siglas. Ojo: aquí la facultad es la de "
-        "la jefatura que evalúa (facultad_jefe), otro campo que la unidad del Bloque I; por eso los N° "
-        "no coinciden.",
-        "Con la corrección de Holm por bloque se sostienen 3 de las 5 diferencias (Derecho y "
-        "Humanidades, Medicina, VR Investigación); Ingeniería y Economía quedan como indicio.",
+        "Con la nota limpia ninguna facultad difiere del resto. Las diferencias anteriores (VR "
+        "Investigación y Medicina más bajas) venían de las notas dañadas; VR Investigación solo tiene "
+        "evaluaciones 2024-2025.",
+        "Se usan los nombres de facultad del Bloque I en vez de siglas. Aquí la facultad es la de la "
+        "jefatura que evalúa (facultad_jefe), otro campo que la unidad del Bloque I; por eso los N° no "
+        "coinciden.",
     ],
     "¿Difiere el % de aprobación según sexo": [
-        "Decisión: se usa una sola medida, el % de aprobación promedio por docente (la unidad de la "
-        "prueba t). La versión ponderada por calificación daba otras cifras (90.0% vs 86.7%) para la "
-        "misma comparación y se leía como contradicción; queda en notas.",
+        "Se usa una sola medida, el % de aprobación promedio por docente (la unidad de la prueba t). La "
+        "versión ponderada por calificación daba otras cifras para la misma comparación; queda en notas.",
     ],
     "% de aprobación según sexo, dentro de cada grupo de dificultad": [
-        "Análisis nuevo: como los hombres dictan más asignaturas de baja aprobación, la brecha por sexo "
-        "podía deberse a la dificultad del curso. Comparando dentro de cada grupo, la diferencia "
-        "desaparece (ningún grupo significativo). Cambia la lectura: no es que las docentes aprueben "
-        "más en cursos comparables.",
+        "Análisis de control: como los hombres dictan más asignaturas de baja aprobación, la brecha por "
+        "sexo podía deberse a la dificultad del curso. Comparando dentro de cada grupo, la diferencia "
+        "desaparece: no es que las docentes aprueben más en cursos comparables.",
     ],
     "¿Difiere el % de aprobación según escalafón": [
         "Misma medida que en sexo: % de aprobación promedio por docente.",
     ],
     "% de aprobación según antigüedad del docente": [
-        "Antes esta diapositiva no tenía prueba y el Bloque IV afirmaba 'sin diferencias significativas'. "
-        "Se agregó un ANOVA entre los 4 tramos (p=0.2832) que respalda esa frase.",
+        "Se agregó un ANOVA entre los 4 tramos (antes esta diapositiva no tenía prueba): no hay diferencia "
+        "significativa.",
     ],
     "Composición de los grupos de dificultad": [
         "Grupos = terciles del % de aprobación histórico de cada asignatura, con todos los docentes "
@@ -175,15 +164,14 @@ COMENTARIOS = {
         "histórico de la asignatura es el del propio docente (medida circular).",
     ],
     "Antigüedad de los docentes según grupo de dificultad": [
-        "Revisión de coherencia: antes el descriptivo contaba instancias y comparaba Baja vs Alta, y la "
-        "prueba usaba 1 valor por docente y comparaba Baja vs Media+Alta (dos cifras distintas para lo "
-        "mismo). Ahora ambos usan 1 valor por docente en su grupo predominante, en una sola diapositiva.",
+        "Descriptivo y prueba usan la misma unidad: 1 valor por docente en su grupo predominante. Sin "
+        "corregir la diferencia era significativa; con la corrección por comparaciones múltiples no lo es "
+        "(lo mismo ocurre con la edad).",
     ],
     "Anexo — Resumen de pruebas estadísticas": [
-        "Decisión: se muestran todas las pruebas, incluidas las no significativas, para no sesgar la "
-        "lectura. La columna 'p ajustado' corrige por hacer muchas comparaciones a la vez, dentro de cada "
-        "bloque (familia de preguntas); en dorado, las que siguen siendo significativas después del ajuste. "
-        "Las diapositivas cuyo resultado no se sostiene llevan un aviso en el punteo.",
+        "Se muestran todas las pruebas, incluidas las no significativas. La columna 'p ajustado' corrige "
+        "por hacer muchas comparaciones a la vez, dentro de cada bloque (Holm); en dorado, las "
+        "significativas según la regla del deck.",
     ],
 }
 

@@ -16,7 +16,7 @@ from scipy import stats
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "shared"))
-from pptx_helpers import lectura_p
+from pptx_helpers import lectura_p, encabezado_prueba
 
 GRUPOS_ORD = ["Baja", "Media", "Alta"]
 ETIQUETAS = {"Baja": "Baja aprobación", "Media": "Aprobación media", "Alta": "Aprobación alta"}
@@ -31,7 +31,7 @@ def prueba_baja_vs_resto(por_docente, col):
 
 
 def slide_por_grupo(prs, kit, por_docente, col, *, escala=1.0, fmt="{:.1f}", unidad="",
-                    ylabel, titulo, subtitulo, frase_valor, notas, chart_name):
+                    ylabel, titulo, subtitulo, frase_valor, notas, chart_name, clave=None):
     """por_docente: 1 fila por docente con `grupo_predominante` y la columna `col`.
     escala: multiplicador para mostrar (100 para proporciones → %).
     frase_valor(baja_media, resto_media) -> str: primer punteo, en palabras."""
@@ -52,9 +52,10 @@ def slide_por_grupo(prs, kit, por_docente, col, *, escala=1.0, fmt="{:.1f}", uni
                 fontsize=13, fontweight="bold", color="white", path_effects=stroke, zorder=6)
         ax.text(xi, ymax * 0.02, f"N°={len(s)} docentes", ha="center", va="bottom",
                 fontsize=8.5, color="white")
-    sig = "significativa" if p < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch, Baja vs Media+Alta:  t = {t:.2f}   ·   p = {p:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
+    # sobre el borde superior del eje (no dentro): el encabezado con p corregido es largo y tapaba
+    # la marca superior del eje Y
+    ax.text(0.5, 1.02, encabezado_prueba("Prueba t de Welch, Baja vs Media+Alta", "t", t, p, clave),
+            transform=ax.transAxes, ha="center", va="bottom",
             fontsize=9.5, color="#F2D675", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels([ETIQUETAS[g] for g in GRUPOS_ORD], fontsize=11.5, color="white")
     ax.set_xlabel("Grupo de dificultad predominante del docente", color="#AAAAAA", fontsize=9)
@@ -71,7 +72,7 @@ def slide_por_grupo(prs, kit, por_docente, col, *, escala=1.0, fmt="{:.1f}", uni
     kit.pic_chart(sl, prs, chart_path)
     kit.title(sl, titulo)
     kit.subtitulo(sl, subtitulo)
-    kit.punteo_numerado(sl, [frase_valor(baja.mean() * escala, resto.mean() * escala), lectura_p(p)], fs=12)
+    kit.punteo_numerado(sl, [frase_valor(baja.mean() * escala, resto.mean() * escala), lectura_p(p, clave=clave)], fs=12)
     kit.notas(sl, notas + " Grupo predominante = el grupo de dificultad (Baja/Media/Alta) donde el "
                   "docente tiene más instancias docente×asignatura×período (D27); cada docente aporta "
                   "un solo valor. Barras = intervalo de confianza 95%.")

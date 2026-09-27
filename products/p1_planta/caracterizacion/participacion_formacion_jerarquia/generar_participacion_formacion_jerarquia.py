@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
 from config import OUTPUTS
-from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict
+from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict, encabezado_prueba
 
 import numpy as np
 import pandas as pd
@@ -86,6 +86,7 @@ con_jer["es_regular"] = con_jer["jerarquia"].str.contains("REGULAR").astype(int)
 docente_g = con_jer.loc[con_jer["es_regular"] == 0, "participo"]
 regular_g = con_jer.loc[con_jer["es_regular"] == 1, "participo"]
 T_STAT, P_VAL = stats.ttest_ind(regular_g, docente_g, equal_var=False)   # Welch
+CLAVE = "Participación: escalafón Regular vs Docente"   # = comparación registrada en PRUEBAS (p corregido por Holm)
 PRUEBAS = [prueba_dict("II · Participación", "Participación: escalafón Regular vs Docente",
                        f"{100 * regular_g.mean():.1f}% vs {100 * docente_g.mean():.1f}%",
                        len(regular_g) + len(docente_g), P_VAL)]
@@ -161,7 +162,7 @@ def agregar(prs):
         )
     # Revisión 2026-09-26 (obs. 21): la prueba por escalafón va en esta misma diapositiva.
     bullets.insert(1, f"Por escalafón: Docente {100 * docente_g.mean():.1f}% vs Regular "
-                      f"{100 * regular_g.mean():.1f}%. " + lectura_p(P_VAL))
+                      f"{100 * regular_g.mean():.1f}%. " + lectura_p(P_VAL, clave=CLAVE))
     kit.punteo_numerado(sl, bullets, fs=12)
     return sl
 
@@ -193,9 +194,8 @@ def agregar_ttest(prs):
         ax.text(xi, 2, f"N°={n} docentes", ha="center", va="bottom",
                  fontsize=8.5, color="white")
 
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
+    ax.text(0.5, 0.99, encabezado_prueba("Prueba t de Welch", "t", T_STAT, P_VAL, CLAVE),
+            transform=ax.transAxes, ha="center", va="top",
             fontsize=9.5, color="#F2D675", fontweight="bold")
 
     ax.set_xticks(x)

@@ -101,6 +101,22 @@ fac_max, fac_min = fac_ok["pct_si"].idxmax(), fac_ok["pct_si"].idxmin()
 jer_ok = tab_jer[tab_jer["n"] >= N_MIN_CONFIABLE]
 jer_max, jer_min = jer_ok["pct_si"].idxmax(), jer_ok["pct_si"].idxmin()
 
+# Pruebas por facultad (decisión del usuario 2026-09-26): cada unidad con N° suficiente vs el
+# resto, prueba t de Welch sobre participó=1/no=0 — mismo criterio que EDD por facultad. Entran
+# al anexo y a la corrección de Holm del Bloque II.
+from scipy import stats
+from pptx_helpers import prueba_dict, lectura_p, es_significativa
+_con_fac = base.dropna(subset=["fac"])
+PRUEBAS, RES_FAC = [], {}
+for _f in fac_ok.index:
+    _g = _con_fac.loc[_con_fac["fac"] == _f, "participo"].astype(float)
+    _r = _con_fac.loc[_con_fac["fac"] != _f, "participo"].astype(float)
+    _p = stats.ttest_ind(_g, _r, equal_var=False).pvalue
+    RES_FAC[_f] = (100 * _g.mean(), 100 * _r.mean(), _p)
+    PRUEBAS.append(prueba_dict("II · Participación", f"Participación: {_f} vs resto",
+                               f"{100 * _g.mean():.1f}% vs {100 * _r.mean():.1f}%", len(_con_fac), _p))
+print("\nPruebas por facultad (vs resto):", {k: round(v[2], 4) for k, v in RES_FAC.items()})
+
 
 def _panel(ax, t, labels, titulo):
     y = np.arange(len(t))
@@ -153,11 +169,13 @@ def agregar_facultad(prs):
         f"Universo: {N_JORNADA} docentes Jornada  ·  {N_FAC} con unidad/facultad registrada  ·  "
         f"{N_PARTICIPA} ({100*N_PARTICIPA/N_JORNADA:.0f}%) cursaron al menos una instancia formativa")
     sin_fac = tab_fac.drop(index=[f for f in tab_fac.index if f.startswith("VR") or f == "Otras unidades"])
+    sig = [f for f, (g, r, p) in RES_FAC.items() if es_significativa(p, f"Participación: {f} vs resto")]
     kit.punteo_numerado(sl, [
         f"{fac_max} tiene la mayor participación ({tab_fac.loc[fac_max, 'pct_si']:.0f}%) y "
-        f"{fac_min} la menor ({tab_fac.loc[fac_min, 'pct_si']:.0f}%).",
-        f"Entre las 5 facultades académicas la participación va de {sin_fac['pct_si'].min():.0f}% a "
-        f"{sin_fac['pct_si'].max():.0f}%: la brecha grande está en las unidades no académicas.",
+        f"{fac_min} la menor ({tab_fac.loc[fac_min, 'pct_si']:.0f}%). Entre las 5 facultades académicas "
+        f"va de {sin_fac['pct_si'].min():.0f}% a {sin_fac['pct_si'].max():.0f}%.",
+        (f"Cada unidad vs el resto (prueba t de Welch, p corregido por comparaciones múltiples): difieren {', '.join(sig)}; el resto no."
+         if sig else "Cada unidad vs el resto (prueba t de Welch, p corregido por comparaciones múltiples): ninguna difiere."),
     ], fs=12)
     kit.notas(sl,
         "Participó = al menos 1 Taller, Diplomado o Proyecto registrado (analisis.universo_formados_p3, "

@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
 from config import OUTPUTS
-from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict
+from pptx_helpers import UcenSlideKit, lectura_p, prueba_dict, encabezado_prueba
 
 import numpy as np
 import pandas as pd
@@ -76,6 +76,7 @@ N_SIN_EDAD_ANIOS = N_JORNADA - len(con_edad)
 participo_g = con_edad.loc[con_edad["participo"] == 1, "edad_anios"]
 no_participo_g = con_edad.loc[con_edad["participo"] == 0, "edad_anios"]
 T_STAT, P_VAL = stats.ttest_ind(participo_g, no_participo_g, equal_var=False)   # Welch
+CLAVE = "Edad: participó vs no participó"   # = comparación registrada en PRUEBAS (p corregido por Holm)
 PRUEBAS = [prueba_dict("II · Participación", "Edad: participó vs no participó",
                        f"{participo_g.mean():.1f} vs {no_participo_g.mean():.1f} años",
                        len(participo_g) + len(no_participo_g), P_VAL)]
@@ -143,7 +144,7 @@ def agregar(prs):
         f"N°={int(tab.loc[tramo_menor,'n'])}).",
         # Revisión 2026-09-26 (obs. 6): la prueba no significativa se muestra, no se oculta.
         f"No hay un patrón lineal claro por edad. Edad promedio: participó {participo_g.mean():.1f} vs "
-        f"no participó {no_participo_g.mean():.1f} años. " + lectura_p(P_VAL),
+        f"no participó {no_participo_g.mean():.1f} años. " + lectura_p(P_VAL, clave=CLAVE),
     ]
     if tramos_muestra_chica:
         nombres = ", ".join(tramos_muestra_chica)
@@ -183,9 +184,8 @@ def agregar_ttest(prs):
         ax.text(xi, 0.3, f"N°={n} docentes", ha="center", va="bottom",
                  fontsize=8.5, color="white")
 
-    sig = "significativa" if P_VAL < 0.05 else "no significativa"
-    ax.text(0.5, 0.99, f"Prueba t de Welch:  t = {T_STAT:.2f}   ·   p = {P_VAL:.4f}   ·   "
-            f"diferencia {sig} al 5%", transform=ax.transAxes, ha="center", va="top",
+    ax.text(0.5, 0.99, encabezado_prueba("Prueba t de Welch", "t", T_STAT, P_VAL, CLAVE),
+            transform=ax.transAxes, ha="center", va="top",
             fontsize=9.5, color="#F2D675", fontweight="bold")
 
     ax.set_xticks(x)

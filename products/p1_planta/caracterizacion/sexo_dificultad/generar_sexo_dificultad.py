@@ -124,6 +124,7 @@ def agregar(prs):
                                   f"aprobación, el {b:.1f}% son mujeres, vs {r:.1f}% en el resto: los "
                                   f"hombres están sobrerrepresentados en las asignaturas más exigentes."),
         notas="% de mujeres = promedio de la variable Mujer=1/Hombre=0.",
+        clave="% mujeres: grupo predominante Baja vs Media+Alta",
         chart_name="sexo_dificultad_chart.png")
 
 
