@@ -21,6 +21,10 @@ de los 854 docentes que SÍ siguen en el plan 2026 también tienen esa
 columna poblada (refleja fin de un contrato/período puntual, no separación
 real — común en Honorario con renovación por período) — hallazgo D35.
 
+⚠ D39 (2026-09-27): las tasas de baja ahora usan tipo_contrato_tag (contrato de entrada)
+para todos; la columna híbrida de abajo se conserva pero ya no se usa en el deck. La
+antigüedad tampoco se usa (inflada para las bajas, ver D39).
+
 CRITERIO DE CONTRATO (indicación explícita del usuario, D35): a quienes
 siguen activos se los reclasifica por su tipo de contrato FINAL (NIVEL_PROF
 2026), no el histórico de universo_base — "entender a los que transitan
@@ -39,13 +43,15 @@ SALIDA: analisis.universo_rotacion (DB), 1.144 filas (universo histórico
 completo, con 539 altas nuevas excluidas desde el origen).
 """
 import sys; sys.stdout.reconfigure(encoding="utf-8")
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+REPO = Path(__file__).resolve().parents[3]
 DB_URL = "postgresql://ucen_user:ucen2026@localhost:5432/ucen"
 engine = create_engine(DB_URL)
 
-PLAN_2026_PATH = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\analisis-ucen\Planeación docente- Docentes planta + honorarios 2026 (1).xlsx"
+PLAN_2026_PATH = REPO / "Planeación docente- Docentes planta + honorarios 2026 (1).xlsx"
 
 FECHA_REFERENCIA = pd.Timestamp.today().normalize()
 
@@ -65,7 +71,30 @@ def cargar_plan_2026():
     return plan[["rut_key", "nombre_2026", "tipo_contrato_2026"]]
 
 
+# Correcciones de RUT (D39, 2026-09-27), verificadas cruzando nómina, dotación, calificaciones,
+# evaluación estudiantil, EDD y formación:
+# - 15042382: el archivo 2026 lo trae como 15024382 (dígitos traspuestos; mismo nombre, Honorario).
+#   Sin corregir quedaba como baja falsa + alta nueva falsa.
+# - 16322128: la nómina asigna este RUT a otra persona (Honorario); en dotación, formación y el
+#   archivo 2026 es un profesor Jornada con ingreso 2015. La otra persona tiene su propio RUT en
+#   calificaciones y en el archivo 2026 (alta nueva). Sin corregir quedaba como transición H→J falsa.
+# - 17980343 (sin corregir): el RUT aparece con dos nombres distintos según la fuente; no se puede
+#   resolver con los datos. Queda como activo Jornada (el RUT está en el archivo 2026). Informar a UCEN.
+CORRECCION_RUT_PLAN = {"15024382": "15042382"}
+# 16322128 se corrige en el origen (shared/etl/00_base/etl_universo_base.py, RUT_NOMINA_ERRONEO).
+CORRECCION_CONTRATO_BASE = {}
+
+
+def aplicar_correcciones(base, plan):
+    plan = plan.copy(); base = base.copy()
+    plan["rut_key"] = plan["rut_key"].replace(CORRECCION_RUT_PLAN)
+    for rut, contrato in CORRECCION_CONTRATO_BASE.items():
+        base.loc[base["rut_key"].astype(str) == rut, "tipo_contrato_tag"] = contrato
+    return base, plan
+
+
 def calcular_rotacion(base, plan):
+    base, plan = aplicar_correcciones(base, plan)
     df = base.merge(plan, on="rut_key", how="left")
 
     df["activo_2026"] = df["nombre_2026"].notna()
@@ -135,6 +164,6 @@ if __name__ == "__main__":
     # para que las 2 tandas queden contiguas, sin exponer esa columna en el CSV.
     transicionados = df[df["transicion"] != "N/A (baja o sin cambio)"].sort_values(
         ["transicion", "nombre"])[["nombre", "rut_key"]].rename(columns={"rut_key": "rut"})
-    csv_path = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\transiciones_jornada_honorario.csv"
+    csv_path = REPO / "outputs" / "transiciones_jornada_honorario.csv"
     transicionados.to_csv(csv_path, index=False, encoding="utf-8-sig")
     print(f"✓ Guardado: {csv_path} ({len(transicionados)} filas)")

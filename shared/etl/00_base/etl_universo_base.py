@@ -170,6 +170,16 @@ merged["origen"] = merged["_merge"].map({
 })
 merged = merged.drop(columns=["_merge"])
 
+# ── Corrección de RUT mal asignado en NOMINA (D39, 2026-09-27) ───────────────
+# 16322128: la NOMINA lo asigna a otra persona (Honorario, cuyo RUT real 27711156 aparece en
+# calificaciones y en la planeación 2026). En DOTACION, formación y planeación 2026 es un profesor
+# Jornada con ingreso 2015. Se descarta la fila de NOMINA para ese RUT: queda como SOLO_DOTACION y
+# todos sus datos (contrato, nombre, jerarquía) salen de DOTACION. Verificado cruzando fuentes.
+RUT_NOMINA_ERRONEO = {"16322128"}
+_mal = merged["rut_key"].astype(str).isin(RUT_NOMINA_ERRONEO) & merged["origen"].eq("AMBOS")
+merged.loc[_mal, [c for c in merged.columns if c.startswith("n_")]] = np.nan
+merged.loc[_mal, "origen"] = "SOLO_DOTACION"
+
 print(f"\nResultado cruce:")
 print(merged["origen"].value_counts().to_string())
 print(f"Total RUTs únicos: {len(merged)}")

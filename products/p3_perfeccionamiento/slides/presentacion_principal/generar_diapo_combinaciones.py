@@ -27,7 +27,7 @@ FONDOTIPO = os.path.join(REPO, "assets", "Fondotipop.pptx")
 BG_PATH   = os.path.join(SCRATCH, "fondotipo_image1.jpg")
 LOGO_PATH = os.path.join(SCRATCH, "fondotipo_image2.png")
 SHARED_BG = os.path.join(OUT_DIR, "_background.png")
-OUT_PPTX  = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\DIAPO_combinaciones.pptx"
+OUT_PPTX  = os.path.join(REPO, "outputs", "pptx", "DIAPO_combinaciones.pptx")
 
 # Extraer assets si no existen
 for path, zname in [(BG_PATH,"ppt/media/image1.jpg"),(LOGO_PATH,"ppt/media/image2.png")]:

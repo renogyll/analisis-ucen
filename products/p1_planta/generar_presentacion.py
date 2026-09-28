@@ -99,8 +99,8 @@ BLOQUE_II = [
     ("formacion_jornada", "generar_formacion_jornada.py", ["agregar_tipo_por_grupo"]),
 ]
 
-# EDD ajustada por año (D36): primero la diapositiva por año (cambio de escala e inversión
-# por sexo), después las comparaciones con la EDD ajustada, cada una en una diapositiva.
+# EDD limpia (D37, reemplaza el ajuste por año de D36): primero la diapositiva de calidad de
+# datos por año (notas dañadas 2024-2025), después las comparaciones con la nota limpia.
 BLOQUE_III = [
     ("edd_sexo", "generar_edd_sexo.py", ["agregar_por_anio", "agregar"]),
     ("edd_jerarquia", "generar_edd_jerarquia.py", ["agregar"]),
@@ -153,54 +153,64 @@ def agregar_bloque(prs, bloque, etiqueta):
 # Holm dentro del bloque es < 0.05). El p corregido se deja en pptx_helpers.P_AJUSTADO y cada
 # script lo usa para el recuadro del gráfico y el punteo (encabezado_prueba / lectura_p).
 import pptx_helpers
-print("── Pasada 1: cargando scripts y pruebas ──────────────────────")
-PRUEBAS = []
-for bloque in (BLOQUE_I, BLOQUE_II, BLOQUE_III, BLOQUE_IV):
-    for carpeta, script_name, _ in bloque:
-        if carpeta not in MODULOS:
-            mod = cargar_modulo(carpeta, script_name)
-            PRUEBAS.extend(getattr(mod, "PRUEBAS", []))
-HOLM = estructura.holm_por_bloque(PRUEBAS)
-pptx_helpers.P_AJUSTADO.update({pr["comparacion"]: h for pr, h in zip(PRUEBAS, HOLM)})
-for pr, h in zip(PRUEBAS, HOLM):
-    if (pr["p"] < 0.05) != (h < 0.05):
-        print(f"  Sin ajuste significativa, con Holm por bloque no: {pr['comparacion']} "
-              f"(p={pr['p']:.4f} → {h:.4f})")
 
-# ── Pasada 2: diapositivas ──────────────────────────────────────────────────────────────
-prs = Presentation()
-prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
 
-print("── Portada y estructura ──────────────────────────────────────")
-estructura.portada(prs)
-# Grilla de apertura en 4 franjas (2026-09-25) + cada bloque abre con su
-# Universo/Índice/Hallazgos en formato franjas (2026-09-26, los 4 bloques por igual).
-estructura.grid_bloques(prs)
+def cargar_todo():
+    """Pasada 1: carga todos los scripts, junta sus PRUEBAS y deja el p corregido por Holm en
+    pptx_helpers.P_AJUSTADO. La usan este ensamblador y el resumen (resumen/generar_resumen.py)."""
+    print("── Pasada 1: cargando scripts y pruebas ──────────────────────")
+    pruebas = []
+    for bloque in (BLOQUE_I, BLOQUE_II, BLOQUE_III, BLOQUE_IV):
+        for carpeta, script_name, _ in bloque:
+            if carpeta not in MODULOS:
+                mod = cargar_modulo(carpeta, script_name)
+                pruebas.extend(getattr(mod, "PRUEBAS", []))
+    holm = estructura.holm_por_bloque(pruebas)
+    pptx_helpers.P_AJUSTADO.update({pr["comparacion"]: h for pr, h in zip(pruebas, holm)})
+    for pr, h in zip(pruebas, holm):
+        if (pr["p"] < 0.05) != (h < 0.05):
+            print(f"  Sin ajuste significativa, con Holm por bloque no: {pr['comparacion']} "
+                  f"(p={pr['p']:.4f} → {h:.4f})")
+    return pruebas, holm
 
-estructura.uih_b1(prs)
-agregar_bloque(prs, BLOQUE_I, "Bloque I — Caracterización")
 
-estructura.uih_b2(prs)
-agregar_bloque(prs, BLOQUE_II, "Bloque II — Participación")
+if __name__ == "__main__":
+    PRUEBAS, HOLM = cargar_todo()
 
-estructura.uih_b3(prs)
-agregar_bloque(prs, BLOQUE_III, "Bloque III — EDD")
+    # ── Pasada 2: diapositivas ──────────────────────────────────────────────────────────────
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Emu(UcenSlideKit.SW_EMU), Emu(UcenSlideKit.SH_EMU)
 
-estructura.uih_b4(prs)
-agregar_bloque(prs, BLOQUE_IV, "Bloque IV — Aprobación")
+    print("── Portada y estructura ──────────────────────────────────────")
+    estructura.portada(prs)
+    # Grilla de apertura en 4 franjas (2026-09-25) + cada bloque abre con su
+    # Universo/Índice/Hallazgos en formato franjas (2026-09-26, los 4 bloques por igual).
+    estructura.grid_bloques(prs)
 
-print(f"\n── Anexo: {len(PRUEBAS)} pruebas estadísticas ───────────────────────────")
-# Holm por bloque (decisión del usuario 2026-09-26); el veredicto ya va en cada diapositiva.
-estructura.anexo_pruebas(prs, PRUEBAS, HOLM)
+    estructura.uih_b1(prs)
+    agregar_bloque(prs, BLOQUE_I, "Bloque I — Caracterización")
 
-prs.save(OUT_PPTX)
-print(f"\n✓ Guardado: {OUT_PPTX}  ({len(prs.slides)} diapositivas)")
+    estructura.uih_b2(prs)
+    agregar_bloque(prs, BLOQUE_II, "Bloque II — Participación")
 
-# Comentarios de decisiones para la contraparte (2026-09-26) — se reaplican en cada corrida
-# porque el pptx se crea desde cero. Requiere PowerPoint (COM); si no está, el deck igual queda.
-print("\n── Comentarios de decisiones ─────────────────────────────────")
-try:
-    import comentarios_decisiones
-    comentarios_decisiones.aplicar(OUT_PPTX)
-except Exception as e:
-    print(f"  ⚠ No se agregaron comentarios ({type(e).__name__}: {e}) — el deck quedó sin ellos.")
+    estructura.uih_b3(prs)
+    agregar_bloque(prs, BLOQUE_III, "Bloque III — EDD")
+
+    estructura.uih_b4(prs)
+    agregar_bloque(prs, BLOQUE_IV, "Bloque IV — Aprobación")
+
+    print(f"\n── Anexo: {len(PRUEBAS)} pruebas estadísticas ───────────────────────────")
+    # Holm por bloque (decisión del usuario 2026-09-26); el veredicto ya va en cada diapositiva.
+    estructura.anexo_pruebas(prs, PRUEBAS, HOLM)
+
+    prs.save(OUT_PPTX)
+    print(f"\n✓ Guardado: {OUT_PPTX}  ({len(prs.slides)} diapositivas)")
+
+    # Comentarios de decisiones para la contraparte (2026-09-26) — se reaplican en cada corrida
+    # porque el pptx se crea desde cero. Requiere PowerPoint (COM); si no está, el deck igual queda.
+    print("\n── Comentarios de decisiones ─────────────────────────────────")
+    try:
+        import comentarios_decisiones
+        comentarios_decisiones.aplicar(OUT_PPTX)
+    except Exception as e:
+        print(f"  ⚠ No se agregaron comentarios ({type(e).__name__}: {e}) — el deck quedó sin ellos.")

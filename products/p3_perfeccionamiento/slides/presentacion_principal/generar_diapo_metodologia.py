@@ -19,7 +19,7 @@ REPO    = str(pathlib.Path(BASE).parents[3])
 CASCADE = os.path.join(REPO, "data", "cascade")
 OUT_DIR = os.path.join(BASE, "dark_slides_v3")
 SHARED_BG = os.path.join(OUT_DIR, "_background.png")  # ya contiene el logo
-OUT_PPTX  = r"c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\DIAPO_metodologia_v3.pptx"
+OUT_PPTX  = os.path.join(REPO, "outputs", "pptx", "DIAPO_metodologia_v3.pptx")
 
 # ── Layout (igual que generar_presentacion.py) ────────────────────────────────
 SW_EMU = 12192000

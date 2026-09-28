@@ -1,5 +1,13 @@
 # Traspaso de sesión — P1 Caracterización Cuerpo Académico (Jornada)
 
+> ⚠️ **HISTÓRICO (2026-09-27).** Este traspaso describe el estado del 2026-08-04 y ya no está
+> vigente: el deck se reestructuró en 4 bloques (Caracterización, Participación, EDD,
+> Aprobación), la EDD usa la nota limpia (D37) y la significancia se decide con el p corregido
+> por Holm dentro de cada bloque. Las rutas `c:\Users\r.gonzalez_fluxsolar…` son del PC anterior;
+> el repo está hoy en `C:\Users\renat\Downloads\RESCATE_TODO_UCEN\analisis-ucen`.
+> **Fuente vigente:** `docs/DECISIONES_METODOLOGICAS.md` (D36, D37 y el "Catálogo de
+> visualizaciones P1 confirmadas", que lista las 39 diapositivas actuales).
+
 **Para:** la próxima conversación que continúe este trabajo (mismo Claude Code, chat nuevo).
 **Escrito por:** Claude, al cierre de la sesión del 2026-08-04.
 **Repo:** `c:\Users\r.gonzalez_fluxsolar.LAPTOP-FLUX-ECO\Downloads\analisis-ucen` (git, branch `main`).

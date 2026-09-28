@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "shared"))
-from pptx_helpers import UcenSlideKit
+from pptx_helpers import UcenSlideKit, holm_por_bloque  # noqa: F401 (lo usa generar_presentacion)
 
 HERE = Path(__file__).parent
 kit = UcenSlideKit(out_dir=HERE)
@@ -131,16 +131,16 @@ def grid_bloques(prs):
     diapositivas fundidas (obs. 21)."""
     sl = _nueva(prs)
     kit.title(sl, "Contenido de la presentación — Bloques I a IV", fs=17)
-    kit.subtitulo(sl, "Universo: 624 docentes Jornada  ·  cada bloque indica su período de datos")
+    kit.subtitulo(sl, "Universo: 625 docentes Jornada  ·  cada bloque indica su período de datos")
     kit.franjas_bloques(sl, [
         ("Bloque I — Caracterización del cuerpo académico",
-         ["Universo: 624 docentes Jornada",
+         ["Universo: 625 docentes Jornada",
           "Período: dotación vigente; carga académica según archivo de mayo 2026"],
          ["Sexo y tramo de edad · edad y trayectoria según jerarquía",
           "Unidad/facultad · carga académica · grado académico según sexo",
           "Jornada completa/parcial: composición y según sexo"]),
         ("Bloque II — Análisis de la participación en el perfeccionamiento docente",
-         ["Universo: 624 docentes Jornada, 418 (67.0%) con al menos una instancia formativa "
+         ["Universo: 625 docentes Jornada, 419 (67.0%) con al menos una instancia formativa "
           "(Oferta formativa (Taller), Diplomado o Proyecto)",
           "Período: 2022-2025 (el 74% de los registros son de 2025)"],
          ["Participación y modalidades · tipos (Venn) · intensidad",
@@ -148,13 +148,13 @@ def grid_bloques(prs):
           "Antigüedad de los formados · participación según edad",
           "Tipo de formación según antigüedad, sexo y edad"]),
         ("Bloque III — Evaluación de Desempeño Docente (EDD)",
-         ["Universo: 624 docentes Jornada, 491 con EDD (hecha por la jefatura, distinta de la "
+         ["Universo: 625 docentes Jornada, 491 con EDD (hecha por la jefatura, distinta de la "
           "evaluación que hacen los estudiantes)",
           "Período: 2022-2025; se excluyen las notas dañadas de 2024-2025"],
          ["Calidad de los datos de la EDD por año",
           "EDD según sexo, jerarquía/escalafón y facultad, con sus pruebas"]),
         ("Bloque IV — Aprobación y reprobación de alumnos",
-         ["Universo: 624 docentes Jornada, 515 con calificaciones registradas",
+         ["Universo: 625 docentes Jornada, 515 con calificaciones registradas",
           "Período: 2023-01 a 2025-02"],
          ["Aprobación global · según sexo (y dentro de cada grupo de dificultad) · escalafón · antigüedad",
           "Evolución de la aprobación según sexo (2023-2025)",
@@ -169,29 +169,11 @@ def grid_bloques(prs):
 # (incluidas las no significativas) y agrega el valor p ajustado por Holm, que corrige por
 # hacer muchas comparaciones a la vez. Cada script expone su lista `PRUEBAS`.
 
-def _holm(pvals):
-    orden = sorted(range(len(pvals)), key=lambda i: pvals[i])
-    m = len(pvals); ajust = [0.0] * m; previo = 0.0
-    for rango, i in enumerate(orden):
-        previo = max(previo, min(1.0, (m - rango) * pvals[i]))
-        ajust[i] = previo
-    return ajust
-
-
 def _fmt_p(p):
     return "<0.0001" if p < 0.0001 else f"{p:.4f}"
 
 
-def holm_por_bloque(pruebas):
-    """p ajustado por Holm DENTRO de cada bloque (familia de pruebas), no sobre el total.
-    Decisión del usuario 2026-09-26: Holm sobre las 21 pruebas juntas era demasiado estricto
-    (mezcla preguntas de bloques distintos); lo habitual es corregir por familia."""
-    ajust = [None] * len(pruebas)
-    for bloque in dict.fromkeys(pr["bloque"] for pr in pruebas):
-        idx = [i for i, pr in enumerate(pruebas) if pr["bloque"] == bloque]
-        for i, h in zip(idx, _holm([pruebas[i]["p"] for i in idx])):
-            ajust[i] = h
-    return ajust
+# holm_por_bloque vive en shared/pptx_helpers.py (2026-09-27, compartido con rotación).
 
 
 def anexo_pruebas(prs, pruebas, holm, por_diapo=14):
@@ -235,10 +217,10 @@ def anexo_pruebas(prs, pruebas, holm, por_diapo=14):
 
 def uih_b1(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque I — Caracterización del cuerpo académico de Jornada (N°624)", fs=16)
+    kit.title(sl, "Bloque I — Caracterización del cuerpo académico de Jornada (N°625)", fs=16)
     kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes con contrato de Jornada (planta), universo de todo el Producto 1. "
+            "625 docentes con contrato de Jornada (planta), universo de todo el Producto 1. "
             "Jerarquía = 8 categorías (Instructor a Titular, cada una Docente o Regular); escalafón = "
             "Docente o Regular. 90 docentes (14%) no tienen registro en dotación (sin edad, antigüedad, "
             "cargo ni jornada): son más mujeres (66% vs 51%) y menos Regulares (7% vs 16%)."),
@@ -256,7 +238,7 @@ def uih_b1(prs):
             "Las mujeres son mayoría (53% con dato), pero solo el 46% de los Doctores.",
             "Edad y trayectoria crecen con la jerarquía: de 41.2 a 67.3 años de edad y de 3.2 a 14.9 "
             "años en la universidad entre Instructor Docente y Titular Docente.",
-            "Medicina y C. Salud concentra el 32% de los docentes; Docencia es la función principal del 49%.",
+            "Medicina y C. Salud concentra el 32% de los docentes; Docencia es la función principal del 50%.",
             "Los hombres tienen jornada completa con más frecuencia que las mujeres (82% vs 75%).",
         ])
     kit.notas(sl,
@@ -269,10 +251,10 @@ def uih_b1(prs):
 
 def uih_b2(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque II — Participación en el perfeccionamiento docente (N°624)", fs=16)
+    kit.title(sl, "Bloque II — Participación en el perfeccionamiento docente (N°625)", fs=16)
     kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes Jornada; 418 (67%) cursaron al menos una instancia formativa: Oferta "
+            "625 docentes Jornada; 419 (67%) cursaron al menos una instancia formativa: Oferta "
             "formativa (Taller), Diplomado o Proyecto, entre 2022 y 2025. Primero, cuánto y cómo "
             "participan; después, quién participa, con su prueba estadística en la misma diapositiva."),
         indice_items=[
@@ -303,10 +285,10 @@ def uih_b2(prs):
 
 def uih_b3(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque III — Evaluación de desempeño docente (N°624)", fs=16)
+    kit.title(sl, "Bloque III — Evaluación de desempeño docente (N°625)", fs=16)
     kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes Jornada; 491 (78.7%) tienen al menos una evaluación de desempeño docente (EDD) "
+            "625 docentes Jornada; 491 (78.6%) tienen al menos una evaluación de desempeño docente (EDD) "
             "entre 2022 y 2025, hecha por la jefatura. En 2024-2025 cerca del 38% de las notas está dañado "
             "(ceros que son datos vacíos y notas partidas a la mitad); las comparaciones usan la nota limpia "
             "(396 docentes)."),
@@ -333,10 +315,10 @@ def uih_b3(prs):
 
 def uih_b4(prs):
     sl = _nueva(prs)
-    kit.title(sl, "Bloque IV — Aprobación y reprobación de alumnos (N°624)", fs=16)
+    kit.title(sl, "Bloque IV — Aprobación y reprobación de alumnos (N°625)", fs=16)
     kit.franjas_universo_indice_hallazgos(sl,
         universo_txt=(
-            "624 docentes Jornada, de los cuales 515 (82.5%) tienen al menos una calificación de alumnos "
+            "625 docentes Jornada, de los cuales 515 (82.4%) tienen al menos una calificación de alumnos "
             "entre 2023-01 y 2025-02. Las comparaciones usan el % de aprobación promedio por docente y "
             "controlan por la dificultad de las asignaturas cuando corresponde."),
         indice_items=[

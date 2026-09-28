@@ -61,7 +61,7 @@ COMENTARIOS = {
     ],
     "Distribución de la carga académica": [
         "Fuente: archivo 'CONSOLIDADO DOCENTES 3-05-2026 — dotacion_con_clasificacion' (547 docentes), "
-        "cruzado por RUT con el universo Jornada: 534 de 624 están en el archivo.",
+        "cruzado por RUT con el universo Jornada: 535 de 625 están en el archivo.",
         "Categoría = columna CLASIFICACION del archivo, con dos ajustes: 'DOCENTE' (1 caso, cargo "
         "'Profesor') se sumó a Docencia, y los Vicedecano(a) y las autoridades superiores (Rector, "
         "Vicerrectores, Decanos(as) y Junta Directiva) pasaron de Vinculación con el Medio a Gestión "
@@ -75,14 +75,14 @@ COMENTARIOS = {
     ],
     "Participación en instancias formativas y modalidades": [
         "Las diapositivas de modalidades, Venn, intensidad, antigüedad y tipo por grupo replican gráficos "
-        "del informe P3, pero sobre el universo Jornada (624 docentes, 418 formados), no sobre los 316 "
+        "del informe P3, pero sobre el universo Jornada (625 docentes, 419 formados), no sobre los 316 "
         "'Aptos P3'. Por eso los N° no coinciden con P3.",
         "Terminología: 'instancias formativas' = cualquier Taller, Diplomado o Proyecto; 'Oferta "
         "formativa (Taller)' = solo el tipo Taller, como en P3. Quien combina 2 o más tipos tiene "
         "'Participación Mixta'.",
     ],
     "Tipos de formación (diagrama de Venn)": [
-        "El Venn es esquemático: el tamaño de los círculos NO es proporcional al N° (con 381 vs 31 "
+        "El Venn es esquemático: el tamaño de los círculos NO es proporcional al N° (con 382 vs 31 "
         "docentes, un Venn proporcional dejaría Proyecto casi invisible). El número de cada región sí "
         "es el conteo real.",
     ],
@@ -185,7 +185,8 @@ def _titulo(slide):
     return ""
 
 
-def aplicar(ruta_pptx):
+def aplicar(ruta_pptx, comentarios=None):
+    """comentarios: dict título→textos; por defecto COMENTARIOS (deck completo)."""
     import win32com.client
 
     ruta = str(Path(ruta_pptx).resolve())
@@ -194,7 +195,7 @@ def aplicar(ruta_pptx):
     try:
         titulos = {i: _titulo(pres.Slides.Item(i)).lower() for i in range(1, pres.Slides.Count + 1)}
         total = 0
-        for clave, textos in COMENTARIOS.items():
+        for clave, textos in (comentarios or COMENTARIOS).items():
             nums = [i for i, t in titulos.items() if t.startswith(clave.lower())]
             if not nums:
                 print(f"  ⚠ Comentarios: no se encontró diapositiva con título '{clave}…'")

@@ -63,7 +63,7 @@ import matplotlib.text as _mtext
 from PIL import Image as PILImage
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
 
 _HERE = Path(__file__).resolve().parent
@@ -101,6 +101,9 @@ def formato_cl(s):
 # se usa el p sin corregir. Regla binaria (decisión del usuario 2026-09-27): significativa solo
 # si el p corregido es < 0.05; si no, "no hay diferencia" — sin categoría de "indicio".
 P_AJUSTADO = {}
+# Si es False, los textos no mencionan el p corregido (el veredicto igual usa P_AJUSTADO).
+# Rotación lo apaga: la contraparte no necesita ver la corrección en la entrega (2026-09-27).
+MOSTRAR_P_CORREGIDO = True
 
 
 def _p_txt(p):
@@ -117,6 +120,11 @@ def lectura_p(p, prueba="prueba t de Welch", clave=None):
                     f"(es poco probable que se deba solo al azar).")
         return (f"La {prueba} da {_p_txt(p)}: no hay diferencia estadísticamente significativa al 5%.")
     corr = f"{_p_txt(pa)} corregido por comparaciones múltiples"
+    if not MOSTRAR_P_CORREGIDO:
+        if pa < 0.05:
+            return (f"La {prueba} da {_p_txt(p)}: la diferencia es estadísticamente significativa "
+                    f"(es poco probable que se deba solo al azar).")
+        return f"La {prueba} da {_p_txt(p)}: no hay diferencia estadísticamente significativa."
     if pa < 0.05:
         return (f"La {prueba} da {_p_txt(p)} ({corr}): la diferencia es estadísticamente significativa "
                 f"(es poco probable que se deba solo al azar).")
@@ -132,9 +140,9 @@ def es_significativa(p, clave=None):
 def encabezado_prueba(nombre, estadistico, valor, p, clave=None):
     """Texto del recuadro dorado sobre los gráficos de prueba: estadístico, p y veredicto binario."""
     pa = P_AJUSTADO.get(clave) if clave else None
-    base = f"{nombre}:  {estadistico} = {valor:.2f}   ·   p = {p:.4f}"
-    if pa is not None:
-        base += f"   ·   p corregido = {pa:.4f}"
+    base = f"{nombre}:  {estadistico} = {valor:.2f}   ·   {_p_txt(p).replace('=', ' = ').replace('<', ' < ')}"
+    if pa is not None and MOSTRAR_P_CORREGIDO:
+        base += f"   ·   p corregido {'< 0.0001' if pa < 0.0001 else f'= {pa:.4f}'}"
     return base + ("   ·   diferencia significativa" if es_significativa(p, clave) else "   ·   sin diferencia significativa")
 
 
@@ -144,11 +152,36 @@ def prueba_dict(bloque, comparacion, resultado, n, p, prueba="t de Welch"):
                 p=float(p), prueba=prueba)
 
 
+def holm(pvals):
+    """p ajustados por Holm (step-down) para una familia de pruebas."""
+    orden = sorted(range(len(pvals)), key=lambda i: pvals[i])
+    m = len(pvals); ajust = [0.0] * m; previo = 0.0
+    for rango, i in enumerate(orden):
+        previo = max(previo, min(1.0, (m - rango) * pvals[i]))
+        ajust[i] = previo
+    return ajust
+
+
+def holm_por_bloque(pruebas):
+    """p ajustado por Holm DENTRO de cada bloque (familia de pruebas), no sobre el total.
+    Decisión del usuario 2026-09-26: lo habitual es corregir por familia de preguntas."""
+    ajust = [None] * len(pruebas)
+    for bloque in dict.fromkeys(pr["bloque"] for pr in pruebas):
+        idx = [i for i, pr in enumerate(pruebas) if pr["bloque"] == bloque]
+        for i, a in zip(idx, holm([pruebas[i]["p"] for i in idx])):
+            ajust[i] = a
+    return ajust
+
+
 if not getattr(_mtext.Text.set_text, "_formato_cl", False):
     _set_text_original = _mtext.Text.set_text
 
     def _set_text_cl(self, s):
-        return _set_text_original(self, formato_cl(s) if isinstance(s, str) else s)
+        # matplotlib vuelve a llamar set_text con el texto ya convertido (p. ej. al dibujar); formato_cl
+        # no es idempotente ("1.144" → "1,144"), así que el texto vigente no se reconvierte.
+        if isinstance(s, str) and s != getattr(self, "_text", None):
+            s = formato_cl(s)
+        return _set_text_original(self, s)
 
     _set_text_cl._formato_cl = True
     _mtext.Text.set_text = _set_text_cl
@@ -323,16 +356,23 @@ class UcenSlideKit:
                                Emu(self.CHART_W), Emu(self.CHART_H))
 
     def txt(self, sl, text, left, top, width, height, fs=12, bold=False, italic=False,
-            color="#FFFFFF", align=PP_ALIGN.LEFT, wrap=True, lspc=0, font_name="Calibri"):
+            color="#FFFFFF", align=PP_ALIGN.LEFT, wrap=True, lspc=0, font_name="Calibri", centrar_v=False):
+        """Una línea escrita como "**texto**" sale en negrita (subtítulos dentro de un bloque).
+        centrar_v=True centra el texto verticalmente en su caja."""
         txb = sl.shapes.add_textbox(Emu(left), Emu(top), Emu(width), Emu(height))
         tf = txb.text_frame; tf.word_wrap = wrap
+        if centrar_v:
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         for i, line in enumerate(formato_cl(str(text)).split("\n")):
+            negrita_linea = line.startswith("**") and line.endswith("**") and len(line) > 4
+            if negrita_linea:
+                line = line[2:-2]
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
             p.alignment = align
             if lspc > 0 and i > 0:
                 p.space_before = Pt(lspc)
             run = p.add_run(); run.text = line
-            run.font.size = Pt(fs); run.font.bold = bold; run.font.italic = italic
+            run.font.size = Pt(fs); run.font.bold = bold or negrita_linea; run.font.italic = italic
             if font_name:
                 run.font.name = font_name
             r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
@@ -421,7 +461,7 @@ class UcenSlideKit:
         for (bx, by), (hdr, body) in zip(pos, cajas):
             self._caja_navy(sl, bx, by, bw, bh, hdr, body, fs_header=12, fs_body=10)
 
-    def franjas(self, sl, filas, top=None, fs=9, col_split=0.41):
+    def franjas(self, sl, filas, top=None, fs=9, col_split=0.41, fs_hdr=12, centrar_v=False):
         """Formato "franjas" (pedido de la contraparte 2026-09-25): filas horizontales de
         ancho completo, sin cajas de fondo, letras blancas, separadas por líneas finas.
         Cada fila = (header, columnas): header a la izquierda (22% del ancho) y 1 o 2
@@ -459,11 +499,11 @@ class UcenSlideKit:
         y = top
         for (hdr, cols), fh in zip(filas, alturas):
             self.txt(sl, hdr, l, y + pad, col_hdr - pad, fh - 2 * pad,
-                      fs=12, bold=True, color="#FFFFFF")
+                      fs=fs_hdr, bold=True, color="#FFFFFF", centrar_v=centrar_v)
             x = l + col_hdr
             for c, a in zip(cols, _anchos(cols)):
                 if c:
-                    self.txt(sl, c, x, y + pad, a - pad, fh - 2 * pad, fs=fs, color="#FFFFFF", lspc=2)
+                    self.txt(sl, c, x, y + pad, a - pad, fh - 2 * pad, fs=fs, color="#FFFFFF", lspc=2, centrar_v=centrar_v)
                 x += a
             y += fh
             _linea(y)
@@ -479,7 +519,8 @@ class UcenSlideKit:
             filas.append((hdr, [c1, c2]))
         self.franjas(sl, filas, top=top)
 
-    def franjas_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items):
+    def franjas_universo_indice_hallazgos(self, sl, universo_txt, indice_items, hallazgos_items,
+                                          fs=10, fs_hdr=12, top=None):
         """Universo / Índice / Hallazgos en formato franjas (reemplaza a la caja navy de
         3 columnas de `caja_universo_indice_hallazgos`). Un índice largo (>5 ítems) se
         reparte en 2 columnas para no alargar la fila."""
@@ -493,7 +534,7 @@ class UcenSlideKit:
             ("Universo", [universo_txt]),
             ("Índice", indice_cols),
             ("Hallazgos", ["\n".join(f"{i + 1}. {it}" for i, it in enumerate(hallazgos_items))]),
-        ], fs=10, col_split=0.39)
+        ], fs=fs, col_split=0.39, fs_hdr=fs_hdr, top=top)
 
     def tabla(self, sl, encabezados, filas, anchos, top=None, fs=9, resaltar=None):
         """Tabla simple en formato franjas (sin cajas de color): encabezado en negrita,

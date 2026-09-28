@@ -69,6 +69,8 @@ es `analisis.universo_base` (1.144) y su sub-universo Jornada (624, usado en P1)
 | 32 | Participación en instancias formativas por Facultad (P3, Jornada+Honorario) | ✅ Resuelto | 1.144 (595 en 5 facultades + 549 Otra/Sin facultad) | ✅ Vigente |
 | 36 | Revisión de coherencia P1: EDD ajustada por año, control por dificultad, anexo de pruebas con Holm, diapositivas fundidas, formato numérico | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
 | 37 | EDD limpia (notas dañadas 2024-2025) + regla binaria de significancia con Holm por bloque | ✅ Resuelto | 491 con EDD → 396 con nota limpia | ✅ Vigente |
+| 38 | Versión resumida del deck P1 (11 láminas, directivos): criterios de síntesis | ✅ Resuelto | 624 (Jornada) | ✅ Vigente |
+| 39 | Rotación: contrato de entrada, sin antigüedad, 5 facultades, pruebas con Holm, correcciones de RUT, extensiones; deck en 2 bloques | ✅ Resuelto | 1.144 (histórico) | ✅ Vigente |
 
 ---
 
@@ -1452,58 +1454,207 @@ edad por grupo de dificultad.
 
 **Otras decisiones del mismo día:** trayectoria = años en UCEN (explícito en la bajada); se quita el
 punteo sobre Regulares que ingresan jerarquizados; "posible implicancia" en grado académico; pruebas
-de participación por facultad (cada unidad vs el resto); en la carga académica, los 7 Vicedecano(a)
+de participación por facultad (cada unidad vs el resto); en la carga académica, los 10 Vicedecano(a)
 y las 8 autoridades superiores (Rector, Vicerrector Académico, Vicerrector Regional, 3 Decanos(as),
 Presidente y Director de la Junta Directiva) se reclasifican de VcM a Gestión Académica por ser
 cargos de gestión. Resultado: Gestión Académica 73 (13,7%), VcM 33 (6,2%).
 
 ---
 
+## D38 — Versión resumida del deck P1 (2026-09-27)
+
+**Qué:** `products/p1_planta/resumen/generar_resumen.py` → `outputs/pptx/P1_resumen.pptx`, 11
+láminas para directivos que no verán el deck completo. Decisiones del usuario: cierra con
+implicancias; audiencia directivos (sin valores p en pantalla).
+
+**Estructura:** portada · "Cinco hallazgos" (la respuesta primero) · 7 láminas de respaldo en el
+mismo orden (perfil, jerarquía, formación, quién se forma, EDD, aprobación, dificultad) ·
+implicancias · nota metodológica. Cada lámina junta varias diapositivas del completo; las notas
+del orador dicen cuáles y traen las pruebas con su p corregido.
+
+**Criterios:**
+1. **Título = el hallazgo** (afirmación), no el tema. Máximo 3 punteos, cada uno con su cifra.
+2. **Mismos datos que el completo:** el resumen no recalcula; carga los módulos con
+   `generar_presentacion.cargar_todo()` (pasada 1 extraída a función para compartirla) y lee sus
+   variables. Todas las cifras de pantalla salen de ahí.
+3. **"Difiere" solo con la regla D37:** cada punteo comparativo pasa por `difiere(clave, …)`, que
+   usa `es_significativa` y aborta la generación si un veredicto cambia respecto del texto
+   escrito (así el resumen no puede contradecir al completo si cambian los datos).
+4. **La EDD dañada se presenta como hallazgo**, no como nota al pie, porque cambia la lectura.
+5. **Control por dificultad** (lámina 9) matiza la brecha de aprobación por sexo. Para el
+   escalafón no se hizo ese control, así que no se afirma lo mismo.
+6. **Implicancias como propuestas** atadas a un hallazgo; la del doctorado queda como "posible
+   línea de seguimiento" (mismo criterio que "posible implicancia" del completo).
+7. Instructor Regular (N°=5) no se grafica en la lámina de jerarquía (N°<15).
+
+---
+
+## D39 — Rotación docente: revisión de método y pruebas (2026-09-27)
+
+**Contexto:** el deck de rotación (D35) mostraba tasas de baja por contrato, jerarquía, facultad y
+antigüedad sin pruebas estadísticas, con punteos que afirmaban patrones ("casi el doble", "Titular
+Docente es la excepción", "la baja baja con la antigüedad"). Se verificó en la base y se decidió
+(usuario):
+
+1. **Contrato de entrada para todos.** Las tasas se comparan con `tipo_contrato_tag` (registro
+   histórico) para activos y bajas. Reemplaza la columna híbrida `tipo_contrato_rotacion` de D35
+   (activos con su contrato 2026, bajas con el de origen): los 59 que pasaron de Jornada a Honorario
+   contaban como activos de Honorario y achicaban la brecha (33,3% vs 17,6%; con contrato de
+   entrada: **36,2% vs 16,3%**). El contrato 2026 solo se usa para la diapositiva de transición.
+2. **Sin antigüedad.** Sin fecha de salida, para las bajas la antigüedad se mide hasta hoy (queda
+   inflada: quien entró en 2016 y se fue en 2018 aparece con 10 años), y la fecha de ingreso falta
+   en el 58% de las bajas de Jornada vs 6% de los activos (en Honorario casi nadie la tiene: 12 de
+   520). La diapositiva se eliminó. Las columnas `antiguedad_*` siguen en la tabla pero no se usan.
+3. **Solo las 5 facultades.** "Otra / Sin facultad" (549 docentes, 364 Honorario) no es una
+   facultad y repetía el efecto del contrato; se informa en la bajada.
+4. **Pruebas:** chi-cuadrado de independencia (baja × categoría), 1 docente = 1 caso. Contrato; y
+   escalafón, nivel de jerarquía (Instructor/Asistente/Asociado/Titular, sin las 8 categorías para
+   evitar celdas de 0-7 casos), facultad y sexo, cada una en el total y dentro de cada contrato.
+   13 pruebas, una familia, corrección de Holm; regla binaria D37.
+5. **Resultado:** solo el contrato es significativo (χ²=57,8, p<0,0001). Escalafón da p=0,027 en el
+   total (Regular 12,5% vs Docente 22,1%) pero no sobrevive a Holm y desaparece dentro de cada
+   contrato: 90 de 112 Regulares son Jornada. Las variables no significativas van juntas en una
+   diapositiva (decisión del usuario).
+6. **Estructura:** un script por diapositiva en `products/rotacion_docente/slides/<tema>/`, módulo
+   común `rotacion_comun.py`, `estructura.py` (UIH y anexo) y ensamblador `generar_presentacion.py`
+   → `outputs/pptx/Rotacion_presentacion.pptx` (8 diapositivas). El script único anterior quedó en
+   `archive/rotacion_v1/`. `holm_por_bloque` pasó a `shared/pptx_helpers.py` (compartido con P1).
+
+**Ampliación del mismo día (decisiones del usuario):**
+- **Correcciones de RUT** (en `generar_tag_rotacion.py`, solo en la tabla de rotación), verificadas cruzando nómina,
+  dotación, calificaciones, evaluación estudiantil, EDD y formación:
+  - 15042382 (Honorario): la planeación 2026 lo trae como 15024382 (dígitos traspuestos). Era baja falsa + alta falsa.
+  - 16322128: la nómina lo asigna a otra persona (Honorario, cuyo RUT real 27711156 figura en calificaciones y en la
+    planeación 2026 como alta nueva); en dotación, formación y planeación 2026 es un profesor Jornada con ingreso 2015.
+    Contrato de entrada corregido a Jornada; deja de ser transición H→J (14 → 13).
+  - 17980343 (sin corregir): dos nombres según la fuente (nómina, EDD y evaluación estudiantil vs dotación,
+    calificaciones y planeación 2026). Queda activo Jornada; se informa a UCEN.
+  - Cifras resultantes: 855 activos, 289 bajas, 538 docentes nuevos 2026.
+  - **16322128 corregido en el origen** (`shared/etl/00_base/etl_universo_base.py`, `RUT_NOMINA_ERRONEO`): se descarta
+    su fila de NOMINA y queda SOLO_DOTACION (contrato, nombre y jerarquía desde DOTACION; sexo y jerarquía quedan sin
+    dato). Prueba en seco antes de aplicar: regenerar la base reproduce la anterior salvo ese RUT. Se regeneraron
+    universo_base, universo_jornada/docentes_jornada.csv, universo_formados_p3 y universo_rotacion. **El P1 pasa de
+    624 a 625 docentes Jornada** (419 formados, 535 en el archivo de carga académica, Docencia 265); ningún veredicto
+    de prueba cambia. Textos fijos del P1 (grilla, separadores, comentarios) actualizados.
+    Esto aplica la decisión ya registrada en la tabla de duplicados de este documento ("Conservar RODRIGO
+    ESPINOZA; Carlos Espinoza Bardales, RUT real 27711156, no entra"), que no se había llevado a universo_base.
+    `docs/DICCIONARIO_DATOS.md` ("ambas filas eliminadas") describe una versión anterior y queda desactualizado.
+- **Universo:** se mantiene completo (1.144). Los 182 sin calificaciones 2023-2025 son parte de la universidad
+  (investigación, gestión, formación); 97 de los 143 Honorarios que están en el registro solo por formación sí
+  dictaron clases. La hipótesis inicial de que no eran docentes activos era incorrecta.
+- **Estructura en dos bloques** (orden final a pedido del usuario): metodología; Bloque 1 ¿Cómo cambia la planta?
+  (activos/bajas, balance, transición, quiénes cambian); Bloque 2 ¿Quiénes se van? (contrato, perfil del docente,
+  carga Honorario). La formación en Jornada no va como diapositiva (no significativa entre quienes dictan clases);
+  sus pruebas quedan en el anexo 2. El desempeño va en los hallazgos y el anexo 2, no en la diapositiva de perfil. Anexos:
+  pruebas por bloque (Holm dentro de cada anexo) y calidad de datos. El "p corregido" no se muestra en la entrega.
+- **Extensiones** (bloque "Rotación — composición", 7 pruebas): balance entradas/salidas (97% de quienes entran es
+  Honorario vs 65% de quienes salen, significativa); carga Honorario (2,13 vs 2,44 secciones por semestre,
+  Mann-Whitney, significativa); formación Jornada (13,4% vs 22,3% en todos, significativa; 11,4% vs 13,3% entre
+  quienes dictan clases, no significativa); desempeño (EDD Jornada y aprobación, sin diferencias).
+
+**Corrección técnica asociada:** el conversor de formato chileno en gráficos (`_set_text_cl`) se
+aplicaba dos veces cuando matplotlib reasignaba el texto ("1.144" volvía a "1,144"); ahora no
+reconvierte el texto vigente.
+
+---
+
 ## Catálogo de visualizaciones P1 confirmadas
 
-De aquí en adelante, **cada visualización de P1 que se dé por aprobada y se
-commitee** se registra acá con su fuente y filtros — para no tener que releer el
-script cada vez que alguien pregunte "¿de dónde sale este número?". Todas comparten
-el universo Jornada (624, `tipo_contrato_tag='JORNADA'` sobre `universo_base`) salvo
-que se indique lo contrario.
+Estado al 2026-09-27 (tras D36 y D37). Una fila por diapositiva de `outputs/pptx/P1_presentacion.pptx`
+(39 diapositivas), en el orden del deck, con su carpeta y función en
+`products/p1_planta/caracterizacion/` (el orden lo fija `BLOQUE_I`–`BLOQUE_IV` en
+`generar_presentacion.py`). Universo Jornada (624, `tipo_contrato_tag='JORNADA'` sobre
+`universo_base`) salvo que se indique otra cosa. Las versiones anteriores de esta tabla (agosto
+2026, con la numeración y las cifras de entonces) quedan en el historial de git; los cambios de
+cifras están explicados en el Registro de cambios y en D36/D37.
 
-| # | Carpeta (`products/p1_planta/caracterizacion/`) | Fuente | Filtros aplicados | Estado |
+**Regla de significancia (D37):** una diferencia es significativa solo si su p corregido por Holm
+dentro de su bloque es < 0,05 (columna "Signif."). Veredicto binario, sin categoría intermedia.
+
+**Versión resumida** (`resumen/generar_resumen.py` → `P1_resumen.pptx`, 11 láminas): no tiene
+visualizaciones propias con otra fuente; reagrupa las de esta tabla con los mismos datos (D38).
+
+### Estructura (`slides_estructura.py`)
+
+| Diapo | Contenido | Función |
+|---|---|---|
+| 1 | Portada | `portada` |
+| 2 | Grilla "Contenido de la presentación" (4 bloques) | `grid_bloques` |
+| 3, 12, 22, 27 | Separadores Universo / Índice / Hallazgos de cada bloque | `uih_b1`–`uih_b4` |
+| 38-39 | Anexo con las 27 pruebas (p, p corregido, ¿Signif.?) | `anexo_pruebas` |
+
+### Bloque I — Caracterización
+
+| Diapo | Carpeta · función | Fuente | Filtros / criterio |
+|---|---|---|---|
+| 4 | `edad_sexo` · `agregar` | `data/cascade/01_jornada/docentes_jornada.csv` | `sexo`+`tramo_edad` no nulos (N=513); 65-69 y 70+ fusionados en "65+" |
+| 5 | `edad_jerarquia` · `agregar` | mismo CSV | `jerarquia`+`edad_anios` no nulos (N=485); 8 categorías D25; N<15 con textura |
+| 6 | `antiguedad_jerarquia` · `agregar` | mismo CSV | Años en UCEN desde la fecha de ingreso (no incluye carrera previa); mismas 8 categorías y colores que la diapo 5 |
+| 7 | `facultad` · `agregar` | mismo CSV | Unidad normalizada (nombres duplicados de facultad sumados); VR Investigación como barra propia; 4 unidades chicas en "Otras unidades" (13); 73 sin unidad solo en la bajada |
+| 8 | `funcion_academica` · `agregar` | `data/raw/dotacion_clasificacion/dotacion_con_clasificacion_2026-05-03.csv` (PII, fuera de git) | Cruce por RUT: 535/625. Categoría = CLASIFICACION; "DOCENTE" → Docencia; Vicedecano(a) (10, con interinos y sede) y autoridades superiores (8) → Gestión Académica. Docencia 265, Investigación 84, Docente/Gestor 80, Gestión 73, VcM 33 |
+| 9 | `grado_academico_sexo` · `agregar` | mismo CSV de jornada | `nivel_formacion`+`sexo` no nulos (N=478); sin "NO INFORMA" (D21); Técnico sumado a Profesional; punteo 4 como "posible implicancia" |
+| 10 | `distribucion_horas` · `agregar_donut` | mismo CSV | `jornada_dot` a horas (D30): Completa 44h, Parcial <44h, sin dato |
+| 11 | `distribucion_horas` · `agregar_sexo` | mismo CSV | Completa/Parcial por sexo (100% apilada) |
+
+### Bloque II — Participación en formación (`analisis.universo_formados_p3`, D31)
+
+| Diapo | Carpeta · función | Criterio | Prueba (p corregido) | Signif. |
 |---|---|---|---|---|
-| 1 | `edad_sexo/` | `data/cascade/01_jornada/docentes_jornada.csv` | `sexo`+`tramo_edad` no nulos (N=513/624); tramos 65-69 y 70+ fusionados en "65+" | ✅ Aprobado |
-| 2 | `edad_jerarquia/` | mismo CSV | `jerarquia`+`edad_anios` no nulos (N=485/624); excluye SIN JERARQUÍA/NULL; 8 categorías D25, ordenadas por edad desc., N<15 marcado con textura | ✅ Aprobado |
-| 3 | `grado_academico_sexo/` | mismo CSV | `nivel_formacion`+`sexo` no nulos (N=478/624); excluye "NO INFORMA" (D21); Técnico fusionado con Profesional (N°=2) | ✅ Aprobado |
-| 4 | `evaluacion_apr/` | `consolidados.evaluacion_respuesta` JOIN `evaluacion_periodo` | CM-1 (`cobertura_pct≥40`, D10) + CM-2 (ponderado por `n_alumnos_evaluaron`, D11); `rut_docente` en Jornada; descarta "indiferente"; APR_01-03 × 6 semestres 2023-01→2025-02 | ✅ Aprobado |
-| 5 | `evaluacion_met/` | mismo JOIN | Igual que APR; MET_01-05, repartidas 2+3 en 2 diapositivas/pptx | ✅ Aprobado |
-| 6 | `evaluacion_afo/` | mismo JOIN | Igual que APR; AFO_01-09, repartidas 3+3+3 en 3 diapositivas/pptx | ✅ Aprobado |
-| 7 | `aprobacion_reprobacion/` | `intel.rendimiento_academico_alumnos` (D26) | `tipo_contrato_tag='JORNADA'` AND `aprueba IS NOT NULL`; N°=134.640 calificaciones, 515 docentes (82.5% cobertura) | ✅ Aprobado |
-| 8 | `aprobacion_reprobacion_sexo/` | misma tabla | Igual + `GROUP BY sexo`. Prueba t de Welch por docente (Mujer 91.1% vs Hombre 87.7%): t=3.18, **p=0.0016 — significativa** | ✅ Aprobado (con prueba t) |
-| 9 | `aprobacion_reprobacion_jerarquia/` | misma tabla | Igual + escalafón **Docente vs Regular** (colapsado desde las 8 categorías D25, no el cruce completo). Prueba t de Welch por docente (Docente 90.5% vs Regular 84.3%): t=3.47, **p=0.0008 — significativa** | ✅ Aprobado (con prueba t) |
-| 10 | `aprobacion_reprobacion_antiguedad_4tramos/` | misma tabla + `tramo_antiguedad` (D26, agregado 2026-08-02) | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10-14 / 15+; excluye sin dato (55/624). Prueba t probada (15+ vs resto, por docente): p=0.157 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
-| 11 | `aprobacion_reprobacion_antiguedad_3tramos/` | misma tabla | `tramo_antiguedad` regrupado a 0-4 / 5-9 / 10+. Prueba t probada (10+ vs resto, por docente): p=0.552 — **no significativa, diapositiva descartada** | ✅ Aprobado (sin prueba t) |
-| 12 | `evolucion_aprobacion_sexo/` | misma tabla | `GROUP BY LEFT(periodo,4)` (año) × `sexo`; 2 barras (Hombre/Mujer) × 3 años (2023-2025), sin split aprobación/reprobación (solo tasa de aprobación) | ⏳ Generado, pendiente confirmación |
-| 13 | `dificultad_composicion/` | misma tabla + `grupo_dificultad` (D27, agregado 2026-08-03) | Sin gráfico — 3 cajas de texto (Baja/Media/Alta): rango institucional + N° asignaturas/calificaciones/docentes/% aprobación en Jornada por grupo | ✅ Aprobado |
-| 14 | `antiguedad_dificultad/` | misma tabla | Antigüedad promedio por `grupo_dificultad` (ponderado por instancia). Prueba t con "grupo predominante" por docente (Baja 7.0 años vs Media+Alta 5.8 años): t=2.09, **p=0.0375 — significativa** | ✅ Aprobado (con prueba t) |
-| 15 | `edad_dificultad/` | misma tabla | Igual patrón que antiguedad_dificultad. Edad promedio por `grupo_dificultad`. Prueba t "grupo predominante" (Baja 49.0 años vs Media+Alta 46.8 años): t=2.07, **p=0.0387 — significativa** | ⏳ Generado, pendiente confirmación |
-| 16 | `sexo_dificultad/` | misma tabla | % de docentes mujeres por `grupo_dificultad`. Prueba t "grupo predominante", sexo codificado Mujer=1/Hombre=0 (Baja 43.8% vs Media+Alta 61.3%): t=-3.96, **p=0.0001 — muy significativa** | ⏳ Generado, pendiente confirmación |
-| 17 | `jerarquia_dificultad/` | misma tabla | % de docentes escalafón Regular por `grupo_dificultad` (colapso Docente/Regular, no las 8 categorías D25 — mismo criterio que aprobacion_reprobacion_jerarquia/). Prueba t "grupo predominante" (Baja 18.9% vs Media+Alta 12.8%): t=1.81, **p=0.0716 — no significativa** | ❌ Descartada del consolidado (no significativa) — pptx suelto y script siguen existiendo |
-| 18 | `edd_sexo/` | `intel.evaluacion_jefes` (D28) | `tipo_contrato_tag='JORNADA'`, promedio de `edd_total` por docente (N°=487/491). Prueba t de Welch (Hombre 0.72 vs Mujer 0.66): t=-2.37, **p=0.0183 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
-| 19 | `edd_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo) / escalafón Docente vs Regular (prueba t, mismo colapso que #9/#17). Prueba t "por docente" (Docente 0.71 vs Regular 0.59): t=-3.36, **p=0.0011 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
-| 20 | `edd_facultad/` | misma tabla | Facultad **predominante** por docente (D29 — `facultad_jefe` puede variar entre años, 46/491 casos). 6 pruebas t de Welch, cada facultad vs. el resto: FACDEH p<0.001 (+0.13), FINARQ p<0.001 (+0.10), FAMEDSA p=0.024 (-0.06), VRIIP p<0.001 (-0.23) **significativas**; FEGOC p=0.069, FED p=0.873 **no significativas**. Sin corrección por comparaciones múltiples (ver D29) | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
-| 21 | `distribucion_horas/` | `data/cascade/01_jornada/docentes_jornada.csv` | `jornada_dot` parseado a horas (D30); Completa=44h (418), Parcial<44h (113), Sin dato/variable (93 — misma brecha D22/D23). 2 diapositivas en el consolidado: dona+detalle parcial, sexo/escalafón (100% apilada) — la intro se excluyó del ensamblado (sigue en el script). Sin prueba t (no pedida) | ✅ Aprobado — en consolidado, Bloque II |
-| 22 | `participacion_formacion_sexo/` | `analisis.universo_formados_p3` (D31) | Tasa de docentes con ≥1 instancia formativa 2022-2025, por sexo (N°=603/624). Prueba t de Welch (Mujer 74.4% vs Hombre 62.4%): t=3.17, **p=0.0016 — significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
-| 23 | `participacion_formacion_jerarquia/` | misma tabla | Igual + 8 categorías D25 (descriptivo, N°=558/624) / escalafón Docente vs Regular (prueba t). Prueba t (Docente 76.5% vs Regular 48.9%): t=-4.89, **p<0.0001 — muy significativa** | ✅ Aprobado (con prueba t) — en consolidado, Bloque IV |
-| 24 | `participacion_formacion_edad/` | misma tabla | Descriptivo por tramo de edad (10 tramos, N°=534/624) / prueba t sobre edad_anios continua, Participó vs No participó (N°=534, roles invertidos respecto a D27). Prueba t (47.4 vs 49.4 años): t=-1.80, **p=0.0724 — no significativa** | ✅ Aprobado (sin prueba t) — en consolidado, Bloque IV; diapositiva de prueba t excluida (no significativa) |
+| 13 | `formacion_jornada` · `agregar_modalidades` | 418 de 624 formados; tipos Taller/Diplomado/Proyecto y "Participación Mixta" | — | — |
+| 14 | `formacion_jornada` · `agregar_venn` | Venn esquemático (áreas no proporcionales, conteos reales) | — | — |
+| 15 | `formacion_jornada` · `agregar_intensidad` | Instancia = actividad distinta (nombre + período) | — | — |
+| 16 | `participacion_formacion_sexo` · `agregar_ttest` | Tasa ≥1 instancia 2022-2025, N=603. Mujer 74,4% vs Hombre 62,4% | Welch, 0,0114 | Sí |
+| 17 | `participacion_formacion_jerarquia` · `agregar` | 8 categorías (N=558); prueba Regular 48,9% vs Docente 76,5% | Welch, <0,0001 | Sí |
+| 18 | `participacion_facultad_jerarquia` · `agregar_facultad` | Cada unidad (N≥15) vs el resto, N=551. Solo VR Investigación difiere (42,5% vs 72,6%); Educación y Derecho eran significativas sin corregir (0,090 y 0,145) | Welch ×6, VRIIP <0,0001 | Solo VRIIP |
+| 19 | `formacion_jornada` · `agregar_antiguedad` | Conteo de formados + tasa por tramo de antigüedad (pareja, 65%-72%) | — | — |
+| 20 | `participacion_formacion_edad` · `agregar` | 10 tramos de edad (N=534); prueba sobre edad continua: participó 47,4 vs no 49,4 años | Welch, 0,2896 | No |
+| 21 | `formacion_jornada` · `agregar_tipo_por_grupo` | Composición por tipo según antigüedad / sexo / edad; mosaico (ancho ∝ N°); 15-19 y 20+ fusionados en "15+" | — | — |
 
-**Convención de las pruebas t (aplica a todas las de esta tabla):** unidad de análisis
-= % de aprobación promedio *por docente* (no por calificación individual), para
-evitar pseudo-repetición — un docente con 500 notas no debe pesar 500 veces más que
-uno con 5. Siempre Welch (`equal_var=False`), sin asumir varianzas iguales entre
-grupos. Diapositivas de prueba t no significativa (p≥0.05) se descartan a pedido de
-la contraparte — el criterio y los N° quedan igual documentados acá aunque la
-diapositiva no exista en el pptx final. **Excepción — atributos fijos del docente**
-(ej. antigüedad, edad): no se promedia por docente×grupo, se usa el "grupo
-predominante" del docente (ver detalle en D27) para que cada docente aporte un solo
-valor a una sola muestra.
+### Bloque III — EDD (`intel.evaluacion_jefes`, D28; nota limpia D37)
+
+EDD limpia: se excluyen las notas `edd_total == 0` y las < 0,55 en 2024-2025 (`edd_comun.py`).
+Quedan 396 de 491 docentes con nota limpia; 1 valor por docente (promedio de sus años).
+
+| Diapo | Carpeta · función | Criterio | Prueba (p corregido) | Signif. |
+|---|---|---|---|---|
+| 23 | `edd_sexo` · `agregar_por_anio` | Nota original vs limpia por año y % de notas dañadas; limpia estable 0,86-0,89 | — | — |
+| 24 | `edd_sexo` · `agregar` | Mujer 0,884 vs Hombre 0,869 | Welch, 1,0000 | No |
+| 25 | `edd_jerarquia` · `agregar` | 8 categorías (descriptivo); prueba Regular 0,849 vs Docente 0,882 | Welch, 0,8671 | No |
+| 26 | `edd_facultad` · `agregar` | Facultad predominante del jefe (`facultad_jefe`, D29), nombres del Bloque I; 6 pruebas vs el resto, rango 0,855-0,900 | Welch ×6, todas ≥0,87 | No |
+
+### Bloque IV — Aprobación (`intel.rendimiento_academico_alumnos`, D26; dificultad D27)
+
+Unidad de las pruebas: % de aprobación promedio por docente. Atributos fijos del docente
+(antigüedad, edad, sexo, escalafón) por grupo de dificultad: 1 valor por docente en su grupo
+predominante (D27).
+
+| Diapo | Carpeta · función | Criterio | Prueba (p corregido) | Signif. |
+|---|---|---|---|---|
+| 28 | `aprobacion_reprobacion` · `agregar` | `aprueba IS NOT NULL`; 134.640 calificaciones, 515 docentes | — | — |
+| 29 | `aprobacion_reprobacion_sexo` · `agregar` | Mujer 91,1% vs Hombre 87,7% (N=509) | Welch, 0,0125 | Sí |
+| 30 | `aprobacion_reprobacion_sexo` · `agregar_por_dificultad` | Control: sexo dentro de cada grupo (Baja 81,0 vs 80,0; Media 94,9 vs 94,4; Alta 98,8 vs 98,6) | Welch ×3, todas 1,0000 | No |
+| 31 | `aprobacion_reprobacion_jerarquia` · `agregar` | Docente 90,5% vs Regular 84,3% (N=493) | Welch, 0,0071 | Sí |
+| 32 | `aprobacion_reprobacion_antiguedad_4tramos` · `agregar` | 0-4 / 5-9 / 10-14 / 15+ (N=460) | ANOVA, 1,0000 | No |
+| 33 | `evolucion_aprobacion_sexo` · `agregar` | Tasa por año (2023-2025) y sexo | — | — |
+| 34 | `dificultad_composicion` · `agregar` | Terciles del % histórico de cada asignatura (D27); 3 cajas de texto | — | — |
+| 35 | `antiguedad_dificultad` · `agregar` | Baja 7,0 vs Media+Alta 5,8 años (N=460) | Welch, 0,2624 | No |
+| 36 | `edad_dificultad` · `agregar` | Baja 49,0 vs Media+Alta 46,8 años (N=460) | Welch, 0,2624 | No |
+| 37 | `sexo_dificultad` · `agregar` | % mujeres: Baja 43,8% vs Media+Alta 61,3% (N=509) | Welch, 0,0009 | Sí |
+| — | `jerarquia_dificultad` (sin diapositiva) | % Regular: Baja 18,9% vs Media+Alta 12,8% (N=493); solo aporta su prueba al anexo | Welch, 0,3581 | No |
+
+**Resumen:** 27 pruebas, 6 significativas: participación por sexo, escalafón y VR Investigación;
+aprobación por sexo y escalafón; % de mujeres en asignaturas de baja aprobación.
+
+**Scripts fuera del deck** (siguen en el repo, no se ensamblan): `evaluacion_apr/`,
+`evaluacion_met/`, `evaluacion_afo/` (evaluación estudiantil, retirada el 2026-09-25),
+`aprobacion_reprobacion_antiguedad_3tramos/` (variante duplicada de 4 tramos),
+`formacion_jornada.agregar_jerarquia`, el panel por jerarquía de
+`participacion_facultad_jerarquia` y la intro de `distribucion_horas`.
+
+**Convención de las pruebas:** t de Welch (`equal_var=False`) con 1 valor por docente, para
+evitar pseudo-repetición (un docente con 500 notas no pesa 500 veces más que uno con 5). ANOVA
+de un factor cuando hay más de 2 grupos. Todas las pruebas, significativas o no, están en el
+anexo del deck.
 
 ---
 
@@ -1531,3 +1682,7 @@ valor a una sola muestra.
 | 2026-09-13 | Reescrita `participacion_facultad` a pedido de la contraparte (rechazó la versión de D32): ahora 2 diapositivas simples, 100% apiladas Formados/No formados, por año (2023-2025) y por facultad, sin desagregar por tipo de formación ni por tipo de contrato (Jornada+Honorario combinados). Agregada D33: tema nuevo, tag Elector/Elegible para elección de Asamblea General, `products/elecciones_asamblea/etl/generar_tag_electores.py` → `analisis.universo_electores`. Calculado `es_elector` (Art. 2°) sobre los 1.144 docentes con 3 estados Sí/No/Sin dato (Honorario mayormente Sin dato por falta de `fecha_ingreso`, 507/520). `es_elegible` (Art. 4°) queda pendiente — el mapeo de "las 2 jerarquías más altas" no está confirmado con la contraparte; se dejó el componente de antigüedad (`cumple_antiguedad_8anios`) calculado como pieza reutilizable. |
 | 2026-09-26 | Agregada D36: revisión de coherencia del P1 — EDD ajustada por año, control de sexo por dificultad, anexo de 21 pruebas con Holm, pares descriptivo+prueba fundidos (39 diapositivas), formato numérico chileno centralizado. |
 | 2026-09-27 | Agregada D37: EDD limpia (notas dañadas 2024-2025, reemplaza el ajuste por año de D36), regla binaria de significancia con Holm por bloque, pruebas de participación por facultad, Vicedecano y autoridades superiores a Gestión Académica. |
+| 2026-09-27 (2) | Catálogo de visualizaciones P1 reescrito: una fila por diapositiva del deck actual (39), con cifras de la EDD limpia, p corregido por Holm y veredicto binario; scripts fuera del deck listados aparte. |
+| 2026-09-27 (3) | Agregada D38: versión resumida del deck P1 (11 láminas para directivos, `resumen/generar_resumen.py`); `cargar_todo()` extraída del ensamblador para compartir la carga de datos; corregido el N° de Vicedecanos reclasificados (10, con interinos y sede, no 7). |
+| 2026-09-27 (4) | Agregada D39: rotación con contrato de entrada, sin antigüedad, 5 facultades y 13 pruebas chi-cuadrado con Holm (solo el contrato es significativo); deck reestructurado un script por diapositiva; Holm movido a shared; corregida la doble conversión de formato en gráficos. |
+| 2026-09-27 (5) | 16322128 corregido en el origen (universo_base): el P1 pasa a 625 docentes Jornada (419 formados); rotación reordenada (cambio de la planta primero), formación Jornada fuera del deck, carga Honorario con % que se va por tramo. |
